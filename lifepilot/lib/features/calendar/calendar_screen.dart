@@ -32,6 +32,8 @@ class CalendarScreen extends ConsumerWidget {
     final tasks = ref.watch(selectedDayTasksProvider);
     final dayEvents = ref.watch(selectedDayEventsProvider);
 
+    final isWide = MediaQuery.sizeOf(context).width >= 800;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Calendar'),
@@ -48,66 +50,74 @@ class CalendarScreen extends ConsumerWidget {
         icon: const Icon(Icons.event_available),
         label: const Text('Event'),
       ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
-        children: [
-          _MonthCard(events: events),
-          const SizedBox(height: 16),
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final wide = constraints.maxWidth >= 900;
-              final children = [
-                _DailySchedule(events: dayEvents),
-                _LinkedTasks(tasks: tasks),
-              ];
-              if (!wide) {
-                return Column(
-                  children: [
-                    children[0],
-                    const SizedBox(height: 16),
-                    children[1],
-                  ],
-                );
-              }
-              return Row(
+      body: isWide
+          ? Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+              child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(child: children[0]),
-                  const SizedBox(width: 16),
-                  Expanded(child: children[1]),
+                  // Left Column: Fixed Calendar Dock
+                  SizedBox(width: 380, child: _MonthCard(events: events)),
+                  const SizedBox(width: 24),
+                  // Right Column: Flexible Agenda Feed with independent scrolling
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.only(bottom: 96),
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          final rightWide = constraints.maxWidth >= 600;
+                          if (rightWide) {
+                            return Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(
+                                  child: _DailySchedule(events: dayEvents),
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(child: _LinkedTasks(tasks: tasks)),
+                              ],
+                            );
+                          } else {
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _DailySchedule(events: dayEvents),
+                                const SizedBox(height: 16),
+                                _LinkedTasks(tasks: tasks),
+                              ],
+                            );
+                          }
+                        },
+                      ),
+                    ),
+                  ),
                 ],
-              );
-            },
-          ),
-        ],
-      ),
+              ),
+            )
+          : ListView(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
+              children: [
+                _MonthCard(events: events),
+                const SizedBox(height: 16),
+                _DailySchedule(events: dayEvents),
+                const SizedBox(height: 16),
+                _LinkedTasks(tasks: tasks),
+              ],
+            ),
     );
   }
 }
 
-class _MonthCard extends ConsumerStatefulWidget {
+class _MonthCard extends ConsumerWidget {
   const _MonthCard({required this.events});
 
   final AsyncValue<List<CalendarEvent>> events;
 
   @override
-  ConsumerState<_MonthCard> createState() => _MonthCardState();
-}
-
-class _MonthCardState extends ConsumerState<_MonthCard> {
-  bool _isExpanded = false;
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final visibleMonth = ref.watch(visibleCalendarMonthProvider);
     final selectedDay = ref.watch(selectedCalendarDayProvider);
-
-    // Week strip logic: find the Monday of the selected day's week
-    final monday = selectedDay.subtract(
-      Duration(days: selectedDay.weekday - 1),
-    );
-    final weekDays = List.generate(7, (i) => monday.add(Duration(days: i)));
 
     // Month grid logic
     final firstWeekday = DateTime(
@@ -120,272 +130,219 @@ class _MonthCardState extends ConsumerState<_MonthCard> {
       visibleMonth.month + 1,
       0,
     ).day;
-    final totalCells = ((firstWeekday - 1 + daysInMonth) / 7).ceil() * 7;
 
-    return AnimatedSize(
-      duration: const Duration(milliseconds: 250),
-      curve: Curves.easeInOutCubic,
-      child: ConstrainedBox(
-        constraints: BoxConstraints(maxHeight: _isExpanded ? 260.0 : 130.0),
-        child: SectionCard(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-          title: _isExpanded
-              ? monthLabel(visibleMonth)
-              : 'Week of ${shortDate(selectedDay)}',
-          action: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (_isExpanded) ...[
-                IconButton(
-                  visualDensity: VisualDensity.compact,
-                  tooltip: 'Previous month',
-                  onPressed: () =>
-                      ref.read(visibleCalendarMonthProvider.notifier).state =
-                          DateTime(visibleMonth.year, visibleMonth.month - 1),
-                  icon: const Icon(Icons.chevron_left, size: 20),
-                ),
-                IconButton(
-                  visualDensity: VisualDensity.compact,
-                  tooltip: 'Next month',
-                  onPressed: () =>
-                      ref.read(visibleCalendarMonthProvider.notifier).state =
-                          DateTime(visibleMonth.year, visibleMonth.month + 1),
-                  icon: const Icon(Icons.chevron_right, size: 20),
-                ),
-              ],
-              IconButton(
-                visualDensity: VisualDensity.compact,
-                tooltip: _isExpanded ? 'Show week' : 'Show month',
-                onPressed: () => setState(() => _isExpanded = !_isExpanded),
-                icon: Icon(
-                  _isExpanded
-                      ? Icons.keyboard_arrow_up
-                      : Icons.keyboard_arrow_down,
-                  size: 20,
-                  color: theme.colorScheme.primary,
-                ),
-              ),
-            ],
+    const totalCells = 35;
+
+    return SectionCard(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      title: monthLabel(visibleMonth),
+      action: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          IconButton(
+            visualDensity: VisualDensity.compact,
+            tooltip: 'Previous month',
+            onPressed: () =>
+                ref.read(visibleCalendarMonthProvider.notifier).state =
+                    DateTime(visibleMonth.year, visibleMonth.month - 1),
+            icon: const Icon(Icons.chevron_left, size: 20),
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
+          IconButton(
+            visualDensity: VisualDensity.compact,
+            tooltip: 'Next month',
+            onPressed: () =>
+                ref.read(visibleCalendarMonthProvider.notifier).state =
+                    DateTime(visibleMonth.year, visibleMonth.month + 1),
+            icon: const Icon(Icons.chevron_right, size: 20),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
             children: [
-              Row(
-                children: [
-                  for (final label in ['M', 'T', 'W', 'T', 'F', 'S', 'S'])
-                    Expanded(
-                      child: Center(
-                        child: Text(
-                          label,
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            fontWeight: FontWeight.w700,
-                            fontSize: 10,
-                            color: theme.colorScheme.onSurface.withValues(
-                              alpha: 0.45,
-                            ),
-                          ),
+              for (final label in ['M', 'T', 'W', 'T', 'F', 'S', 'S'])
+                Expanded(
+                  child: Center(
+                    child: Text(
+                      label,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 10,
+                        color: theme.colorScheme.onSurface.withValues(
+                          alpha: 0.45,
                         ),
                       ),
                     ),
-                ],
-              ),
-              const SizedBox(height: 6),
-              if (_isExpanded)
-                Flexible(
-                  child: GridView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 7,
-                          mainAxisSpacing: 4,
-                          crossAxisSpacing: 4,
-                          childAspectRatio: 1.5,
-                        ),
-                    itemCount: totalCells,
-                    itemBuilder: (context, index) {
-                      final dayNumber = index - firstWeekday + 2;
-                      if (dayNumber < 1 || dayNumber > daysInMonth) {
-                        return const SizedBox.shrink();
-                      }
-                      final date = DateTime(
-                        visibleMonth.year,
-                        visibleMonth.month,
-                        dayNumber,
-                      );
-                      final isSelected = isSameDate(date, selectedDay);
-                      final hasEvent =
-                          widget.events.valueOrNull?.any(
-                            (e) => isSameDate(e.date, date),
-                          ) ??
-                          false;
-
-                      return _CalendarDay(
-                        day: dayNumber,
-                        selected: isSelected,
-                        hasEvent: hasEvent,
-                        onTap: () {
-                          ref.read(selectedCalendarDayProvider.notifier).state =
-                              date;
-                        },
-                      );
-                    },
                   ),
-                )
-              else
-                Row(
-                  children: [
-                    for (final date in weekDays)
-                      Expanded(
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 2),
-                          child: AspectRatio(
-                            aspectRatio: 1.0,
-                            child: _CalendarDay(
-                              day: date.day,
-                              selected: isSameDate(date, selectedDay),
-                              hasEvent:
-                                  widget.events.valueOrNull?.any(
-                                    (e) => isSameDate(e.date, date),
-                                  ) ??
-                                  false,
-                              onTap: () {
-                                ref
-                                        .read(
-                                          selectedCalendarDayProvider.notifier,
-                                        )
-                                        .state =
-                                    date;
-                                if (date.month != visibleMonth.month) {
-                                  ref
-                                      .read(
-                                        visibleCalendarMonthProvider.notifier,
-                                      )
-                                      .state = DateTime(
-                                    date.year,
-                                    date.month,
-                                  );
-                                }
-                              },
-                            ),
-                          ),
-                        ),
-                      ),
-                  ],
                 ),
             ],
           ),
-        ),
+          const SizedBox(height: 12),
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 7,
+              mainAxisSpacing: 6,
+              crossAxisSpacing: 6,
+              childAspectRatio: 1.0,
+            ),
+            itemCount: totalCells,
+            itemBuilder: (context, index) {
+              final dayNumber = index - firstWeekday + 2;
+              if (dayNumber < 1 || dayNumber > daysInMonth) {
+                return const SizedBox.shrink();
+              }
+              final date = DateTime(
+                visibleMonth.year,
+                visibleMonth.month,
+                dayNumber,
+              );
+              final isSelected = isSameDate(date, selectedDay);
+              final hasEvent =
+                  events.valueOrNull?.any((e) => isSameDate(e.date, date)) ??
+                  false;
+
+              return Center(
+                child: _CalendarDay(
+                  date: date,
+                  day: dayNumber,
+                  selected: isSelected,
+                  hasEvent: hasEvent,
+                  onTap: () {
+                    ref.read(selectedCalendarDayProvider.notifier).state = date;
+                  },
+                ),
+              );
+            },
+          ),
+        ],
       ),
     );
   }
 }
 
-class _CalendarDay extends StatelessWidget {
+class _CalendarDay extends StatefulWidget {
   const _CalendarDay({
+    required this.date,
     required this.day,
     required this.selected,
     required this.hasEvent,
     required this.onTap,
   });
 
+  final DateTime date;
   final int day;
   final bool selected;
   final bool hasEvent;
   final VoidCallback onTap;
 
   @override
+  State<_CalendarDay> createState() => _CalendarDayState();
+}
+
+class _CalendarDayState extends State<_CalendarDay> {
+  bool _isHovered = false;
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final dark = theme.brightness == Brightness.dark;
+    final isToday = isSameDate(widget.date, DateTime.now());
 
-    final selectedBackgroundColor = theme.colorScheme.primary.withValues(
-      alpha: 0.38,
+    final goldColor = theme.colorScheme.primary;
+
+    Widget cellChild = Center(
+      child: Text(
+        '${widget.day}',
+        style: TextStyle(
+          fontWeight: widget.selected || isToday
+              ? FontWeight.w700
+              : FontWeight.w500,
+          fontSize: 14,
+          color: widget.selected
+              ? theme.colorScheme.onPrimary
+              : isToday
+              ? theme.colorScheme.onSurface
+              : theme.colorScheme.onSurface.withValues(
+                  alpha: _isHovered ? 0.9 : 0.3,
+                ),
+        ),
+      ),
     );
-    final selectedBorderColor = theme.colorScheme.primary.withValues(
-      alpha: 0.72,
-    );
 
-    final cardGradient = selected
-        ? LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              selectedBackgroundColor,
-              theme.colorScheme.primary.withValues(alpha: 0.12),
-            ],
-          )
-        : LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: dark
-                ? [
-                    Colors.white.withValues(alpha: 0.05),
-                    Colors.white.withValues(alpha: 0.01),
-                  ]
-                : [
-                    Colors.white.withValues(alpha: 0.12),
-                    Colors.white.withValues(alpha: 0.04),
-                  ],
-          );
-
-    final borderGradient = selected
-        ? LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              selectedBorderColor,
-              theme.colorScheme.primary.withValues(alpha: 0.28),
-            ],
-          )
-        : LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Colors.white.withValues(alpha: 0.15),
-              Colors.white.withValues(alpha: 0.04),
-            ],
-          );
-
-    final shadowColor = selected
-        ? theme.colorScheme.primary.withValues(alpha: 0.15)
-        : Colors.transparent;
-
-    return InkWell(
-      borderRadius: BorderRadius.circular(12),
-      onTap: onTap,
-      child: LifePilotGlassCard(
-        radius: 12,
-        padding: EdgeInsets.zero,
-        cardGradient: cardGradient,
-        borderGradient: borderGradient,
-        shadowColor: shadowColor,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              '$day',
-              style: TextStyle(
-                fontWeight: FontWeight.w600,
-                fontSize: 12,
-                color: selected
-                    ? theme.colorScheme.primary
-                    : theme.colorScheme.onSurface,
-              ),
-            ),
-            const SizedBox(height: 2),
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 180),
-              width: hasEvent ? 4 : 0,
+    if (widget.hasEvent) {
+      cellChild = Stack(
+        alignment: Alignment.center,
+        children: [
+          cellChild,
+          Positioned(
+            bottom: 4,
+            child: Container(
+              width: 4,
               height: 4,
               decoration: BoxDecoration(
-                color: selected
-                    ? theme.colorScheme.primary
-                    : theme.colorScheme.tertiary,
+                color: widget.selected
+                    ? theme.colorScheme.onPrimary
+                    : theme.colorScheme.primary,
                 shape: BoxShape.circle,
               ),
             ),
+          ),
+        ],
+      );
+    }
+
+    BoxDecoration decoration;
+    if (widget.selected) {
+      decoration = BoxDecoration(
+        borderRadius: BorderRadius.circular(22),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            goldColor.withValues(alpha: 0.85),
+            goldColor.withValues(alpha: 0.55),
           ],
+        ),
+        border: Border.all(color: goldColor.withValues(alpha: 0.9), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: goldColor.withValues(alpha: 0.4),
+            blurRadius: 10,
+            spreadRadius: 1,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      );
+    } else if (isToday) {
+      decoration = BoxDecoration(
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(
+          color: dark
+              ? const Color(0xFFE5DED2).withValues(alpha: 0.7)
+              : const Color(0xFF8A847C).withValues(alpha: 0.6),
+          width: 1.5,
+        ),
+        color: Colors.transparent,
+      );
+    } else {
+      decoration = const BoxDecoration(color: Colors.transparent);
+    }
+
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(22),
+        onTap: widget.onTap,
+        child: Container(
+          width: 44,
+          height: 44,
+          decoration: decoration,
+          child: cellChild,
         ),
       ),
     );
