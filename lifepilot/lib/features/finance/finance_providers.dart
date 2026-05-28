@@ -1,5 +1,8 @@
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/services/notification_provider.dart';
+import '../../core/services/notification_service.dart';
 import '../../core/utils/date_helpers.dart';
 import '../../data/database/app_database.dart';
 import '../../data/database/database_provider.dart';
@@ -88,3 +91,143 @@ FinanceSummary buildFinanceSummary(List<FinanceEntry> entries) {
     byCategory: byCategory,
   );
 }
+
+class CategoryBudgetStatus {
+  CategoryBudgetStatus({
+    required this.category,
+    required this.spent,
+    required this.budget,
+  });
+
+  final Category category;
+  final double spent;
+  final double budget;
+
+  double get ratio => budget > 0 ? spent / budget : 0.0;
+  bool get hasBudget => budget > 0;
+  bool get isNearLimit => hasBudget && ratio >= 0.8 && ratio < 1.0;
+  bool get isOverLimit => hasBudget && ratio >= 1.0;
+}
+
+final categoriesStreamProvider = StreamProvider<List<Category>>((ref) {
+  final database = ref.watch(appDatabaseProvider);
+  return database.watchCategories();
+});
+
+final categoryBudgetStatusProvider = Provider<AsyncValue<List<CategoryBudgetStatus>>>((ref) {
+  final categoriesAsync = ref.watch(categoriesStreamProvider);
+  final selectedMonth = ref.watch(selectedFinanceMonthProvider);
+  final financeEntriesAsync = ref.watch(financeEntriesProvider);
+
+  return categoriesAsync.when(
+    loading: () => const AsyncValue.loading(),
+    error: (err, stack) => AsyncValue.error(err, stack),
+    data: (categories) {
+      return financeEntriesAsync.when(
+        loading: () => const AsyncValue.loading(),
+        error: (err, stack) => AsyncValue.error(err, stack),
+        data: (entries) {
+          final monthlyExpenses = <String, double>{};
+          for (final entry in entries) {
+            final inMonth =
+                entry.date.year == selectedMonth.year &&
+                entry.date.month == selectedMonth.month;
+            if (inMonth && entry.type == 'expense') {
+              monthlyExpenses.update(
+                entry.category,
+                (val) => val + entry.amount,
+                ifAbsent: () => entry.amount,
+              );
+            }
+          }
+
+          final statusList = categories.map((cat) {
+            final spent = monthlyExpenses[cat.name] ?? 0.0;
+            final budget = cat.monthlyBudget ?? 0.0;
+            return CategoryBudgetStatus(
+              category: cat,
+              spent: spent,
+              budget: budget,
+            );
+          }).toList();
+
+          return AsyncValue.data(statusList);
+        },
+      );
+    },
+  );
+});
+
+final saveFinanceTransactionProvider = Provider((ref) {
+  final db = ref.watch(appDatabaseProvider);
+  final notificationService = ref.watch(notificationServiceProvider);
+
+  return (FinanceEntriesCompanion transactionCompanion) async {
+    final entryType = transactionCompanion.type.value;
+    final entryCategory = transactionCompanion.category.value;
+    final entryAmount = transactionCompanion.amount.value;
+    final entryDate = transactionCompanion.date.value;
+
+    if (entryType == 'expense') {
+      final categoriesList = await db.select(db.categories).get();
+      final categoryMatch = categoriesList.firstWhere(
+        (c) => c.name == entryCategory,
+        orElse: () => Category(
+          id: 0,
+          name: entryCategory,
+          type: 'finance',
+          colorValue: 0,
+          iconName: '',
+          monthlyBudget: null,
+        ),
+      );
+
+      final budget = categoryMatch.monthlyBudget ?? 0.0;
+      if (budget > 0) {
+        final allEntries = await db.select(db.financeEntries).get();
+        final currentMonth = startOfMonth(entryDate);
+
+        var spentBefore = 0.0;
+        final existingId = transactionCompanion.id.present ? transactionCompanion.id.value : null;
+
+        for (final entry in allEntries) {
+          final inMonth =
+              entry.date.year == currentMonth.year &&
+              entry.date.month == currentMonth.month;
+          if (inMonth && entry.type == 'expense' && entry.category == entryCategory) {
+            if (existingId != null && entry.id == existingId) {
+              continue;
+            }
+            spentBefore += entry.amount;
+          }
+        }
+
+        final spentAfter = spentBefore + entryAmount;
+        final newId = await db.saveFinanceEntry(transactionCompanion);
+
+        final beforeRatio = spentBefore / budget;
+        final afterRatio = spentAfter / budget;
+
+        if (beforeRatio < 0.8 && afterRatio >= 0.8 && afterRatio < 1.0) {
+          await notificationService.schedule(
+            id: 300000 + (existingId ?? newId),
+            title: 'Budget Alert (80%+)',
+            body: 'You have spent ${spentAfter.toStringAsFixed(2)} of your ${budget.toStringAsFixed(2)} budget for $entryCategory.',
+            when: DateTime.now().add(const Duration(seconds: 1)),
+          );
+        } else if (beforeRatio < 1.0 && afterRatio >= 1.0) {
+          await notificationService.schedule(
+            id: 400000 + (existingId ?? newId),
+            title: 'Budget Exceeded (100%+)',
+            body: 'Alert! You spent ${spentAfter.toStringAsFixed(2)} exceeding your ${budget.toStringAsFixed(2)} budget for $entryCategory!',
+            when: DateTime.now().add(const Duration(seconds: 1)),
+          );
+        }
+
+        return newId;
+      }
+    }
+
+    return db.saveFinanceEntry(transactionCompanion);
+  };
+});

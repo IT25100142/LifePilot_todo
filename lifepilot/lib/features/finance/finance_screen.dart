@@ -39,6 +39,11 @@ class FinanceScreen extends ConsumerWidget {
         title: const Text('Finance'),
         actions: [
           IconButton(
+            tooltip: 'Manage Budgets',
+            onPressed: () => showBudgetSettingsForm(context, ref),
+            icon: const Icon(Icons.account_balance_wallet_outlined),
+          ),
+          IconButton(
             tooltip: 'Add transaction',
             onPressed: () => showTransactionForm(context, ref),
             icon: const Icon(Icons.add_card),
@@ -87,6 +92,8 @@ class FinanceScreen extends ConsumerWidget {
               );
             },
           ),
+          const SizedBox(height: 16),
+          _CategoryBudgetStatusSection(currency: currency),
           const SizedBox(height: 16),
           _TransactionHistory(entries: entries, currency: currency),
         ],
@@ -596,10 +603,9 @@ class _TransactionFormState extends ConsumerState<_TransactionForm> {
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
-    final database = ref.read(appDatabaseProvider);
     final now = DateTime.now();
     final existing = widget.entry;
-    await database.saveFinanceEntry(
+    await ref.read(saveFinanceTransactionProvider)(
       FinanceEntriesCompanion.insert(
         id: existing == null ? const Value.absent() : Value(existing.id),
         title: _title.text.trim(),
@@ -613,5 +619,298 @@ class _TransactionFormState extends ConsumerState<_TransactionForm> {
       ),
     );
     if (mounted) Navigator.pop(context);
+  }
+}
+
+class _CategoryBudgetStatusSection extends ConsumerWidget {
+  const _CategoryBudgetStatusSection({required this.currency});
+
+  final String currency;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final statusListAsync = ref.watch(categoryBudgetStatusProvider);
+    final theme = Theme.of(context);
+
+    return statusListAsync.when(
+      loading: () => const SizedBox(),
+      error: (_, __) => const SizedBox(),
+      data: (items) {
+        final activeBudgets = items.where((item) => item.hasBudget).toList();
+        if (activeBudgets.isEmpty) {
+          return const SizedBox();
+        }
+
+        return SectionCard(
+          title: 'Category budgets',
+          subtitle: 'Monthly spending status',
+          child: Column(
+            children: [
+              for (final item in activeBudgets)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              CircleAvatar(
+                                backgroundColor: Color(item.category.colorValue).withOpacity(0.2),
+                                radius: 12,
+                                child: Icon(
+                                  Icons.circle,
+                                  color: Color(item.category.colorValue),
+                                  size: 10,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                item.category.name,
+                                style: const TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                            ],
+                          ),
+                          Text(
+                            '${money(item.spent, currency)} / ${money(item.budget, currency)}',
+                            style: TextStyle(
+                              color: item.isOverLimit
+                                  ? theme.colorScheme.error
+                                  : item.isNearLimit
+                                      ? Colors.amber[800]
+                                      : theme.colorScheme.onSurfaceVariant,
+                              fontWeight: item.isNearLimit || item.isOverLimit
+                                  ? FontWeight.bold
+                                  : null,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(4),
+                        child: LinearProgressIndicator(
+                          value: item.ratio.clamp(0.0, 1.0),
+                          minHeight: 8,
+                          backgroundColor: theme.colorScheme.surfaceContainerHighest.withOpacity(0.38),
+                          color: item.isOverLimit
+                              ? theme.colorScheme.error
+                              : item.isNearLimit
+                                  ? Colors.amber
+                                  : Color(item.category.colorValue),
+                        ),
+                      ),
+                      if (item.isOverLimit)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Text(
+                            'Exceeded budget limit by ${money(item.spent - item.budget, currency)}!',
+                            style: TextStyle(
+                              color: theme.colorScheme.error,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        )
+                      else if (item.isNearLimit)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Text(
+                            'Nearing limit! ${(item.ratio * 100).toStringAsFixed(0)}% budget depleted.',
+                            style: TextStyle(
+                              color: Colors.amber[800],
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+Future<void> showBudgetSettingsForm(BuildContext context, WidgetRef ref) {
+  return showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    useSafeArea: true,
+    backgroundColor: Colors.transparent,
+    builder: (context) => GlassPanel(
+      radius: 32,
+      padding: EdgeInsets.zero,
+      child: const _BudgetSettingsForm(),
+    ),
+  );
+}
+
+class _BudgetSettingsForm extends ConsumerStatefulWidget {
+  const _BudgetSettingsForm();
+
+  @override
+  ConsumerState<_BudgetSettingsForm> createState() => _BudgetSettingsFormState();
+}
+
+class _BudgetSettingsFormState extends ConsumerState<_BudgetSettingsForm> {
+  final _formKey = GlobalKey<FormState>();
+  final _controllers = <int, TextEditingController>{};
+
+  @override
+  void dispose() {
+    for (final controller in _controllers.values) {
+      controller.dispose();
+    }
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final categoriesAsync = ref.watch(categoriesStreamProvider);
+
+    return Padding(
+      padding: EdgeInsets.only(
+        left: 16,
+        right: 16,
+        top: 16,
+        bottom: MediaQuery.viewInsetsOf(context).bottom + 16,
+      ),
+      child: Form(
+        key: _formKey,
+        child: ListView(
+          shrinkWrap: true,
+          children: [
+            Text(
+              'Manage Budgets',
+              style: Theme.of(context).textTheme.headlineSmall,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Set monthly spending limits per category.',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+            ),
+            const SizedBox(height: 16),
+            categoriesAsync.when(
+              loading: () => const LoadingState(),
+              error: (err, _) => ErrorState(error: err),
+              data: (items) {
+                final financeCats = items.where((c) => c.type == 'finance' || c.type == 'both').toList();
+                if (financeCats.isEmpty) {
+                  return const Text('No finance categories found.');
+                }
+                return ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: financeCats.length,
+                  itemBuilder: (context, index) {
+                    final cat = financeCats[index];
+                    final controller = _controllers.putIfAbsent(
+                      cat.id,
+                      () => TextEditingController(
+                        text: cat.monthlyBudget == null || cat.monthlyBudget == 0.0
+                            ? ''
+                            : cat.monthlyBudget.toString(),
+                      ),
+                    );
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Row(
+                        children: [
+                          CircleAvatar(
+                            backgroundColor: Color(cat.colorValue).withOpacity(0.2),
+                            radius: 18,
+                            child: Icon(
+                              Icons.category,
+                              color: Color(cat.colorValue),
+                              size: 18,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            flex: 2,
+                            child: Text(
+                              cat.name,
+                              style: const TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            flex: 3,
+                            child: TextFormField(
+                              controller: controller,
+                              decoration: const InputDecoration(
+                                hintText: 'No budget limit',
+                                labelText: 'Monthly limit',
+                                isDense: true,
+                              ),
+                              keyboardType: const TextInputType.numberWithOptions(
+                                decimal: true,
+                              ),
+                              validator: (value) {
+                                if (value != null && value.isNotEmpty) {
+                                  final val = double.tryParse(value);
+                                  if (val == null || val < 0) {
+                                    return 'Invalid';
+                                  }
+                                }
+                                return null;
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+            const SizedBox(height: 20),
+            FilledButton.icon(
+              onPressed: () async {
+                if (!_formKey.currentState!.validate()) return;
+                final db = ref.read(appDatabaseProvider);
+                final categoriesAsync = ref.read(categoriesStreamProvider);
+
+                categoriesAsync.whenData((items) async {
+                  for (final cat in items) {
+                    final controller = _controllers[cat.id];
+                    if (controller == null) continue;
+                    final budgetText = controller.text.trim();
+                    final double? budgetVal = budgetText.isEmpty ? null : double.parse(budgetText);
+
+                    await db.saveCategory(
+                      CategoriesCompanion(
+                        id: Value(cat.id),
+                        name: Value(cat.name),
+                        type: Value(cat.type),
+                        colorValue: Value(cat.colorValue),
+                        iconName: Value(cat.iconName),
+                        monthlyBudget: Value(budgetVal),
+                      ),
+                    );
+                  }
+                  if (mounted) {
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Budgets updated successfully')),
+                    );
+                  }
+                });
+              },
+              icon: const Icon(Icons.check),
+              label: const Text('Save budgets'),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

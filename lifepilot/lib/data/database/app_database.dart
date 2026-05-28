@@ -63,6 +63,7 @@ class Categories extends Table {
   IntColumn get colorValue =>
       integer().withDefault(const Constant(0xFF286C63))();
   TextColumn get iconName => text().withDefault(const Constant('label'))();
+  RealColumn get monthlyBudget => real().nullable()();
 }
 
 class AppSettingsTable extends Table {
@@ -94,7 +95,7 @@ class AppDatabase extends _$AppDatabase {
       );
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -105,6 +106,9 @@ class AppDatabase extends _$AppDatabase {
           if (from < 2) {
             await m.addColumn(tasks, tasks.recurrencePattern);
             await m.addColumn(tasks, tasks.recurrenceParentId);
+          }
+          if (from < 3) {
+            await m.addColumn(categories, categories.monthlyBudget);
           }
         },
       );
@@ -195,6 +199,10 @@ class AppDatabase extends _$AppDatabase {
     return (select(
       categories,
     )..orderBy([(c) => OrderingTerm.asc(c.name)])).watch();
+  }
+
+  Future<int> saveCategory(CategoriesCompanion entry) {
+    return into(categories).insertOnConflictUpdate(entry);
   }
 
   Future<void> clearAllData() async {

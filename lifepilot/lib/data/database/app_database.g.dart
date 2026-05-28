@@ -1872,8 +1872,26 @@ class $CategoriesTable extends Categories
     requiredDuringInsert: false,
     defaultValue: const Constant('label'),
   );
+  static const VerificationMeta _monthlyBudgetMeta = const VerificationMeta(
+    'monthlyBudget',
+  );
   @override
-  List<GeneratedColumn> get $columns => [id, name, type, colorValue, iconName];
+  late final GeneratedColumn<double> monthlyBudget = GeneratedColumn<double>(
+    'monthly_budget',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    name,
+    type,
+    colorValue,
+    iconName,
+    monthlyBudget,
+  ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -1915,6 +1933,15 @@ class $CategoriesTable extends Categories
         iconName.isAcceptableOrUnknown(data['icon_name']!, _iconNameMeta),
       );
     }
+    if (data.containsKey('monthly_budget')) {
+      context.handle(
+        _monthlyBudgetMeta,
+        monthlyBudget.isAcceptableOrUnknown(
+          data['monthly_budget']!,
+          _monthlyBudgetMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -1944,6 +1971,10 @@ class $CategoriesTable extends Categories
         DriftSqlType.string,
         data['${effectivePrefix}icon_name'],
       )!,
+      monthlyBudget: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}monthly_budget'],
+      ),
     );
   }
 
@@ -1959,12 +1990,14 @@ class Category extends DataClass implements Insertable<Category> {
   final String type;
   final int colorValue;
   final String iconName;
+  final double? monthlyBudget;
   const Category({
     required this.id,
     required this.name,
     required this.type,
     required this.colorValue,
     required this.iconName,
+    this.monthlyBudget,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -1974,6 +2007,9 @@ class Category extends DataClass implements Insertable<Category> {
     map['type'] = Variable<String>(type);
     map['color_value'] = Variable<int>(colorValue);
     map['icon_name'] = Variable<String>(iconName);
+    if (!nullToAbsent || monthlyBudget != null) {
+      map['monthly_budget'] = Variable<double>(monthlyBudget);
+    }
     return map;
   }
 
@@ -1984,6 +2020,9 @@ class Category extends DataClass implements Insertable<Category> {
       type: Value(type),
       colorValue: Value(colorValue),
       iconName: Value(iconName),
+      monthlyBudget: monthlyBudget == null && nullToAbsent
+          ? const Value.absent()
+          : Value(monthlyBudget),
     );
   }
 
@@ -1998,6 +2037,7 @@ class Category extends DataClass implements Insertable<Category> {
       type: serializer.fromJson<String>(json['type']),
       colorValue: serializer.fromJson<int>(json['colorValue']),
       iconName: serializer.fromJson<String>(json['iconName']),
+      monthlyBudget: serializer.fromJson<double?>(json['monthlyBudget']),
     );
   }
   @override
@@ -2009,6 +2049,7 @@ class Category extends DataClass implements Insertable<Category> {
       'type': serializer.toJson<String>(type),
       'colorValue': serializer.toJson<int>(colorValue),
       'iconName': serializer.toJson<String>(iconName),
+      'monthlyBudget': serializer.toJson<double?>(monthlyBudget),
     };
   }
 
@@ -2018,12 +2059,16 @@ class Category extends DataClass implements Insertable<Category> {
     String? type,
     int? colorValue,
     String? iconName,
+    Value<double?> monthlyBudget = const Value.absent(),
   }) => Category(
     id: id ?? this.id,
     name: name ?? this.name,
     type: type ?? this.type,
     colorValue: colorValue ?? this.colorValue,
     iconName: iconName ?? this.iconName,
+    monthlyBudget: monthlyBudget.present
+        ? monthlyBudget.value
+        : this.monthlyBudget,
   );
   Category copyWithCompanion(CategoriesCompanion data) {
     return Category(
@@ -2034,6 +2079,9 @@ class Category extends DataClass implements Insertable<Category> {
           ? data.colorValue.value
           : this.colorValue,
       iconName: data.iconName.present ? data.iconName.value : this.iconName,
+      monthlyBudget: data.monthlyBudget.present
+          ? data.monthlyBudget.value
+          : this.monthlyBudget,
     );
   }
 
@@ -2044,13 +2092,15 @@ class Category extends DataClass implements Insertable<Category> {
           ..write('name: $name, ')
           ..write('type: $type, ')
           ..write('colorValue: $colorValue, ')
-          ..write('iconName: $iconName')
+          ..write('iconName: $iconName, ')
+          ..write('monthlyBudget: $monthlyBudget')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, name, type, colorValue, iconName);
+  int get hashCode =>
+      Object.hash(id, name, type, colorValue, iconName, monthlyBudget);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -2059,7 +2109,8 @@ class Category extends DataClass implements Insertable<Category> {
           other.name == this.name &&
           other.type == this.type &&
           other.colorValue == this.colorValue &&
-          other.iconName == this.iconName);
+          other.iconName == this.iconName &&
+          other.monthlyBudget == this.monthlyBudget);
 }
 
 class CategoriesCompanion extends UpdateCompanion<Category> {
@@ -2068,12 +2119,14 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
   final Value<String> type;
   final Value<int> colorValue;
   final Value<String> iconName;
+  final Value<double?> monthlyBudget;
   const CategoriesCompanion({
     this.id = const Value.absent(),
     this.name = const Value.absent(),
     this.type = const Value.absent(),
     this.colorValue = const Value.absent(),
     this.iconName = const Value.absent(),
+    this.monthlyBudget = const Value.absent(),
   });
   CategoriesCompanion.insert({
     this.id = const Value.absent(),
@@ -2081,6 +2134,7 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
     this.type = const Value.absent(),
     this.colorValue = const Value.absent(),
     this.iconName = const Value.absent(),
+    this.monthlyBudget = const Value.absent(),
   }) : name = Value(name);
   static Insertable<Category> custom({
     Expression<int>? id,
@@ -2088,6 +2142,7 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
     Expression<String>? type,
     Expression<int>? colorValue,
     Expression<String>? iconName,
+    Expression<double>? monthlyBudget,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -2095,6 +2150,7 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
       if (type != null) 'type': type,
       if (colorValue != null) 'color_value': colorValue,
       if (iconName != null) 'icon_name': iconName,
+      if (monthlyBudget != null) 'monthly_budget': monthlyBudget,
     });
   }
 
@@ -2104,6 +2160,7 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
     Value<String>? type,
     Value<int>? colorValue,
     Value<String>? iconName,
+    Value<double?>? monthlyBudget,
   }) {
     return CategoriesCompanion(
       id: id ?? this.id,
@@ -2111,6 +2168,7 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
       type: type ?? this.type,
       colorValue: colorValue ?? this.colorValue,
       iconName: iconName ?? this.iconName,
+      monthlyBudget: monthlyBudget ?? this.monthlyBudget,
     );
   }
 
@@ -2132,6 +2190,9 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
     if (iconName.present) {
       map['icon_name'] = Variable<String>(iconName.value);
     }
+    if (monthlyBudget.present) {
+      map['monthly_budget'] = Variable<double>(monthlyBudget.value);
+    }
     return map;
   }
 
@@ -2142,7 +2203,8 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
           ..write('name: $name, ')
           ..write('type: $type, ')
           ..write('colorValue: $colorValue, ')
-          ..write('iconName: $iconName')
+          ..write('iconName: $iconName, ')
+          ..write('monthlyBudget: $monthlyBudget')
           ..write(')'))
         .toString();
   }
@@ -3357,6 +3419,7 @@ typedef $$CategoriesTableCreateCompanionBuilder =
       Value<String> type,
       Value<int> colorValue,
       Value<String> iconName,
+      Value<double?> monthlyBudget,
     });
 typedef $$CategoriesTableUpdateCompanionBuilder =
     CategoriesCompanion Function({
@@ -3365,6 +3428,7 @@ typedef $$CategoriesTableUpdateCompanionBuilder =
       Value<String> type,
       Value<int> colorValue,
       Value<String> iconName,
+      Value<double?> monthlyBudget,
     });
 
 class $$CategoriesTableFilterComposer
@@ -3398,6 +3462,11 @@ class $$CategoriesTableFilterComposer
 
   ColumnFilters<String> get iconName => $composableBuilder(
     column: $table.iconName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get monthlyBudget => $composableBuilder(
+    column: $table.monthlyBudget,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -3435,6 +3504,11 @@ class $$CategoriesTableOrderingComposer
     column: $table.iconName,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<double> get monthlyBudget => $composableBuilder(
+    column: $table.monthlyBudget,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$CategoriesTableAnnotationComposer
@@ -3462,6 +3536,11 @@ class $$CategoriesTableAnnotationComposer
 
   GeneratedColumn<String> get iconName =>
       $composableBuilder(column: $table.iconName, builder: (column) => column);
+
+  GeneratedColumn<double> get monthlyBudget => $composableBuilder(
+    column: $table.monthlyBudget,
+    builder: (column) => column,
+  );
 }
 
 class $$CategoriesTableTableManager
@@ -3497,12 +3576,14 @@ class $$CategoriesTableTableManager
                 Value<String> type = const Value.absent(),
                 Value<int> colorValue = const Value.absent(),
                 Value<String> iconName = const Value.absent(),
+                Value<double?> monthlyBudget = const Value.absent(),
               }) => CategoriesCompanion(
                 id: id,
                 name: name,
                 type: type,
                 colorValue: colorValue,
                 iconName: iconName,
+                monthlyBudget: monthlyBudget,
               ),
           createCompanionCallback:
               ({
@@ -3511,12 +3592,14 @@ class $$CategoriesTableTableManager
                 Value<String> type = const Value.absent(),
                 Value<int> colorValue = const Value.absent(),
                 Value<String> iconName = const Value.absent(),
+                Value<double?> monthlyBudget = const Value.absent(),
               }) => CategoriesCompanion.insert(
                 id: id,
                 name: name,
                 type: type,
                 colorValue: colorValue,
                 iconName: iconName,
+                monthlyBudget: monthlyBudget,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))

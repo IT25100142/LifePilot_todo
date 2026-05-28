@@ -89,4 +89,40 @@ void main() {
     final marNext = calculateNextDueDate(leapFeb29, 'monthly');
     expect(marNext, DateTime(2024, 3, 29, 12, 0));
   });
+
+  test('budget warning and limit threshold transitions', () {
+    const budget = 1000.0;
+
+    bool checkWarning(double before, double amount) {
+      final beforeRatio = before / budget;
+      final afterRatio = (before + amount) / budget;
+      return beforeRatio < 0.8 && afterRatio >= 0.8 && afterRatio < 1.0;
+    }
+
+    bool checkExceeded(double before, double amount) {
+      final beforeRatio = before / budget;
+      final afterRatio = (before + amount) / budget;
+      return beforeRatio < 1.0 && afterRatio >= 1.0;
+    }
+
+    // 1. Initial 500, adding 250 -> 750 (75%). No alerts.
+    expect(checkWarning(500, 250), isFalse);
+    expect(checkExceeded(500, 250), isFalse);
+
+    // 2. Initial 750, adding 100 -> 850 (85%). Warning triggers.
+    expect(checkWarning(750, 100), isTrue);
+    expect(checkExceeded(750, 100), isFalse);
+
+    // 3. Initial 850, adding 50 -> 900 (90%). No new alerts.
+    expect(checkWarning(850, 50), isFalse);
+    expect(checkExceeded(850, 50), isFalse);
+
+    // 4. Initial 900, adding 150 -> 1050 (105%). Exceeded triggers.
+    expect(checkWarning(900, 150), isFalse);
+    expect(checkExceeded(900, 150), isTrue);
+
+    // 5. Initial 1050, adding 100 -> 1150 (115%). Already exceeded, no alert.
+    expect(checkWarning(1050, 100), isFalse);
+    expect(checkExceeded(1050, 100), isFalse);
+  });
 }
