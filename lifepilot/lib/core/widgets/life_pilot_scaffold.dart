@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../app/theme.dart';
 import 'glass.dart';
 
 class LifePilotScaffold extends StatelessWidget {
@@ -31,96 +32,102 @@ class LifePilotScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final width = MediaQuery.sizeOf(context).width;
-    final isCompact = width < 720;
-    final isExpanded = width >= 1100;
-
-    if (isCompact) {
-      return Scaffold(
-        extendBody: true,
-        backgroundColor: Colors.transparent,
-        body: LiquidBackground(
-          child: Stack(
-            children: [
-              Positioned.fill(
-                child: Padding(
-                  // Reserve space for the floating dock so content is not obscured
-                  padding: const EdgeInsets.only(bottom: 96),
-                  child: SafeArea(child: navigationShell),
-                ),
-              ),
-              Positioned(
-                left: 16,
-                right: 16,
-                bottom: 16,
-                child: SafeArea(
-                  child: Hero(
-                    tag: 'navigation-dock',
-                    child: GlassPanel(
-                      radius: 32,
-                      padding: const EdgeInsets.symmetric(
-                        vertical: 4,
-                        horizontal: 12,
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceAround,
-                        children: [
-                          for (int i = 0; i < _destinations.length; i++)
-                            Expanded(
-                              child: FloatingDockTab(
-                                icon: _destinations[i].icon,
-                                selectedIcon: _destinations[i].selectedIcon,
-                                label: _destinations[i].label,
-                                isSelected: navigationShell.currentIndex == i,
-                                onTap: () => _goBranch(i),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
+    // Constrain dock width on wider viewports for centered iPadOS/macOS feel
+    final dockMaxWidth = width >= 720 ? 520.0 : double.infinity;
 
     return Scaffold(
+      extendBody: true,
       backgroundColor: Colors.transparent,
       body: LiquidBackground(
-        child: SafeArea(
-          child: Row(
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(14),
-                child: GlassPanel(
-                  radius: 34,
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  child: NavigationRail(
-                    extended: isExpanded,
-                    selectedIndex: navigationShell.currentIndex,
-                    onDestinationSelected: _goBranch,
-                    leading: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      child: isExpanded
-                          ? const _BrandHeader()
-                          : const GlassIcon(icon: Icons.flight_takeoff_rounded),
+        child: Stack(
+          children: [
+            // ── Page Content with AnimatedSwitcher transitions ──
+            Positioned.fill(
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 96),
+                child: SafeArea(
+                  child: RepaintBoundary(
+                    child: AnimatedSwitcher(
+                      duration: LifePilotTheme.pageDuration,
+                      switchInCurve: const Cubic(0.25, 0.1, 0.25, 1.0),
+                      switchOutCurve: const Cubic(0.25, 0.1, 0.25, 1.0),
+                      transitionBuilder: (child, animation) {
+                        return FadeTransition(
+                          opacity: CurvedAnimation(
+                            parent: animation,
+                            curve: const Interval(
+                              0.0,
+                              1.0,
+                              curve: Curves.easeOutCubic,
+                            ),
+                          ),
+                          child: ScaleTransition(
+                            scale: Tween<double>(begin: 0.97, end: 1.0).animate(
+                              CurvedAnimation(
+                                parent: animation,
+                                curve: const Interval(
+                                  0.0,
+                                  1.0,
+                                  curve: Curves.easeOutCubic,
+                                ),
+                              ),
+                            ),
+                            child: child,
+                          ),
+                        );
+                      },
+                      child: RepaintBoundary(
+                        key: ValueKey<int>(navigationShell.currentIndex),
+                        child: navigationShell,
+                      ),
                     ),
-                    destinations: [
-                      for (final item in _destinations)
-                        NavigationRailDestination(
-                          icon: Icon(item.icon),
-                          selectedIcon: Icon(item.selectedIcon),
-                          label: Text(item.label),
-                        ),
-                    ],
                   ),
                 ),
               ),
-              Expanded(child: navigationShell),
-            ],
-          ),
+            ),
+
+            // ── Floating Glass Dock (universal across all viewports) ──
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 16,
+              child: SafeArea(
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(maxWidth: dockMaxWidth),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: RepaintBoundary(
+                        child: GlassPanel(
+                          radius: 32,
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 4,
+                            horizontal: 12,
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceAround,
+                            children: [
+                              for (int i = 0; i < _destinations.length; i++)
+                                Expanded(
+                                  child: FloatingDockTab(
+                                    icon: _destinations[i].icon,
+                                    selectedIcon: _destinations[i].selectedIcon,
+                                    label: _destinations[i].label,
+                                    isSelected:
+                                        navigationShell.currentIndex == i,
+                                    onTap: () => _goBranch(i),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -133,6 +140,10 @@ class LifePilotScaffold extends StatelessWidget {
     );
   }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FloatingDockTab — premium spring-elastic tactile tab with smooth indicators
+// ─────────────────────────────────────────────────────────────────────────────
 
 class FloatingDockTab extends StatefulWidget {
   const FloatingDockTab({
@@ -156,25 +167,29 @@ class FloatingDockTab extends StatefulWidget {
 
 class _FloatingDockTabState extends State<FloatingDockTab>
     with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
-  late final Animation<double> _scaleAnimation;
+  late final AnimationController _pressController;
+  late final Animation<double> _pressScale;
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
+    _pressController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 100),
+      duration: const Duration(milliseconds: 80),
+      reverseDuration: const Duration(milliseconds: 260),
     );
-    _scaleAnimation = Tween<double>(
-      begin: 1.0,
-      end: 0.90,
-    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
+    _pressScale = Tween<double>(begin: 1.0, end: 0.82).animate(
+      CurvedAnimation(
+        parent: _pressController,
+        curve: Curves.easeOut,
+        reverseCurve: const _SpringOutCurve(),
+      ),
+    );
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _pressController.dispose();
     super.dispose();
   }
 
@@ -182,51 +197,90 @@ class _FloatingDockTabState extends State<FloatingDockTab>
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final activeColor = theme.colorScheme.primary;
-    final inactiveColor = theme.colorScheme.onSurface.withValues(alpha: 0.54);
+    final inactiveColor = theme.colorScheme.onSurface.withValues(alpha: 0.48);
     final color = widget.isSelected ? activeColor : inactiveColor;
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
-      onTapDown: (_) => _controller.forward(),
+      onTapDown: (_) => _pressController.forward(),
       onTapUp: (_) {
-        _controller.reverse();
+        _pressController.reverse();
         widget.onTap();
       },
-      onTapCancel: () => _controller.reverse(),
+      onTapCancel: () => _pressController.reverse(),
       child: ScaleTransition(
-        scale: _scaleAnimation,
+        scale: _pressScale,
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 8),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: widget.isSelected
-                      ? activeColor.withValues(alpha: 0.12)
-                      : Colors.transparent,
-                ),
-                child: Icon(
-                  widget.isSelected ? widget.selectedIcon : widget.icon,
-                  color: color,
-                  size: 24,
-                ),
+              // ── Icon with smooth expanding glow indicator ──
+              Stack(
+                alignment: Alignment.center,
+                children: [
+                  // Expanding selection glow circle
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 320),
+                    curve: Curves.easeOutCubic,
+                    width: widget.isSelected ? 48 : 0,
+                    height: widget.isSelected ? 48 : 0,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: widget.isSelected
+                          ? activeColor.withValues(alpha: 0.14)
+                          : Colors.transparent,
+                    ),
+                  ),
+                  // Icon itself with smooth cross-fade
+                  AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 240),
+                    switchInCurve: Curves.easeOutCubic,
+                    switchOutCurve: Curves.easeInCubic,
+                    transitionBuilder: (child, animation) {
+                      return FadeTransition(
+                        opacity: animation,
+                        child: ScaleTransition(
+                          scale: Tween<double>(
+                            begin: 0.85,
+                            end: 1.0,
+                          ).animate(animation),
+                          child: child,
+                        ),
+                      );
+                    },
+                    child: Icon(
+                      widget.isSelected ? widget.selectedIcon : widget.icon,
+                      key: ValueKey<bool>(widget.isSelected),
+                      color: color,
+                      size: 24,
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 2),
-              Text(
-                widget.label,
+              // ── Label with animated color/weight ──
+              AnimatedDefaultTextStyle(
+                duration: const Duration(milliseconds: 240),
+                curve: Curves.easeOutCubic,
+                style:
+                    theme.textTheme.labelSmall?.copyWith(
+                      color: color,
+                      fontWeight: widget.isSelected
+                          ? FontWeight.w800
+                          : FontWeight.w600,
+                      fontSize: 10,
+                    ) ??
+                    TextStyle(
+                      color: color,
+                      fontSize: 10,
+                      fontWeight: widget.isSelected
+                          ? FontWeight.w800
+                          : FontWeight.w600,
+                    ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: color,
-                  fontWeight: widget.isSelected
-                      ? FontWeight.w800
-                      : FontWeight.w600,
-                  fontSize: 10,
-                ),
+                child: Text(widget.label),
               ),
             ],
           ),
@@ -236,30 +290,46 @@ class _FloatingDockTabState extends State<FloatingDockTab>
   }
 }
 
-class _BrandHeader extends StatelessWidget {
-  const _BrandHeader();
+// ─────────────────────────────────────────────────────────────────────────────
+// Custom spring-out curve for elastic snap-back on tap release
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _SpringOutCurve extends Curve {
+  const _SpringOutCurve();
 
   @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return SizedBox(
-      width: 190,
-      child: Row(
-        children: [
-          GlassIcon(
-            icon: Icons.flight_takeoff_rounded,
-            color: theme.colorScheme.primary,
-          ),
-          const SizedBox(width: 12),
-          Text(
-            'LifePilot',
-            style: theme.textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-        ],
-      ),
-    );
+  double transformInternal(double t) {
+    // Underdamped spring: slight overshoot past 1.0 then settle
+    const damping = 5.0;
+    const frequency = 3.2;
+    final decay = 1.0 - (1.0 * _exp(-damping * t));
+    final oscillation = _sin(frequency * t * 3.14159) * (1.0 - t);
+    return decay + oscillation * 0.08;
+  }
+
+  // Inline math to avoid importing dart:math for two functions
+  static double _exp(double x) {
+    // Fast approximation sufficient for animation curves
+    double result = 1.0;
+    double term = 1.0;
+    for (int i = 1; i <= 12; i++) {
+      term *= x / i;
+      result += term;
+    }
+    return result;
+  }
+
+  static double _sin(double x) {
+    // Normalize x to [-π, π] range
+    const pi = 3.14159265358979;
+    x = x % (2 * pi);
+    if (x > pi) x -= 2 * pi;
+    if (x < -pi) x += 2 * pi;
+    // Taylor series approximation
+    final x3 = x * x * x;
+    final x5 = x3 * x * x;
+    final x7 = x5 * x * x;
+    return x - x3 / 6 + x5 / 120 - x7 / 5040;
   }
 }
 
