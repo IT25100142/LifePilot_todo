@@ -125,4 +125,77 @@ void main() {
     expect(checkWarning(1050, 100), isFalse);
     expect(checkExceeded(1050, 100), isFalse);
   });
+
+  test('global search filtering logic matches text case-insensitively', () {
+    final task = Task(
+      id: 1,
+      title: 'Plan the Week',
+      description: 'Review tasks and budget priorities.',
+      dueDate: DateTime.now(),
+      reminderAt: null,
+      priority: 'high',
+      tags: 'Personal,Work',
+      isCompleted: false,
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+    );
+
+    final event = CalendarEvent(
+      id: 1,
+      title: 'Budget check-in',
+      description: 'Update monthly expense categories.',
+      date: DateTime.now(),
+      startTime: DateTime.now(),
+      endTime: DateTime.now(),
+      reminderAt: null,
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+    );
+
+    final tx = FinanceEntry(
+      id: 1,
+      title: 'Groceries store',
+      amount: 4500,
+      category: 'Food',
+      date: DateTime.now(),
+      note: 'Bought milk and vegetables',
+      type: 'expense',
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+    );
+
+    bool matchTask(Task t, String query) {
+      final q = query.trim().toLowerCase();
+      return t.title.toLowerCase().contains(q) ||
+          t.description.toLowerCase().contains(q) ||
+          t.tags.toLowerCase().contains(q);
+    }
+
+    bool matchEvent(CalendarEvent e, String query) {
+      final q = query.trim().toLowerCase();
+      return e.title.toLowerCase().contains(q) ||
+          e.description.toLowerCase().contains(q);
+    }
+
+    bool matchTransaction(FinanceEntry f, String query) {
+      final q = query.trim().toLowerCase();
+      return f.title.toLowerCase().contains(q) ||
+          f.category.toLowerCase().contains(q) ||
+          f.note.toLowerCase().contains(q);
+    }
+
+    // Test queries
+    expect(matchTask(task, 'WEEK'), isTrue);
+    expect(matchTask(task, 'personal'), isTrue);
+    expect(matchTask(task, 'finance'), isFalse);
+
+    expect(matchEvent(event, 'Check-In'), isTrue);
+    expect(matchEvent(event, 'expense'), isTrue);
+    expect(matchEvent(event, 'salary'), isFalse);
+
+    expect(matchTransaction(tx, 'groceries'), isTrue);
+    expect(matchTransaction(tx, 'MILK'), isTrue);
+    expect(matchTransaction(tx, 'Food'), isTrue);
+    expect(matchTransaction(tx, 'rent'), isFalse);
+  });
 }
