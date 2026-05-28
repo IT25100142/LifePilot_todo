@@ -32,6 +32,14 @@ class Tasks extends Table {
   IntColumn get recurrenceParentId => integer().nullable()();
 }
 
+class Subtasks extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get title => text().withLength(min: 1, max: 140)();
+  BoolColumn get isCompleted => boolean().withDefault(const Constant(false))();
+  IntColumn get parentId =>
+      integer().references(Tasks, #id, onDelete: KeyAction.cascade)();
+}
+
 class CalendarEvents extends Table {
   @override
   String get tableName => 'events';
@@ -101,6 +109,7 @@ class AppSettingsTable extends Table {
 @DriftDatabase(
   tables: [
     Tasks,
+    Subtasks,
     CalendarEvents,
     FinanceEntries,
     Categories,
@@ -164,7 +173,7 @@ class AppDatabase extends _$AppDatabase {
   }
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -200,6 +209,9 @@ class AppDatabase extends _$AppDatabase {
       }
       if (from < 5) {
         await m.addColumn(financeEntries, financeEntries.currency);
+      }
+      if (from < 6) {
+        await m.createTable(subtasks);
       }
     },
   );
@@ -258,6 +270,24 @@ class AppDatabase extends _$AppDatabase {
     return update(tasks).replace(
       task.copyWith(isCompleted: !task.isCompleted, updatedAt: DateTime.now()),
     );
+  }
+
+  Stream<List<Subtask>> watchSubtasksForTask(int taskId) {
+    return (select(subtasks)..where((s) => s.parentId.equals(taskId))).watch();
+  }
+
+  Future<int> saveSubtask(SubtasksCompanion entry) {
+    return into(subtasks).insertOnConflictUpdate(entry);
+  }
+
+  Future<void> deleteSubtask(int id) async {
+    await (delete(subtasks)..where((s) => s.id.equals(id))).go();
+  }
+
+  Future<void> toggleSubtask(Subtask subtask) {
+    return update(
+      subtasks,
+    ).replace(subtask.copyWith(isCompleted: !subtask.isCompleted));
   }
 
   Stream<List<CalendarEvent>> watchEvents() {
@@ -496,6 +526,7 @@ class AppDatabase extends _$AppDatabase {
   }
 
   Future<void> _clearAllDataInTransaction() async {
+    await delete(subtasks).go();
     await delete(tasks).go();
     await delete(calendarEvents).go();
     await delete(financeEntries).go();

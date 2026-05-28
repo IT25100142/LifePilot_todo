@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../app/router.dart';
 import '../../core/utils/date_helpers.dart';
 import '../../core/utils/formatters.dart';
 import '../../core/widgets/glass.dart';
@@ -11,10 +10,13 @@ import '../../core/widgets/section_card.dart';
 import '../../core/widgets/state_views.dart';
 import '../../data/database/app_database.dart';
 import '../calendar/calendar_providers.dart';
-import '../finance/finance_providers.dart';
 import '../settings/settings_providers.dart';
 import '../todo/todo_providers.dart';
 import 'search_provider.dart';
+
+// Import features for integration
+import '../finance/finance_screen.dart';
+import '../todo/todo_screen.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -22,213 +24,72 @@ class DashboardScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final currency = ref.watch(activeCurrencyCodeProvider);
-    final tasks = ref.watch(tasksProvider);
-    final events = ref.watch(eventsProvider);
-    final entries = ref.watch(financeEntriesProvider);
+    final query = ref.watch(searchQueryProvider).trim();
+    final isWide = MediaQuery.sizeOf(context).width >= 800;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: Stack(
         children: [
           const Positioned.fill(child: _AmbientBackdrop()),
-          CustomScrollView(
-            slivers: [
-              SliverAppBar.large(
-                backgroundColor: Colors.transparent,
-                elevation: 0,
-                scrolledUnderElevation: 0,
-                title: const Text('LifePilot'),
-                actions: [
-                  IconButton(
-                    tooltip: 'Settings',
-                    onPressed: () => context.go('/settings'),
-                    icon: const Icon(Icons.settings_outlined),
-                  ),
-                ],
-              ),
-              SliverPadding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-                sliver: SliverList(
-                  delegate: SliverChildListDelegate([
-                    const _SearchBar(),
-                    const SizedBox(height: 16),
-                    if (ref.watch(searchQueryProvider).trim().isEmpty) ...[
-                      AnimatedGlassItem(
-                        child: _HeroHeader(
-                          currency: currency,
-                          entries: entries,
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: CustomScrollView(
+              slivers: [
+                SliverAppBar(
+                  backgroundColor: Colors.transparent,
+                  elevation: 0,
+                  scrolledUnderElevation: 0,
+                  title: const Text('LifePilot'),
+                  actions: [
+                    IconButton(
+                      tooltip: 'Settings',
+                      onPressed: () => context.go('/settings'),
+                      icon: const Icon(Icons.settings_outlined),
+                    ),
+                  ],
+                ),
+                SliverPadding(
+                  padding: const EdgeInsets.only(bottom: 24),
+                  sliver: SliverList(
+                    delegate: SliverChildListDelegate([
+                      const _SearchBar(),
+                      const SizedBox(height: 24),
+                      if (query.isNotEmpty)
+                        _SearchResultsView(currency: currency)
+                      else if (isWide) ...[
+                        const _DashboardHeader(),
+                        const SizedBox(height: 24),
+                        const _DashboardWeekStrip(),
+                        const SizedBox(height: 24),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Left Column: Converted Analytics Window
+                            const Expanded(
+                              flex: 5,
+                              child: LifePilotFinanceAnalytics(),
+                            ),
+                            const SizedBox(width: 24),
+                            // Right Column: High-Priority Task Canvas
+                            const Expanded(
+                              flex: 6,
+                              child: _DashboardPriorityTasks(),
+                            ),
+                          ],
                         ),
-                      ),
-                      const SizedBox(height: 16),
-                      _QuickActions(ref: ref),
-                      const SizedBox(height: 16),
-                      LayoutBuilder(
-                        builder: (context, constraints) {
-                          final wide = constraints.maxWidth >= 900;
-                          final children = [
-                            _TodayTasks(tasks: tasks),
-                            _UpcomingEvents(events: events),
-                          ];
-                          if (!wide) {
-                            return Column(
-                              children: [
-                                children[0],
-                                const SizedBox(height: 16),
-                                children[1],
-                              ],
-                            );
-                          }
-                          return Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Expanded(child: children[0]),
-                              const SizedBox(width: 16),
-                              Expanded(child: children[1]),
-                            ],
-                          );
-                        },
-                      ),
-                    ] else ...[
-                      _SearchResultsView(currency: currency),
-                    ],
-                  ]),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _HeroHeader extends StatelessWidget {
-  const _HeroHeader({required this.currency, required this.entries});
-
-  final String currency;
-  final AsyncValue<List<FinanceEntry>> entries;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final month = startOfMonth(DateTime.now());
-    final summary = entries.valueOrNull == null
-        ? null
-        : buildFinanceSummary(
-            entries.value!
-                .where(
-                  (entry) =>
-                      entry.date.year == month.year &&
-                      entry.date.month == month.month,
-                )
-                .toList(),
-          );
-
-    return LifePilotGlassCard(
-      padding: const EdgeInsets.all(26),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              GlassIcon(
-                icon: Icons.auto_awesome_rounded,
-                color: theme.colorScheme.primary,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  'Today at a glance',
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 0.6,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            '${monthLabel(DateTime.now())} forecast across tasks, calendar, and money.',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-              height: 1.4,
-            ),
-          ),
-          const SizedBox(height: 22),
-          Wrap(
-            spacing: 12,
-            runSpacing: 12,
-            children: [
-              _MetricPill(
-                label: 'Income',
-                value: money(summary?.income ?? 0, currency),
-                icon: Icons.trending_up_rounded,
-              ),
-              _MetricPill(
-                label: 'Expenses',
-                value: money(summary?.expenses ?? 0, currency),
-                icon: Icons.trending_down_rounded,
-              ),
-              _MetricPill(
-                label: 'Balance',
-                value: money(summary?.balance ?? 0, currency),
-                icon: Icons.account_balance_wallet_rounded,
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _MetricPill extends StatelessWidget {
-  const _MetricPill({
-    required this.label,
-    required this.value,
-    required this.icon,
-  });
-
-  final String label;
-  final String value;
-  final IconData icon;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return LifePilotGlassCard(
-      constraints: const BoxConstraints(minWidth: 160),
-      radius: 22,
-      padding: const EdgeInsets.all(14),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, color: theme.colorScheme.primary),
-          const SizedBox(width: 12),
-          Flexible(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: theme.textTheme.labelMedium?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant.withValues(
-                      alpha: 0.8,
-                    ),
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    value,
-                    style: theme.textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 0.4,
-                    ),
+                        const SizedBox(height: 96),
+                      ] else ...[
+                        const _DashboardHeader(),
+                        const SizedBox(height: 24),
+                        const _DashboardWeekStrip(),
+                        const SizedBox(height: 16),
+                        const LifePilotFinanceAnalytics(),
+                        const SizedBox(height: 16),
+                        const _DashboardPriorityTasks(),
+                        const SizedBox(height: 96),
+                      ],
+                    ]),
                   ),
                 ),
               ],
@@ -240,45 +101,65 @@ class _MetricPill extends StatelessWidget {
   }
 }
 
-class _QuickActions extends StatelessWidget {
-  const _QuickActions({required this.ref});
-
-  final WidgetRef ref;
+class _DashboardHeader extends StatelessWidget {
+  const _DashboardHeader();
 
   @override
   Widget build(BuildContext context) {
-    return SectionCard(
-      title: 'Quick actions',
-      child: Wrap(
-        spacing: 10,
-        runSpacing: 10,
+    final theme = Theme.of(context);
+    final hour = DateTime.now().hour;
+    final String greeting;
+    if (hour < 12) {
+      greeting = 'GOOD MORNING, SANKALPA';
+    } else if (hour < 17) {
+      greeting = 'GOOD AFTERNOON, SANKALPA';
+    } else {
+      greeting = 'GOOD EVENING, SANKALPA';
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          FilledButton.icon(
-            onPressed: () {
-              ref.read(pendingQuickActionProvider.notifier).state =
-                  QuickAction.task;
-              context.go('/todo');
-            },
-            icon: const Icon(Icons.add_task),
-            label: const Text('Add Task'),
+          Text(
+            greeting,
+            style: theme.textTheme.headlineMedium?.copyWith(
+              fontWeight: FontWeight.w300,
+              letterSpacing: 1.6,
+              color: theme.colorScheme.onSurface,
+            ),
           ),
-          FilledButton.tonalIcon(
-            onPressed: () {
-              ref.read(pendingQuickActionProvider.notifier).state =
-                  QuickAction.event;
-              context.go('/calendar');
-            },
-            icon: const Icon(Icons.event_available),
-            label: const Text('Add Event'),
-          ),
-          FilledButton.tonalIcon(
-            onPressed: () {
-              ref.read(pendingQuickActionProvider.notifier).state =
-                  QuickAction.transaction;
-              context.go('/finance');
-            },
-            icon: const Icon(Icons.payments_outlined),
-            label: const Text('Add Transaction'),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Container(
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.primary,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: theme.colorScheme.primary.withValues(alpha: 0.5),
+                      blurRadius: 6,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'SYSTEM OPERATIONAL • SECURE FALLBACK SYNC',
+                style: theme.textTheme.labelMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 10,
+                  letterSpacing: 1.2,
+                  color: theme.colorScheme.onSurfaceVariant.withValues(
+                    alpha: 0.6,
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -286,95 +167,178 @@ class _QuickActions extends StatelessWidget {
   }
 }
 
-class _TodayTasks extends StatelessWidget {
-  const _TodayTasks({required this.tasks});
-
-  final AsyncValue<List<Task>> tasks;
+class _DashboardWeekStrip extends ConsumerWidget {
+  const _DashboardWeekStrip();
 
   @override
-  Widget build(BuildContext context) {
-    return SectionCard(
-      title: "Today's tasks",
-      action: TextButton(
-        onPressed: () => context.go('/todo'),
-        child: const Text('View all'),
-      ),
-      child: tasks.when(
-        loading: () => const LinearProgressIndicator(),
-        error: (error, _) => Text(error.toString()),
-        data: (items) {
-          final today = DateTime.now();
-          final todaysTasks = items
-              .where(
-                (task) =>
-                    task.dueDate != null && isSameDate(task.dueDate!, today),
-              )
-              .take(4)
-              .toList();
-          if (todaysTasks.isEmpty) {
-            return const Text('No tasks due today. Your runway is clear.');
-          }
-          return Column(
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final eventsAsync = ref.watch(eventsProvider);
+
+    final today = DateTime.now();
+    final monday = today.subtract(Duration(days: today.weekday - 1));
+    final weekDays = List.generate(7, (i) => monday.add(Duration(days: i)));
+
+    return LifePilotGlassCard(
+      radius: 20,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'WEEKLY RUNWAY',
+            style: theme.textTheme.labelMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+              color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+              letterSpacing: 1.2,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              for (final task in todaysTasks)
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: Icon(
-                    task.isCompleted
-                        ? Icons.check_circle
-                        : Icons.radio_button_unchecked,
-                  ),
-                  title: Text(task.title),
-                  subtitle: Text('${task.priority} priority'),
-                ),
+              for (final day in weekDays)
+                _buildDayCell(context, day, today, eventsAsync.valueOrNull),
             ],
-          );
-        },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDayCell(
+    BuildContext context,
+    DateTime day,
+    DateTime today,
+    List<CalendarEvent>? events,
+  ) {
+    final theme = Theme.of(context);
+    final isToday = isSameDate(day, today);
+    final hasEvents = events?.any((e) => isSameDate(e.date, day)) ?? false;
+
+    final label = switch (day.weekday) {
+      1 => 'M',
+      2 => 'T',
+      3 => 'W',
+      4 => 'T',
+      5 => 'F',
+      6 => 'S',
+      7 => 'S',
+      _ => '',
+    };
+
+    BoxDecoration decoration;
+    if (isToday) {
+      decoration = BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: theme.colorScheme.primary, width: 1.5),
+        color: theme.colorScheme.primary.withValues(alpha: 0.12),
+        boxShadow: [
+          BoxShadow(
+            color: theme.colorScheme.primary.withValues(alpha: 0.15),
+            blurRadius: 6,
+          ),
+        ],
+      );
+    } else {
+      decoration = const BoxDecoration(color: Colors.transparent);
+    }
+
+    return Expanded(
+      child: Column(
+        children: [
+          Text(
+            label,
+            style: theme.textTheme.bodySmall?.copyWith(
+              fontWeight: FontWeight.w700,
+              fontSize: 10,
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.45),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Container(
+            width: 36,
+            height: 36,
+            decoration: decoration,
+            alignment: Alignment.center,
+            child: Stack(
+              alignment: Alignment.center,
+              clipBehavior: Clip.none,
+              children: [
+                Text(
+                  '${day.day}',
+                  style: TextStyle(
+                    fontWeight: isToday ? FontWeight.w700 : FontWeight.w500,
+                    fontSize: 12,
+                    color: isToday
+                        ? theme.colorScheme.primary
+                        : theme.colorScheme.onSurface,
+                  ),
+                ),
+                if (hasEvents)
+                  Positioned(
+                    bottom: 4,
+                    child: Container(
+                      width: 4,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: isToday
+                            ? theme.colorScheme.primary
+                            : theme.colorScheme.tertiary,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
 }
 
-class _UpcomingEvents extends StatelessWidget {
-  const _UpcomingEvents({required this.events});
-
-  final AsyncValue<List<CalendarEvent>> events;
+class _DashboardPriorityTasks extends ConsumerWidget {
+  const _DashboardPriorityTasks();
 
   @override
-  Widget build(BuildContext context) {
-    return SectionCard(
-      title: 'Upcoming events',
-      action: TextButton(
-        onPressed: () => context.go('/calendar'),
-        child: const Text('Calendar'),
+  Widget build(BuildContext context, WidgetRef ref) {
+    final tasksAsync = ref.watch(tasksProvider);
+
+    return tasksAsync.when(
+      loading: () => const SizedBox(
+        height: 150,
+        child: Center(child: CircularProgressIndicator()),
       ),
-      child: events.when(
-        loading: () => const LinearProgressIndicator(),
-        error: (error, _) => Text(error.toString()),
-        data: (items) {
-          final now = DateTime.now();
-          final upcoming = items
-              .where((event) => event.startTime.isAfter(now))
-              .take(4)
-              .toList();
-          if (upcoming.isEmpty) {
-            return const Text('No upcoming events on the calendar.');
-          }
-          return Column(
-            children: [
-              for (final event in upcoming)
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.event_note_outlined),
-                  title: Text(event.title),
-                  subtitle: Text(
-                    '${shortDate(event.date)} ${timeLabel(event.startTime)}',
-                  ),
+      error: (err, _) =>
+          SizedBox(height: 150, child: Center(child: Text('Error: $err'))),
+      data: (items) {
+        final highPriorityTasks = items
+            .where((t) => t.priority == 'high' && !t.isCompleted)
+            .toList();
+
+        return SectionCard(
+          title: 'Urgent Tasks',
+          action: TextButton(
+            onPressed: () => context.go('/todo'),
+            child: const Text('View all'),
+          ),
+          child: highPriorityTasks.isEmpty
+              ? const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 20),
+                  child: Text('All clear! No urgent tasks pending.'),
+                )
+              : Column(
+                  children: [
+                    for (final task in highPriorityTasks)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: TaskTile(task: task),
+                      ),
+                  ],
                 ),
-            ],
-          );
-        },
-      ),
+        );
+      },
     );
   }
 }

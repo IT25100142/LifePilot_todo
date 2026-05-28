@@ -171,3 +171,11 @@ DateTime calculateNextDueDate(DateTime current, String pattern) {
       return current;
   }
 }
+
+final subtasksProvider = StreamProvider.family<List<Subtask>, int>((
+  ref,
+  taskId,
+) {
+  final database = ref.watch(appDatabaseProvider);
+  return database.watchSubtasksForTask(taskId);
+});

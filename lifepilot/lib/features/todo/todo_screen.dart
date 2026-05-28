@@ -70,7 +70,7 @@ class TodoScreen extends ConsumerWidget {
               }
               return Wrap(
                 runSpacing: 10,
-                children: [for (final task in items) _TaskTile(task: task)],
+                children: [for (final task in items) TaskTile(task: task)],
               );
             },
           ),
@@ -137,19 +137,30 @@ class _TaskControls extends ConsumerWidget {
   }
 }
 
-class _TaskTile extends ConsumerWidget {
-  const _TaskTile({required this.task});
+class TaskTile extends ConsumerStatefulWidget {
+  const TaskTile({super.key, required this.task});
 
   final Task task;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<TaskTile> createState() => TaskTileState();
+}
+
+class TaskTileState extends ConsumerState<TaskTile> {
+  bool _isExpanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final task = widget.task;
     final theme = Theme.of(context);
     final database = ref.watch(appDatabaseProvider);
     final overdue =
         task.dueDate != null &&
         task.dueDate!.isBefore(DateTime.now()) &&
         !task.isCompleted;
+
+    final subtasksAsync = ref.watch(subtasksProvider(task.id));
+    final hasSubtasks = subtasksAsync.valueOrNull?.isNotEmpty ?? false;
 
     Gradient? borderGradient;
     Color? shadowColor;
@@ -213,70 +224,106 @@ class _TaskTile extends ConsumerWidget {
         return false;
       },
       child: LifePilotGlassCard(
-        radius: 24,
+        radius: 20,
         padding: EdgeInsets.zero,
         borderGradient: borderGradient,
         shadowColor: shadowColor,
-        child: ListTile(
-          minVerticalPadding: 14,
-          leading: Checkbox(
-            value: task.isCompleted,
-            onChanged: (_) async {
-              await ref.read(toggleTaskCompletionProvider)(task);
-            },
-          ),
-          title: Text(
-            task.title,
-            style: TextStyle(
-              decoration: task.isCompleted ? TextDecoration.lineThrough : null,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.4,
-            ),
-          ),
-          subtitle: Padding(
-            padding: const EdgeInsets.only(top: 6),
-            child: Wrap(
-              spacing: 8,
-              runSpacing: 6,
-              children: [
-                _Chip(
-                  label: shortDate(task.dueDate),
-                  color: overdue
-                      ? theme.colorScheme.error
-                      : theme.colorScheme.secondary,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              minVerticalPadding: 14,
+              leading: Checkbox(
+                value: task.isCompleted,
+                onChanged: (_) async {
+                  await ref.read(toggleTaskCompletionProvider)(task);
+                },
+              ),
+              title: Text(
+                task.title,
+                style: TextStyle(
+                  decoration: task.isCompleted
+                      ? TextDecoration.lineThrough
+                      : null,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.4,
                 ),
-                if (task.tags.isNotEmpty)
-                  _Chip(label: task.tags, color: theme.colorScheme.outline),
-                if (task.recurrencePattern != null &&
-                    task.recurrencePattern != 'none')
-                  _Chip(
-                    label: switch (task.recurrencePattern) {
-                      'daily' => 'Daily',
-                      'weekly' => 'Weekly',
-                      'monthly' => 'Monthly',
-                      _ => '',
+              ),
+              subtitle: Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 6,
+                  children: [
+                    _Chip(
+                      label: shortDate(task.dueDate),
+                      color: overdue
+                          ? theme.colorScheme.error
+                          : theme.colorScheme.secondary,
+                    ),
+                    if (task.tags.isNotEmpty)
+                      for (final tag in task.tags.split(','))
+                        if (tag.trim().isNotEmpty) _CategoryBadge(tag: tag),
+                    if (task.recurrencePattern != null &&
+                        task.recurrencePattern != 'none')
+                      _Chip(
+                        label: switch (task.recurrencePattern) {
+                          'daily' => 'Daily',
+                          'weekly' => 'Weekly',
+                          'monthly' => 'Monthly',
+                          _ => '',
+                        },
+                        color: const Color(0xFF286C63),
+                      ),
+                  ],
+                ),
+              ),
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (hasSubtasks)
+                    IconButton(
+                      visualDensity: VisualDensity.compact,
+                      icon: Icon(
+                        _isExpanded
+                            ? Icons.keyboard_arrow_up
+                            : Icons.keyboard_arrow_down,
+                        size: 20,
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _isExpanded = !_isExpanded;
+                        });
+                      },
+                    ),
+                  PopupMenuButton<String>(
+                    onSelected: (value) async {
+                      if (value == 'edit') {
+                        showTaskForm(context, ref, task: task);
+                      } else if (value == 'delete') {
+                        await ref
+                            .read(notificationServiceProvider)
+                            .cancel(taskReminderId(task.id));
+                        await database.deleteTask(task.id);
+                      }
                     },
-                    color: const Color(0xFF286C63),
+                    itemBuilder: (context) => const [
+                      PopupMenuItem(value: 'edit', child: Text('Edit')),
+                      PopupMenuItem(value: 'delete', child: Text('Delete')),
+                    ],
                   ),
-              ],
+                ],
+              ),
             ),
-          ),
-          trailing: PopupMenuButton<String>(
-            onSelected: (value) async {
-              if (value == 'edit') {
-                showTaskForm(context, ref, task: task);
-              } else if (value == 'delete') {
-                await ref
-                    .read(notificationServiceProvider)
-                    .cancel(taskReminderId(task.id));
-                await database.deleteTask(task.id);
-              }
-            },
-            itemBuilder: (context) => const [
-              PopupMenuItem(value: 'edit', child: Text('Edit')),
-              PopupMenuItem(value: 'delete', child: Text('Delete')),
-            ],
-          ),
+            AnimatedSize(
+              duration: const Duration(milliseconds: 250),
+              curve: Curves.easeInOut,
+              child: _isExpanded && hasSubtasks
+                  ? _SubtaskList(taskId: task.id)
+                  : const SizedBox.shrink(),
+            ),
+          ],
         ),
       ),
     );
@@ -304,6 +351,146 @@ class _TaskTile extends ConsumerWidget {
   }
 }
 
+class _CategoryBadge extends StatelessWidget {
+  const _CategoryBadge({required this.tag});
+
+  final String tag;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final dark = theme.brightness == Brightness.dark;
+    final cleaned = tag.trim().toLowerCase();
+
+    Color tintColor;
+    switch (cleaned) {
+      case 'work':
+        tintColor = dark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
+        break;
+      case 'personal':
+        tintColor = theme.colorScheme.primary;
+        break;
+      case 'health':
+      case 'urgent':
+      case 'health/urgent':
+        tintColor = const Color(0xFFE0516F);
+        break;
+      case 'ideas':
+        tintColor = dark ? const Color(0xFFA5B4FC) : const Color(0xFF4F46E5);
+        break;
+      case 'finance':
+        tintColor = const Color(0xFF286C63);
+        break;
+      default:
+        tintColor = theme.colorScheme.secondary;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: tintColor.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: tintColor.withValues(alpha: 0.24),
+          width: 1.0,
+        ),
+        boxShadow: cleaned == 'personal'
+            ? [
+                BoxShadow(
+                  color: tintColor.withValues(alpha: 0.08),
+                  blurRadius: 4,
+                  spreadRadius: 1,
+                ),
+              ]
+            : null,
+      ),
+      child: Text(
+        tag.trim(),
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
+          color: tintColor.withValues(alpha: dark ? 0.95 : 0.85),
+          letterSpacing: 0.5,
+        ),
+      ),
+    );
+  }
+}
+
+class _SubtaskList extends ConsumerWidget {
+  const _SubtaskList({required this.taskId});
+
+  final int taskId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final subtasksAsync = ref.watch(subtasksProvider(taskId));
+    final db = ref.watch(appDatabaseProvider);
+
+    return subtasksAsync.when(
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
+      data: (items) {
+        if (items.isEmpty) return const SizedBox.shrink();
+        return Padding(
+          padding: const EdgeInsets.only(left: 48, right: 16, bottom: 12),
+          child: Column(
+            children: [
+              for (final subtask in items)
+                _SubtaskTile(subtask: subtask, db: db),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _SubtaskTile extends StatelessWidget {
+  const _SubtaskTile({required this.subtask, required this.db});
+
+  final Subtask subtask;
+  final AppDatabase db;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 24,
+            height: 24,
+            child: Checkbox(
+              value: subtask.isCompleted,
+              onChanged: (value) async {
+                await db.toggleSubtask(subtask);
+              },
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              subtask.title,
+              style: TextStyle(
+                decoration: subtask.isCompleted
+                    ? TextDecoration.lineThrough
+                    : null,
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+                color: subtask.isCompleted
+                    ? theme.colorScheme.onSurface.withValues(alpha: 0.4)
+                    : theme.colorScheme.onSurface,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _SwipeActionBackground extends StatelessWidget {
   const _SwipeActionBackground({
     required this.icon,
@@ -321,7 +508,7 @@ class _SwipeActionBackground extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(20),
         gradient: LinearGradient(
           begin: alignment == Alignment.centerLeft
               ? Alignment.centerLeft
@@ -378,15 +565,25 @@ class _TaskForm extends ConsumerStatefulWidget {
   ConsumerState<_TaskForm> createState() => _TaskFormState();
 }
 
+class _DraftSubtask {
+  _DraftSubtask({required this.title, this.isCompleted = false});
+  String title;
+  bool isCompleted;
+}
+
 class _TaskFormState extends ConsumerState<_TaskForm> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _title;
   late final TextEditingController _description;
   late final TextEditingController _tags;
+  late final TextEditingController _subtaskTitleController;
   late String _priority;
   late String _recurrencePattern;
   DateTime? _dueDate;
   DateTime? _reminderAt;
+
+  List<String> _selectedCategories = [];
+  List<_DraftSubtask> _subtasks = [];
 
   @override
   void initState() {
@@ -395,10 +592,36 @@ class _TaskFormState extends ConsumerState<_TaskForm> {
     _title = TextEditingController(text: task?.title ?? '');
     _description = TextEditingController(text: task?.description ?? '');
     _tags = TextEditingController(text: task?.tags ?? '');
+    _subtaskTitleController = TextEditingController();
     _priority = task?.priority ?? 'medium';
     _recurrencePattern = task?.recurrencePattern ?? 'none';
     _dueDate = task?.dueDate;
     _reminderAt = task?.reminderAt;
+
+    _selectedCategories =
+        task?.tags
+            .split(',')
+            .map((t) => t.trim())
+            .where((t) => t.isNotEmpty)
+            .toList() ??
+        [];
+
+    if (task != null) {
+      ref.read(appDatabaseProvider).watchSubtasksForTask(task.id).first.then((
+        list,
+      ) {
+        if (mounted) {
+          setState(() {
+            _subtasks = list
+                .map(
+                  (s) =>
+                      _DraftSubtask(title: s.title, isCompleted: s.isCompleted),
+                )
+                .toList();
+          });
+        }
+      });
+    }
   }
 
   @override
@@ -406,6 +629,7 @@ class _TaskFormState extends ConsumerState<_TaskForm> {
     _title.dispose();
     _description.dispose();
     _tags.dispose();
+    _subtaskTitleController.dispose();
     super.dispose();
   }
 
@@ -441,12 +665,103 @@ class _TaskFormState extends ConsumerState<_TaskForm> {
               decoration: const InputDecoration(labelText: 'Description'),
               maxLines: 3,
             ),
+            const SizedBox(height: 16),
+            Text(
+              'Categories',
+              style: Theme.of(
+                context,
+              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final category in [
+                  'Work',
+                  'Personal',
+                  'Ideas',
+                  'Health',
+                  'Finance',
+                ])
+                  _CategorySelectionChip(
+                    category: category,
+                    isSelected: _selectedCategories.contains(category),
+                    onSelected: (selected) {
+                      setState(() {
+                        if (selected) {
+                          _selectedCategories.add(category);
+                        } else {
+                          _selectedCategories.remove(category);
+                        }
+                        _tags.text = _selectedCategories.join(',');
+                      });
+                    },
+                  ),
+              ],
+            ),
             const SizedBox(height: 12),
             TextFormField(
               controller: _tags,
               decoration: const InputDecoration(
-                labelText: 'Categories or tags',
+                labelText: 'Additional tags (comma separated)',
               ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Sub-tasks',
+              style: Theme.of(
+                context,
+              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 8),
+            for (int i = 0; i < _subtasks.length; i++)
+              Row(
+                children: [
+                  Checkbox(
+                    value: _subtasks[i].isCompleted,
+                    onChanged: (val) {
+                      setState(() {
+                        _subtasks[i].isCompleted = val ?? false;
+                      });
+                    },
+                  ),
+                  Expanded(child: Text(_subtasks[i].title)),
+                  IconButton(
+                    icon: const Icon(Icons.delete_outline, size: 20),
+                    onPressed: () {
+                      setState(() {
+                        _subtasks.removeAt(i);
+                      });
+                    },
+                  ),
+                ],
+              ),
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                Expanded(
+                  child: TextFormField(
+                    controller: _subtaskTitleController,
+                    decoration: const InputDecoration(
+                      hintText: 'Add a sub-task...',
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                IconButton(
+                  icon: const Icon(Icons.add),
+                  onPressed: () {
+                    final txt = _subtaskTitleController.text.trim();
+                    if (txt.isNotEmpty) {
+                      setState(() {
+                        _subtasks.add(_DraftSubtask(title: txt));
+                        _subtaskTitleController.clear();
+                      });
+                    }
+                  },
+                ),
+              ],
             ),
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
@@ -594,6 +909,21 @@ class _TaskFormState extends ConsumerState<_TaskForm> {
     );
     final savedId = await database.saveTask(entry);
     final id = existing?.id ?? savedId;
+
+    // Sync subtasks
+    await database.customStatement('DELETE FROM subtasks WHERE parent_id = ?', [
+      id,
+    ]);
+    for (final sub in _subtasks) {
+      await database.saveSubtask(
+        SubtasksCompanion.insert(
+          title: sub.title,
+          isCompleted: Value(sub.isCompleted),
+          parentId: id,
+        ),
+      );
+    }
+
     final notification = ref.read(notificationServiceProvider);
     await notification.cancel(taskReminderId(id));
     if (_reminderAt != null) {
@@ -605,6 +935,58 @@ class _TaskFormState extends ConsumerState<_TaskForm> {
       );
     }
     if (mounted) Navigator.pop(context);
+  }
+}
+
+class _CategorySelectionChip extends StatelessWidget {
+  const _CategorySelectionChip({
+    required this.category,
+    required this.isSelected,
+    required this.onSelected,
+  });
+
+  final String category;
+  final bool isSelected;
+  final ValueChanged<bool> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final dark = theme.brightness == Brightness.dark;
+
+    final cleaned = category.toLowerCase();
+    Color tintColor;
+    switch (cleaned) {
+      case 'work':
+        tintColor = dark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
+        break;
+      case 'personal':
+        tintColor = theme.colorScheme.primary;
+        break;
+      case 'health':
+        tintColor = const Color(0xFFE0516F);
+        break;
+      case 'ideas':
+        tintColor = dark ? const Color(0xFFA5B4FC) : const Color(0xFF4F46E5);
+        break;
+      case 'finance':
+        tintColor = const Color(0xFF286C63);
+        break;
+      default:
+        tintColor = theme.colorScheme.secondary;
+    }
+
+    return FilterChip(
+      label: Text(category),
+      selected: isSelected,
+      onSelected: onSelected,
+      selectedColor: tintColor.withValues(alpha: 0.25),
+      checkmarkColor: tintColor,
+      labelStyle: TextStyle(
+        color: isSelected ? tintColor : theme.colorScheme.onSurfaceVariant,
+        fontWeight: isSelected ? FontWeight.bold : null,
+      ),
+    );
   }
 }
 
