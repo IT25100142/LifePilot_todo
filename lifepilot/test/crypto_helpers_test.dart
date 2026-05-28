@@ -7,7 +7,8 @@ import 'package:lifepilot/core/utils/crypto_helpers.dart';
 void main() {
   test('encrypt/decrypt backup round-trip returns original JSON', () async {
     const password = 'strong-password-123';
-    const jsonPayload = '{"app":"LifePilot","currency":"LKR","tasks":[{"id":1}]}';
+    const jsonPayload =
+        '{"app":"LifePilot","currency":"LKR","tasks":[{"id":1}]}';
 
     final encrypted = await encryptBackupJson(
       json: jsonPayload,
@@ -35,12 +36,7 @@ void main() {
 
   test('decrypt fails with malformed container', () async {
     final badBytes = Uint8List.fromList(
-      utf8.encode(
-        jsonEncode({
-          'format': 'invalid-format',
-          'salt': 'abc',
-        }),
-      ),
+      utf8.encode(jsonEncode({'format': 'invalid-format', 'salt': 'abc'})),
     );
 
     expect(

@@ -53,7 +53,10 @@ class DashboardScreen extends ConsumerWidget {
                     const SizedBox(height: 16),
                     if (ref.watch(searchQueryProvider).trim().isEmpty) ...[
                       AnimatedGlassItem(
-                        child: _HeroHeader(currency: currency, entries: entries),
+                        child: _HeroHeader(
+                          currency: currency,
+                          entries: entries,
+                        ),
                       ),
                       const SizedBox(height: 16),
                       _QuickActions(ref: ref),
@@ -455,7 +458,10 @@ class _SearchResultsView extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (results.tasks.isNotEmpty) ...[
-              _ResultSectionHeader(title: 'Tasks (${results.tasks.length})', icon: Icons.checklist),
+              _ResultSectionHeader(
+                title: 'Tasks (${results.tasks.length})',
+                icon: Icons.checklist,
+              ),
               const SizedBox(height: 8),
               for (final task in results.tasks)
                 Padding(
@@ -474,11 +480,15 @@ class _SearchResultsView extends ConsumerWidget {
                       title: Text(
                         task.title,
                         style: TextStyle(
-                          decoration: task.isCompleted ? TextDecoration.lineThrough : null,
+                          decoration: task.isCompleted
+                              ? TextDecoration.lineThrough
+                              : null,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      subtitle: task.description.isNotEmpty ? Text(task.description) : null,
+                      subtitle: task.description.isNotEmpty
+                          ? Text(task.description)
+                          : null,
                       trailing: Text(
                         task.priority.toUpperCase(),
                         style: TextStyle(
@@ -497,7 +507,10 @@ class _SearchResultsView extends ConsumerWidget {
               const SizedBox(height: 16),
             ],
             if (results.events.isNotEmpty) ...[
-              _ResultSectionHeader(title: 'Events (${results.events.length})', icon: Icons.event),
+              _ResultSectionHeader(
+                title: 'Events (${results.events.length})',
+                icon: Icons.event,
+              ),
               const SizedBox(height: 8),
               for (final event in results.events)
                 Padding(
@@ -507,8 +520,13 @@ class _SearchResultsView extends ConsumerWidget {
                     padding: EdgeInsets.zero,
                     opacity: theme.brightness == Brightness.dark ? 0.14 : 0.48,
                     child: ListTile(
-                      leading: const GlassIcon(icon: Icons.calendar_today_outlined),
-                      title: Text(event.title, style: const TextStyle(fontWeight: FontWeight.bold)),
+                      leading: const GlassIcon(
+                        icon: Icons.calendar_today_outlined,
+                      ),
+                      title: Text(
+                        event.title,
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
                       subtitle: Text(
                         '${shortDate(event.date)} at ${timeLabel(event.startTime)}',
                       ),
@@ -519,7 +537,10 @@ class _SearchResultsView extends ConsumerWidget {
               const SizedBox(height: 16),
             ],
             if (results.transactions.isNotEmpty) ...[
-              _ResultSectionHeader(title: 'Transactions (${results.transactions.length})', icon: Icons.payments),
+              _ResultSectionHeader(
+                title: 'Transactions (${results.transactions.length})',
+                icon: Icons.payments,
+              ),
               const SizedBox(height: 8),
               for (final tx in results.transactions)
                 Padding(
@@ -537,7 +558,10 @@ class _SearchResultsView extends ConsumerWidget {
                             ? theme.colorScheme.primary
                             : theme.colorScheme.error,
                       ),
-                      title: Text(tx.title, style: const TextStyle(fontWeight: FontWeight.bold)),
+                      title: Text(
+                        tx.title,
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
                       subtitle: Text('${tx.category} • ${shortDate(tx.date)}'),
                       trailing: Text(
                         money(tx.amount, currency),
@@ -571,9 +595,9 @@ class _ResultSectionHeader extends StatelessWidget {
         Text(
           title,
           style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w800,
-                color: theme.colorScheme.primary,
-              ),
+            fontWeight: FontWeight.w800,
+            color: theme.colorScheme.primary,
+          ),
         ),
       ],
     );

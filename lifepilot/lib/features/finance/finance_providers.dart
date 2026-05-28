@@ -117,49 +117,50 @@ final accountsStreamProvider = StreamProvider<List<Account>>((ref) {
   return database.watchAccounts();
 });
 
-final categoryBudgetStatusProvider = Provider<AsyncValue<List<CategoryBudgetStatus>>>((ref) {
-  final categoriesAsync = ref.watch(categoriesStreamProvider);
-  final selectedMonth = ref.watch(selectedFinanceMonthProvider);
-  final financeEntriesAsync = ref.watch(financeEntriesProvider);
+final categoryBudgetStatusProvider =
+    Provider<AsyncValue<List<CategoryBudgetStatus>>>((ref) {
+      final categoriesAsync = ref.watch(categoriesStreamProvider);
+      final selectedMonth = ref.watch(selectedFinanceMonthProvider);
+      final financeEntriesAsync = ref.watch(financeEntriesProvider);
 
-  return categoriesAsync.when(
-    loading: () => const AsyncValue.loading(),
-    error: (err, stack) => AsyncValue.error(err, stack),
-    data: (categories) {
-      return financeEntriesAsync.when(
+      return categoriesAsync.when(
         loading: () => const AsyncValue.loading(),
         error: (err, stack) => AsyncValue.error(err, stack),
-        data: (entries) {
-          final monthlyExpenses = <String, double>{};
-          for (final entry in entries) {
-            final inMonth =
-                entry.date.year == selectedMonth.year &&
-                entry.date.month == selectedMonth.month;
-            if (inMonth && entry.type == 'expense') {
-              monthlyExpenses.update(
-                entry.category,
-                (val) => val + entry.amount,
-                ifAbsent: () => entry.amount,
-              );
-            }
-          }
+        data: (categories) {
+          return financeEntriesAsync.when(
+            loading: () => const AsyncValue.loading(),
+            error: (err, stack) => AsyncValue.error(err, stack),
+            data: (entries) {
+              final monthlyExpenses = <String, double>{};
+              for (final entry in entries) {
+                final inMonth =
+                    entry.date.year == selectedMonth.year &&
+                    entry.date.month == selectedMonth.month;
+                if (inMonth && entry.type == 'expense') {
+                  monthlyExpenses.update(
+                    entry.category,
+                    (val) => val + entry.amount,
+                    ifAbsent: () => entry.amount,
+                  );
+                }
+              }
 
-          final statusList = categories.map((cat) {
-            final spent = monthlyExpenses[cat.name] ?? 0.0;
-            final budget = cat.monthlyBudget ?? 0.0;
-            return CategoryBudgetStatus(
-              category: cat,
-              spent: spent,
-              budget: budget,
-            );
-          }).toList();
+              final statusList = categories.map((cat) {
+                final spent = monthlyExpenses[cat.name] ?? 0.0;
+                final budget = cat.monthlyBudget ?? 0.0;
+                return CategoryBudgetStatus(
+                  category: cat,
+                  spent: spent,
+                  budget: budget,
+                );
+              }).toList();
 
-          return AsyncValue.data(statusList);
+              return AsyncValue.data(statusList);
+            },
+          );
         },
       );
-    },
-  );
-});
+    });
 
 final saveFinanceTransactionProvider = Provider((ref) {
   final db = ref.watch(appDatabaseProvider);
@@ -191,13 +192,17 @@ final saveFinanceTransactionProvider = Provider((ref) {
         final currentMonth = startOfMonth(entryDate);
 
         var spentBefore = 0.0;
-        final existingId = transactionCompanion.id.present ? transactionCompanion.id.value : null;
+        final existingId = transactionCompanion.id.present
+            ? transactionCompanion.id.value
+            : null;
 
         for (final entry in allEntries) {
           final inMonth =
               entry.date.year == currentMonth.year &&
               entry.date.month == currentMonth.month;
-          if (inMonth && entry.type == 'expense' && entry.category == entryCategory) {
+          if (inMonth &&
+              entry.type == 'expense' &&
+              entry.category == entryCategory) {
             if (existingId != null && entry.id == existingId) {
               continue;
             }
@@ -206,7 +211,9 @@ final saveFinanceTransactionProvider = Provider((ref) {
         }
 
         final spentAfter = spentBefore + entryAmount;
-        final newId = await db.saveFinanceEntryWithBalance(transactionCompanion);
+        final newId = await db.saveFinanceEntryWithBalance(
+          transactionCompanion,
+        );
 
         final beforeRatio = spentBefore / budget;
         final afterRatio = spentAfter / budget;
@@ -215,14 +222,16 @@ final saveFinanceTransactionProvider = Provider((ref) {
           await notificationService.schedule(
             id: 300000 + (existingId ?? newId),
             title: 'Budget Alert (80%+)',
-            body: 'You have spent ${spentAfter.toStringAsFixed(2)} of your ${budget.toStringAsFixed(2)} budget for $entryCategory.',
+            body:
+                'You have spent ${spentAfter.toStringAsFixed(2)} of your ${budget.toStringAsFixed(2)} budget for $entryCategory.',
             when: DateTime.now().add(const Duration(seconds: 1)),
           );
         } else if (beforeRatio < 1.0 && afterRatio >= 1.0) {
           await notificationService.schedule(
             id: 400000 + (existingId ?? newId),
             title: 'Budget Exceeded (100%+)',
-            body: 'Alert! You spent ${spentAfter.toStringAsFixed(2)} exceeding your ${budget.toStringAsFixed(2)} budget for $entryCategory!',
+            body:
+                'Alert! You spent ${spentAfter.toStringAsFixed(2)} exceeding your ${budget.toStringAsFixed(2)} budget for $entryCategory!',
             when: DateTime.now().add(const Duration(seconds: 1)),
           );
         }
@@ -247,7 +256,9 @@ class MonthlyTrendPoint {
   final double expense;
 }
 
-final financialTrendProvider = Provider<AsyncValue<List<MonthlyTrendPoint>>>((ref) {
+final financialTrendProvider = Provider<AsyncValue<List<MonthlyTrendPoint>>>((
+  ref,
+) {
   return ref.watch(financeEntriesProvider).whenData(calculateFinancialTrends);
 });
 
@@ -285,14 +296,14 @@ List<MonthlyTrendPoint> calculateFinancialTrends(List<FinanceEntry> entries) {
     runningIncome += monthIncome;
     runningExpense += monthExpense;
 
-    trendPoints.add(MonthlyTrendPoint(
-      month: month,
-      income: runningIncome,
-      expense: runningExpense,
-    ));
+    trendPoints.add(
+      MonthlyTrendPoint(
+        month: month,
+        income: runningIncome,
+        expense: runningExpense,
+      ),
+    );
   }
 
   return trendPoints;
 }
-
-

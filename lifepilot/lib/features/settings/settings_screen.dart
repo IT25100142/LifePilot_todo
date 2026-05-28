@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants/app_constants.dart';
 import '../../core/models/backup_summary.dart';
-import '../../core/services/export_service.dart';
 import '../../core/services/export_provider.dart';
 import '../../core/utils/crypto_helpers.dart';
 import '../../data/database/app_database.dart';
@@ -188,9 +187,7 @@ class _DataSection extends ConsumerWidget {
             label: const Text('Export CSV'),
           ),
           FilledButton.tonalIcon(
-            onPressed: () => _guard(
-              context,
-              () async {
+            onPressed: () => _guard(context, () async {
               final password = await _promptImportPassword(context);
               if (password == null) return;
               final prepared = await service.prepareEncryptedBackupImport(
@@ -204,34 +201,29 @@ class _DataSection extends ConsumerWidget {
               if (!confirmed || !context.mounted) return;
               await service.applyPreparedBackupImport(prepared);
               if (context.mounted) {
-                ScaffoldMessenger.of(
-                  context,
-                ).showSnackBar(const SnackBar(content: Text('Import complete')));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Import complete')),
+                );
               }
-            },
-              showSuccess: false,
-            ),
+            }, showSuccess: false),
             icon: const Icon(Icons.upload_file),
             label: const Text('Import Encrypted Backup'),
           ),
           FilledButton.tonalIcon(
-            onPressed: () => _guard(context, () => service.exportJson(currency)),
+            onPressed: () =>
+                _guard(context, () => service.exportJson(currency)),
             icon: const Icon(Icons.insert_drive_file_outlined),
             label: const Text('Export JSON (legacy)'),
           ),
           FilledButton.tonalIcon(
-            onPressed: () => _guard(
-              context,
-              () async {
+            onPressed: () => _guard(context, () async {
               final imported = await service.importJson();
               if (context.mounted && imported) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Import complete')),
                 );
               }
-            },
-              showSuccess: false,
-            ),
+            }, showSuccess: false),
             icon: const Icon(Icons.file_open_outlined),
             label: const Text('Import JSON (legacy)'),
           ),
@@ -247,9 +239,9 @@ class _DataSection extends ConsumerWidget {
 
   Future<void> _guard(
     BuildContext context,
-    Future<void> Function() action,
-    {bool showSuccess = true}
-  ) async {
+    Future<void> Function() action, {
+    bool showSuccess = true,
+  }) async {
     try {
       await action();
       if (context.mounted && showSuccess) {

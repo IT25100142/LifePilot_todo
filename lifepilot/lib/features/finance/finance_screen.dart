@@ -413,13 +413,13 @@ class _TransactionHistory extends ConsumerWidget {
                         icon: entry.type == 'income'
                             ? Icons.arrow_downward_rounded
                             : entry.type == 'transfer'
-                                ? Icons.swap_horiz
-                                : Icons.arrow_upward_rounded,
+                            ? Icons.swap_horiz
+                            : Icons.arrow_upward_rounded,
                         color: entry.type == 'income'
                             ? Theme.of(context).colorScheme.primary
                             : entry.type == 'transfer'
-                                ? Theme.of(context).colorScheme.secondary
-                                : Theme.of(context).colorScheme.error,
+                            ? Theme.of(context).colorScheme.secondary
+                            : Theme.of(context).colorScheme.error,
                       ),
                       title: Text(entry.title),
                       subtitle: Text(
@@ -439,12 +439,17 @@ class _TransactionHistory extends ConsumerWidget {
                               if (value == 'edit') {
                                 showTransactionForm(context, ref, entry: entry);
                               } else if (value == 'delete') {
-                                await database.deleteFinanceEntryWithBalance(entry.id);
+                                await database.deleteFinanceEntryWithBalance(
+                                  entry.id,
+                                );
                               }
                             },
                             itemBuilder: (context) => const [
                               PopupMenuItem(value: 'edit', child: Text('Edit')),
-                              PopupMenuItem(value: 'delete', child: Text('Delete')),
+                              PopupMenuItem(
+                                value: 'delete',
+                                child: Text('Delete'),
+                              ),
                             ],
                           ),
                         ],
@@ -543,7 +548,8 @@ class _TransactionFormState extends ConsumerState<_TransactionForm> {
 
         _accountId ??= widget.entry?.accountId ?? accounts.first.id;
         if (_type == 'transfer') {
-          _transferTargetAccountId ??= widget.entry?.transferTargetAccountId ??
+          _transferTargetAccountId ??=
+              widget.entry?.transferTargetAccountId ??
               (accounts.length > 1 ? accounts[1].id : accounts.first.id);
         }
 
@@ -650,7 +656,9 @@ class _TransactionFormState extends ConsumerState<_TransactionForm> {
                     items: [
                       for (final category in AppConstants.financeCategories)
                         DropdownMenuItem(
-                            value: category, child: Text(category)),
+                          value: category,
+                          child: Text(category),
+                        ),
                     ],
                     onChanged: (value) =>
                         setState(() => _category = value ?? 'Other'),
@@ -710,8 +718,9 @@ class _TransactionFormState extends ConsumerState<_TransactionForm> {
         createdAt: Value(existing?.createdAt ?? now),
         updatedAt: Value(now),
         accountId: Value(_accountId),
-        transferTargetAccountId:
-            Value(_type == 'transfer' ? _transferTargetAccountId : null),
+        transferTargetAccountId: Value(
+          _type == 'transfer' ? _transferTargetAccountId : null,
+        ),
       ),
     );
     if (mounted) Navigator.pop(context);
@@ -754,7 +763,9 @@ class _CategoryBudgetStatusSection extends ConsumerWidget {
                           Row(
                             children: [
                               CircleAvatar(
-                                backgroundColor: Color(item.category.colorValue).withValues(alpha: 0.2),
+                                backgroundColor: Color(
+                                  item.category.colorValue,
+                                ).withValues(alpha: 0.2),
                                 radius: 12,
                                 child: Icon(
                                   Icons.circle,
@@ -765,7 +776,9 @@ class _CategoryBudgetStatusSection extends ConsumerWidget {
                               const SizedBox(width: 8),
                               Text(
                                 item.category.name,
-                                style: const TextStyle(fontWeight: FontWeight.bold),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ],
                           ),
@@ -775,8 +788,8 @@ class _CategoryBudgetStatusSection extends ConsumerWidget {
                               color: item.isOverLimit
                                   ? theme.colorScheme.error
                                   : item.isNearLimit
-                                      ? Colors.amber[800]
-                                      : theme.colorScheme.onSurfaceVariant,
+                                  ? Colors.amber[800]
+                                  : theme.colorScheme.onSurfaceVariant,
                               fontWeight: item.isNearLimit || item.isOverLimit
                                   ? FontWeight.bold
                                   : null,
@@ -790,12 +803,15 @@ class _CategoryBudgetStatusSection extends ConsumerWidget {
                         child: LinearProgressIndicator(
                           value: item.ratio.clamp(0.0, 1.0),
                           minHeight: 8,
-                          backgroundColor: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.38),
+                          backgroundColor: theme
+                              .colorScheme
+                              .surfaceContainerHighest
+                              .withValues(alpha: 0.38),
                           color: item.isOverLimit
                               ? theme.colorScheme.error
                               : item.isNearLimit
-                                  ? Colors.amber
-                                  : Color(item.category.colorValue),
+                              ? Colors.amber
+                              : Color(item.category.colorValue),
                         ),
                       ),
                       if (item.isOverLimit)
@@ -851,7 +867,8 @@ class _BudgetSettingsForm extends ConsumerStatefulWidget {
   const _BudgetSettingsForm();
 
   @override
-  ConsumerState<_BudgetSettingsForm> createState() => _BudgetSettingsFormState();
+  ConsumerState<_BudgetSettingsForm> createState() =>
+      _BudgetSettingsFormState();
 }
 
 class _BudgetSettingsFormState extends ConsumerState<_BudgetSettingsForm> {
@@ -890,15 +907,17 @@ class _BudgetSettingsFormState extends ConsumerState<_BudgetSettingsForm> {
             Text(
               'Set monthly spending limits per category.',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
             const SizedBox(height: 16),
             categoriesAsync.when(
               loading: () => const LoadingState(),
               error: (err, _) => ErrorState(error: err),
               data: (items) {
-                final financeCats = items.where((c) => c.type == 'finance' || c.type == 'both').toList();
+                final financeCats = items
+                    .where((c) => c.type == 'finance' || c.type == 'both')
+                    .toList();
                 if (financeCats.isEmpty) {
                   return const Text('No finance categories found.');
                 }
@@ -911,7 +930,9 @@ class _BudgetSettingsFormState extends ConsumerState<_BudgetSettingsForm> {
                     final controller = _controllers.putIfAbsent(
                       cat.id,
                       () => TextEditingController(
-                        text: cat.monthlyBudget == null || cat.monthlyBudget == 0.0
+                        text:
+                            cat.monthlyBudget == null ||
+                                cat.monthlyBudget == 0.0
                             ? ''
                             : cat.monthlyBudget.toString(),
                       ),
@@ -921,7 +942,9 @@ class _BudgetSettingsFormState extends ConsumerState<_BudgetSettingsForm> {
                       child: Row(
                         children: [
                           CircleAvatar(
-                            backgroundColor: Color(cat.colorValue).withValues(alpha: 0.2),
+                            backgroundColor: Color(
+                              cat.colorValue,
+                            ).withValues(alpha: 0.2),
                             radius: 18,
                             child: Icon(
                               Icons.category,
@@ -934,7 +957,9 @@ class _BudgetSettingsFormState extends ConsumerState<_BudgetSettingsForm> {
                             flex: 2,
                             child: Text(
                               cat.name,
-                              style: const TextStyle(fontWeight: FontWeight.bold),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
                           const SizedBox(width: 12),
@@ -947,9 +972,10 @@ class _BudgetSettingsFormState extends ConsumerState<_BudgetSettingsForm> {
                                 labelText: 'Monthly limit',
                                 isDense: true,
                               ),
-                              keyboardType: const TextInputType.numberWithOptions(
-                                decimal: true,
-                              ),
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(
+                                    decimal: true,
+                                  ),
                               validator: (value) {
                                 if (value != null && value.isNotEmpty) {
                                   final val = double.tryParse(value);
@@ -980,7 +1006,9 @@ class _BudgetSettingsFormState extends ConsumerState<_BudgetSettingsForm> {
                     final controller = _controllers[cat.id];
                     if (controller == null) continue;
                     final budgetText = controller.text.trim();
-                    final double? budgetVal = budgetText.isEmpty ? null : double.parse(budgetText);
+                    final double? budgetVal = budgetText.isEmpty
+                        ? null
+                        : double.parse(budgetText);
 
                     await db.saveCategory(
                       CategoriesCompanion(
@@ -996,7 +1024,9 @@ class _BudgetSettingsFormState extends ConsumerState<_BudgetSettingsForm> {
                   if (context.mounted) {
                     Navigator.pop(context);
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Budgets updated successfully')),
+                      const SnackBar(
+                        content: Text('Budgets updated successfully'),
+                      ),
                     );
                   }
                 });
@@ -1060,8 +1090,9 @@ class _FinancialTrendChart extends ConsumerWidget {
                     drawVerticalLine: false,
                     getDrawingHorizontalLine: (value) {
                       return FlLine(
-                        color: theme.colorScheme.outlineVariant
-                            .withValues(alpha: 0.15),
+                        color: theme.colorScheme.outlineVariant.withValues(
+                          alpha: 0.15,
+                        ),
                         strokeWidth: 1,
                       );
                     },
@@ -1113,9 +1144,7 @@ class _FinancialTrendChart extends ConsumerWidget {
                       ),
                     ),
                   ),
-                  borderData: FlBorderData(
-                    show: false,
-                  ),
+                  borderData: FlBorderData(show: false),
                   minX: 0,
                   maxX: (points.length - 1).toDouble(),
                   minY: 0,
@@ -1131,11 +1160,11 @@ class _FinancialTrendChart extends ConsumerWidget {
                         show: true,
                         getDotPainter: (spot, percent, barData, index) =>
                             FlDotCirclePainter(
-                          radius: 4,
-                          color: const Color(0xFF286C63),
-                          strokeWidth: 2,
-                          strokeColor: theme.colorScheme.surface,
-                        ),
+                              radius: 4,
+                              color: const Color(0xFF286C63),
+                              strokeWidth: 2,
+                              strokeColor: theme.colorScheme.surface,
+                            ),
                       ),
                       belowBarData: BarAreaData(
                         show: true,
@@ -1152,11 +1181,11 @@ class _FinancialTrendChart extends ConsumerWidget {
                         show: true,
                         getDotPainter: (spot, percent, barData, index) =>
                             FlDotCirclePainter(
-                          radius: 4,
-                          color: theme.colorScheme.error,
-                          strokeWidth: 2,
-                          strokeColor: theme.colorScheme.surface,
-                        ),
+                              radius: 4,
+                              color: theme.colorScheme.error,
+                              strokeWidth: 2,
+                              strokeColor: theme.colorScheme.surface,
+                            ),
                       ),
                       belowBarData: BarAreaData(
                         show: true,
@@ -1167,7 +1196,8 @@ class _FinancialTrendChart extends ConsumerWidget {
                   lineTouchData: LineTouchData(
                     touchTooltipData: LineTouchTooltipData(
                       getTooltipColor: (touchedSpot) => theme
-                          .colorScheme.surfaceContainerHighest
+                          .colorScheme
+                          .surfaceContainerHighest
                           .withValues(alpha: 0.95),
                       tooltipBorderRadius: BorderRadius.circular(12),
                       getTooltipItems: (touchedSpots) {
@@ -1270,8 +1300,9 @@ class _AccountsList extends ConsumerWidget {
                     child: GlassPanel(
                       radius: 16,
                       padding: const EdgeInsets.all(12),
-                      opacity:
-                          theme.brightness == Brightness.dark ? 0.22 : 0.62,
+                      opacity: theme.brightness == Brightness.dark
+                          ? 0.22
+                          : 0.62,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -1279,11 +1310,15 @@ class _AccountsList extends ConsumerWidget {
                           Row(
                             children: [
                               CircleAvatar(
-                                backgroundColor: Color(acc.colorValue)
-                                    .withValues(alpha: 0.16),
+                                backgroundColor: Color(
+                                  acc.colorValue,
+                                ).withValues(alpha: 0.16),
                                 radius: 8,
-                                child: Icon(Icons.circle,
-                                    color: Color(acc.colorValue), size: 6),
+                                child: Icon(
+                                  Icons.circle,
+                                  color: Color(acc.colorValue),
+                                  size: 6,
+                                ),
                               ),
                               const SizedBox(width: 6),
                               Expanded(
@@ -1395,8 +1430,9 @@ class _AddAccountFormState extends ConsumerState<_AddAccountForm> {
             TextFormField(
               controller: _balanceController,
               decoration: const InputDecoration(labelText: 'Initial Balance'),
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
               validator: (value) {
                 if (value == null || value.trim().isEmpty) return null;
                 if (double.tryParse(value) == null) {
@@ -1406,8 +1442,10 @@ class _AddAccountFormState extends ConsumerState<_AddAccountForm> {
               },
             ),
             const SizedBox(height: 16),
-            const Text('Accent Color',
-                style: TextStyle(fontWeight: FontWeight.bold)),
+            const Text(
+              'Accent Color',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 8),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1419,8 +1457,11 @@ class _AddAccountFormState extends ConsumerState<_AddAccountForm> {
                       backgroundColor: Color(colorVal),
                       radius: 18,
                       child: _selectedColor == colorVal
-                          ? const Icon(Icons.check,
-                              color: Colors.white, size: 18)
+                          ? const Icon(
+                              Icons.check,
+                              color: Colors.white,
+                              size: 18,
+                            )
                           : null,
                     ),
                   ),
@@ -1455,4 +1496,3 @@ class _AddAccountFormState extends ConsumerState<_AddAccountForm> {
     if (mounted) Navigator.pop(context);
   }
 }
-

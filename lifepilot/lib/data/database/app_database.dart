@@ -60,7 +60,8 @@ class FinanceEntries extends Table {
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
   DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
   IntColumn get accountId => integer().nullable().references(Accounts, #id)();
-  IntColumn get transferTargetAccountId => integer().nullable().references(Accounts, #id)();
+  IntColumn get transferTargetAccountId =>
+      integer().nullable().references(Accounts, #id)();
 }
 
 class Accounts extends Table {
@@ -101,7 +102,7 @@ class AppSettingsTable extends Table {
     FinanceEntries,
     Categories,
     AppSettingsTable,
-    Accounts
+    Accounts,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -133,7 +134,9 @@ class AppDatabase extends _$AppDatabase {
                   file.deleteSync();
                 }
               } catch (_) {}
-              throw Exception('Database decryption failed. Local database has been reset.');
+              throw Exception(
+                'Database decryption failed. Local database has been reset.',
+              );
             }
           },
         ),
@@ -152,34 +155,38 @@ class AppDatabase extends _$AppDatabase {
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
-        onCreate: (m) async {
-          await m.createAll();
-        },
-        onUpgrade: (m, from, to) async {
-          if (from < 2) {
-            await m.addColumn(tasks, tasks.recurrencePattern);
-            await m.addColumn(tasks, tasks.recurrenceParentId);
-          }
-          if (from < 3) {
-            await m.addColumn(categories, categories.monthlyBudget);
-          }
-          if (from < 4) {
-            await m.createTable(accounts);
-            await m.addColumn(financeEntries, financeEntries.accountId);
-            await m.addColumn(financeEntries,
-                financeEntries.transferTargetAccountId);
+    onCreate: (m) async {
+      await m.createAll();
+    },
+    onUpgrade: (m, from, to) async {
+      if (from < 2) {
+        await m.addColumn(tasks, tasks.recurrencePattern);
+        await m.addColumn(tasks, tasks.recurrenceParentId);
+      }
+      if (from < 3) {
+        await m.addColumn(categories, categories.monthlyBudget);
+      }
+      if (from < 4) {
+        await m.createTable(accounts);
+        await m.addColumn(financeEntries, financeEntries.accountId);
+        await m.addColumn(
+          financeEntries,
+          financeEntries.transferTargetAccountId,
+        );
 
-            // Insert a default Primary Account
-            final nowStr = DateTime.now().toIso8601String();
-            final defaultAccountId = await customInsert(
-                "INSERT INTO accounts (name, initial_balance, current_balance, color_value, created_at) "
-                "VALUES ('Primary Account', 0.0, 0.0, 4280806499, '$nowStr');");
-            // Set all existing transactions to point to this Primary Account
-            await customUpdate(
-                "UPDATE transactions SET account_id = $defaultAccountId WHERE account_id IS NULL;");
-          }
-        },
-      );
+        // Insert a default Primary Account
+        final nowStr = DateTime.now().toIso8601String();
+        final defaultAccountId = await customInsert(
+          "INSERT INTO accounts (name, initial_balance, current_balance, color_value, created_at) "
+          "VALUES ('Primary Account', 0.0, 0.0, 4280806499, '$nowStr');",
+        );
+        // Set all existing transactions to point to this Primary Account
+        await customUpdate(
+          "UPDATE transactions SET account_id = $defaultAccountId WHERE account_id IS NULL;",
+        );
+      }
+    },
+  );
 
   Future<void> ensureSeedData() async {
     final settings = await _settingsRow();
@@ -425,7 +432,8 @@ class AppDatabase extends _$AppDatabase {
             description: Value(event.description),
             date: _date(event.date) ?? start,
             startTime: start,
-            endTime: _date(event.endTime) ?? start.add(const Duration(hours: 1)),
+            endTime:
+                _date(event.endTime) ?? start.add(const Duration(hours: 1)),
             reminderAt: Value(_date(event.reminderAt)),
             createdAt: Value(_date(event.createdAt) ?? DateTime.now()),
             updatedAt: Value(_date(event.updatedAt) ?? DateTime.now()),
@@ -655,10 +663,14 @@ class AppDatabase extends _$AppDatabase {
     if ((await select(financeEntries).get()).isNotEmpty) return;
 
     final allAccounts = await select(accounts).get();
-    final bankAccount = allAccounts.firstWhere((a) => a.name == 'Bank',
-        orElse: () => allAccounts.first);
-    final cashAccount = allAccounts.firstWhere((a) => a.name == 'Cash',
-        orElse: () => allAccounts.first);
+    final bankAccount = allAccounts.firstWhere(
+      (a) => a.name == 'Bank',
+      orElse: () => allAccounts.first,
+    );
+    final cashAccount = allAccounts.firstWhere(
+      (a) => a.name == 'Cash',
+      orElse: () => allAccounts.first,
+    );
 
     final now = DateTime.now();
     await batch((batch) {
@@ -700,8 +712,9 @@ class AppDatabase extends _$AppDatabase {
   }
 
   Stream<List<Account>> watchAccounts() {
-    return (select(accounts)..orderBy([(a) => OrderingTerm.asc(a.name)]))
-        .watch();
+    return (select(
+      accounts,
+    )..orderBy([(a) => OrderingTerm.asc(a.name)])).watch();
   }
 
   Future<int> saveAccount(AccountsCompanion entry) async {
@@ -715,10 +728,10 @@ class AppDatabase extends _$AppDatabase {
   Future<void> deleteAccount(int id) async {
     await transaction(() async {
       await (delete(accounts)..where((a) => a.id.equals(id))).go();
-      await (delete(financeEntries)
-            ..where((t) =>
-                t.accountId.equals(id) |
-                t.transferTargetAccountId.equals(id)))
+      await (delete(financeEntries)..where(
+            (t) =>
+                t.accountId.equals(id) | t.transferTargetAccountId.equals(id),
+          ))
           .go();
       await recalculateAccountBalances();
     });

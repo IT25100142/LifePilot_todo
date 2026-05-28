@@ -285,90 +285,93 @@ void main() {
     expect(result[2].expense, 1200);
   });
 
-  test('recalculateAccountBalances correctly calculates income, expense, and transfer balances', () {
-    final now = DateTime.now();
+  test(
+    'recalculateAccountBalances correctly calculates income, expense, and transfer balances',
+    () {
+      final now = DateTime.now();
 
-    final allAccounts = [
-      Account(
-        id: 1,
-        name: 'Bank',
-        initialBalance: 1000.0,
-        currentBalance: 1000.0,
-        colorValue: 0,
-        createdAt: now,
-      ),
-      Account(
-        id: 2,
-        name: 'Cash',
-        initialBalance: 100.0,
-        currentBalance: 100.0,
-        colorValue: 0,
-        createdAt: now,
-      ),
-    ];
+      final allAccounts = [
+        Account(
+          id: 1,
+          name: 'Bank',
+          initialBalance: 1000.0,
+          currentBalance: 1000.0,
+          colorValue: 0,
+          createdAt: now,
+        ),
+        Account(
+          id: 2,
+          name: 'Cash',
+          initialBalance: 100.0,
+          currentBalance: 100.0,
+          colorValue: 0,
+          createdAt: now,
+        ),
+      ];
 
-    final entries = [
-      FinanceEntry(
-        id: 1,
-        title: 'Salary',
-        amount: 5000,
-        category: 'Salary',
-        date: now,
-        note: '',
-        type: 'income',
-        createdAt: now,
-        updatedAt: now,
-        accountId: 1,
-      ),
-      FinanceEntry(
-        id: 2,
-        title: 'Lunch',
-        amount: 20,
-        category: 'Food',
-        date: now,
-        note: '',
-        type: 'expense',
-        createdAt: now,
-        updatedAt: now,
-        accountId: 2,
-      ),
-      FinanceEntry(
-        id: 3,
-        title: 'ATM Withdrawal',
-        amount: 200,
-        category: 'Transfer',
-        date: now,
-        note: '',
-        type: 'transfer',
-        createdAt: now,
-        updatedAt: now,
-        accountId: 1,
-        transferTargetAccountId: 2,
-      ),
-    ];
+      final entries = [
+        FinanceEntry(
+          id: 1,
+          title: 'Salary',
+          amount: 5000,
+          category: 'Salary',
+          date: now,
+          note: '',
+          type: 'income',
+          createdAt: now,
+          updatedAt: now,
+          accountId: 1,
+        ),
+        FinanceEntry(
+          id: 2,
+          title: 'Lunch',
+          amount: 20,
+          category: 'Food',
+          date: now,
+          note: '',
+          type: 'expense',
+          createdAt: now,
+          updatedAt: now,
+          accountId: 2,
+        ),
+        FinanceEntry(
+          id: 3,
+          title: 'ATM Withdrawal',
+          amount: 200,
+          category: 'Transfer',
+          date: now,
+          note: '',
+          type: 'transfer',
+          createdAt: now,
+          updatedAt: now,
+          accountId: 1,
+          transferTargetAccountId: 2,
+        ),
+      ];
 
-    double calculateBalance(Account account, List<FinanceEntry> txs) {
-      var balance = account.initialBalance;
-      for (final entry in txs) {
-        if (entry.accountId == account.id) {
-          if (entry.type == 'income') {
+      double calculateBalance(Account account, List<FinanceEntry> txs) {
+        var balance = account.initialBalance;
+        for (final entry in txs) {
+          if (entry.accountId == account.id) {
+            if (entry.type == 'income') {
+              balance += entry.amount;
+            } else if (entry.type == 'expense' || entry.type == 'transfer') {
+              balance -= entry.amount;
+            }
+          }
+          if (entry.transferTargetAccountId == account.id &&
+              entry.type == 'transfer') {
             balance += entry.amount;
-          } else if (entry.type == 'expense' || entry.type == 'transfer') {
-            balance -= entry.amount;
           }
         }
-        if (entry.transferTargetAccountId == account.id &&
-            entry.type == 'transfer') {
-          balance += entry.amount;
-        }
+        return balance;
       }
-      return balance;
-    }
 
-    final bankBalance = calculateBalance(allAccounts[0], entries);
-    final cashBalance = calculateBalance(allAccounts[1], entries);
+      final bankBalance = calculateBalance(allAccounts[0], entries);
+      final cashBalance = calculateBalance(allAccounts[1], entries);
 
-    expect(bankBalance, 5800.0);
-    expect(cashBalance, 280.0);
-  });
+      expect(bankBalance, 5800.0);
+      expect(cashBalance, 280.0);
+    },
+  );
 }

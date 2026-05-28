@@ -143,7 +143,10 @@ class ExportService {
     final bytes = file?.bytes;
     if (bytes == null) return null;
 
-    final decryptedJson = await decryptBackupJson(bytes: bytes, password: password);
+    final decryptedJson = await decryptBackupJson(
+      bytes: bytes,
+      password: password,
+    );
     final decoded = jsonDecode(decryptedJson);
     if (decoded is! Map<String, dynamic>) {
       throw const BackupCryptoException('Invalid backup file format.');
@@ -151,7 +154,8 @@ class ExportService {
     final formatVersion = (decoded['formatVersion'] as num?)?.toInt();
     if (formatVersion == 2) {
       final payload = BackupPayloadV2.fromJson(decoded);
-      final exportedAt = DateTime.tryParse(payload.exportedAt) ?? DateTime.now();
+      final exportedAt =
+          DateTime.tryParse(payload.exportedAt) ?? DateTime.now();
       return PreparedBackupImport(
         summary: BackupSummary(
           formatVersion: payload.formatVersion,
@@ -170,7 +174,8 @@ class ExportService {
 
     if (_isLegacyPayload(decoded)) {
       final exportedAt =
-          DateTime.tryParse(decoded['exportedAt'] as String? ?? '') ?? DateTime.now();
+          DateTime.tryParse(decoded['exportedAt'] as String? ?? '') ??
+          DateTime.now();
       return PreparedBackupImport(
         summary: BackupSummary(
           formatVersion: 1,
@@ -178,7 +183,8 @@ class ExportService {
           taskCount: (decoded['tasks'] as List<dynamic>? ?? const []).length,
           eventCount: (decoded['events'] as List<dynamic>? ?? const []).length,
           accountCount: 0,
-          transactionCount: (decoded['transactions'] as List<dynamic>? ?? const []).length,
+          transactionCount:
+              (decoded['transactions'] as List<dynamic>? ?? const []).length,
           currency: decoded['currency'] as String?,
           isLegacy: true,
         ),
@@ -314,7 +320,7 @@ class ExportService {
             'updatedAt': item.updatedAt,
             'recurrencePattern': item.recurrencePattern,
             'recurrenceParentId': item.recurrenceParentId,
-          }
+          },
       ],
       'events': [
         for (final item in payload.events)
@@ -327,7 +333,7 @@ class ExportService {
             'reminderAt': item.reminderAt,
             'createdAt': item.createdAt,
             'updatedAt': item.updatedAt,
-          }
+          },
       ],
       'transactions': [
         for (final item in payload.transactions)
@@ -340,7 +346,7 @@ class ExportService {
             'type': item.type,
             'createdAt': item.createdAt,
             'updatedAt': item.updatedAt,
-          }
+          },
       ],
       'categories': [
         for (final item in payload.categories)
@@ -350,7 +356,7 @@ class ExportService {
             'colorValue': item.colorValue,
             'iconName': item.iconName,
             'monthlyBudget': item.monthlyBudget,
-          }
+          },
       ],
     };
   }

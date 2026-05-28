@@ -12,4 +12,3 @@ final seedDataProvider = FutureProvider<void>((ref) async {
   final database = ref.watch(appDatabaseProvider);
   await database.ensureSeedData();
 });
-

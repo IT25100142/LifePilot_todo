@@ -13,7 +13,8 @@ class AppLockScreen extends ConsumerStatefulWidget {
   ConsumerState<AppLockScreen> createState() => _AppLockScreenState();
 }
 
-class _AppLockScreenState extends ConsumerState<AppLockScreen> with WidgetsBindingObserver {
+class _AppLockScreenState extends ConsumerState<AppLockScreen>
+    with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
@@ -31,7 +32,8 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> with WidgetsBindi
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive) {
       ref.read(appLockProvider.notifier).lock();
     } else if (state == AppLifecycleState.resumed) {
       ref.read(appLockProvider.notifier).authenticate();
@@ -65,8 +67,9 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> with WidgetsBindi
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     CircleAvatar(
-                      backgroundColor:
-                          const Color(0xFF286C63).withValues(alpha: 0.16),
+                      backgroundColor: const Color(
+                        0xFF286C63,
+                      ).withValues(alpha: 0.16),
                       radius: 54,
                       child: const Icon(
                         Icons.lock_person_outlined,
@@ -116,4 +119,3 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> with WidgetsBindi
     );
   }
 }
-

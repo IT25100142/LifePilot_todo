@@ -190,7 +190,8 @@ class _TaskTile extends ConsumerWidget {
               ),
               if (task.tags.isNotEmpty)
                 _Chip(label: task.tags, color: theme.colorScheme.outline),
-              if (task.recurrencePattern != null && task.recurrencePattern != 'none')
+              if (task.recurrencePattern != null &&
+                  task.recurrencePattern != 'none')
                 _Chip(
                   label: switch (task.recurrencePattern) {
                     'daily' => 'Daily',
@@ -348,9 +349,9 @@ class _TaskFormState extends ConsumerState<_TaskForm> {
             const SizedBox(height: 16),
             Text(
               'Repeat',
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 8),
             Wrap(
@@ -358,17 +359,17 @@ class _TaskFormState extends ConsumerState<_TaskForm> {
               children: [
                 for (final pattern in ['none', 'daily', 'weekly', 'monthly'])
                   ChoiceChip(
-                    label: Text(
-                      switch (pattern) {
-                        'none' => 'None',
-                        'daily' => 'Daily',
-                        'weekly' => 'Weekly',
-                        'monthly' => 'Monthly',
-                        _ => 'None',
-                      },
-                    ),
+                    label: Text(switch (pattern) {
+                      'none' => 'None',
+                      'daily' => 'Daily',
+                      'weekly' => 'Weekly',
+                      'monthly' => 'Monthly',
+                      _ => 'None',
+                    }),
                     selected: _recurrencePattern == pattern,
-                    selectedColor: const Color(0xFF286C63).withValues(alpha: 0.24),
+                    selectedColor: const Color(
+                      0xFF286C63,
+                    ).withValues(alpha: 0.24),
                     checkmarkColor: const Color(0xFF286C63),
                     labelStyle: TextStyle(
                       color: _recurrencePattern == pattern
@@ -472,7 +473,9 @@ class _TaskFormState extends ConsumerState<_TaskForm> {
       isCompleted: Value(existing?.isCompleted ?? false),
       createdAt: Value(existing?.createdAt ?? now),
       updatedAt: Value(now),
-      recurrencePattern: Value(_recurrencePattern == 'none' ? null : _recurrencePattern),
+      recurrencePattern: Value(
+        _recurrencePattern == 'none' ? null : _recurrencePattern,
+      ),
       recurrenceParentId: Value(existing?.recurrenceParentId),
     );
     final savedId = await database.saveTask(entry);

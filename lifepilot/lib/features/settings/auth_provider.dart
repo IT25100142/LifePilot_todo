@@ -63,6 +63,6 @@ class AppLockNotifier extends Notifier<AppLockStatus> {
   }
 }
 
-final appLockProvider =
-    NotifierProvider<AppLockNotifier, AppLockStatus>(AppLockNotifier.new);
-
+final appLockProvider = NotifierProvider<AppLockNotifier, AppLockStatus>(
+  AppLockNotifier.new,
+);
