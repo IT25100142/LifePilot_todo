@@ -6,6 +6,7 @@ list(APPEND FLUTTER_PLUGIN_LIST
   file_saver
   flutter_secure_storage_windows
   flutter_timezone
+  local_auth_windows
   sqlcipher_flutter_libs
   sqlite3_flutter_libs
 )

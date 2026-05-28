@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../features/settings/lock_screen.dart';
 import '../features/settings/settings_providers.dart';
 import 'router.dart';
 import 'theme.dart';
@@ -21,6 +22,7 @@ class LifePilotApp extends ConsumerWidget {
       darkTheme: LifePilotTheme.dark(),
       themeMode: themeMode,
       routerConfig: router,
+      builder: (context, child) => AppLockScreen(child: child!),
     );
   }
 }
