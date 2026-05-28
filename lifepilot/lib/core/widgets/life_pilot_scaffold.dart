@@ -1,13 +1,34 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../app/theme.dart';
 import 'glass.dart';
 
-class LifePilotScaffold extends StatelessWidget {
+class LifePilotScaffold extends StatefulWidget {
   const LifePilotScaffold({required this.navigationShell, super.key});
 
   final StatefulNavigationShell navigationShell;
+
+  @override
+  State<LifePilotScaffold> createState() => _LifePilotScaffoldState();
+}
+
+class _LifePilotScaffoldState extends State<LifePilotScaffold> {
+  late int _previousIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    _previousIndex = widget.navigationShell.currentIndex;
+  }
+
+  @override
+  void didUpdateWidget(covariant LifePilotScaffold oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.navigationShell.currentIndex !=
+        widget.navigationShell.currentIndex) {
+      _previousIndex = oldWidget.navigationShell.currentIndex;
+    }
+  }
 
   static const _destinations = [
     _LifePilotDestination(
@@ -48,37 +69,40 @@ class LifePilotScaffold extends StatelessWidget {
                 child: SafeArea(
                   child: RepaintBoundary(
                     child: AnimatedSwitcher(
-                      duration: LifePilotTheme.pageDuration,
-                      switchInCurve: const Cubic(0.25, 0.1, 0.25, 1.0),
-                      switchOutCurve: const Cubic(0.25, 0.1, 0.25, 1.0),
+                      duration: const Duration(milliseconds: 350),
+                      switchInCurve: Curves.easeInOutCubic,
+                      switchOutCurve: Curves.easeInOutCubic,
                       transitionBuilder: (child, animation) {
+                        final childKey = child.key as ValueKey<int>?;
+                        final isIncoming =
+                            childKey?.value ==
+                            widget.navigationShell.currentIndex;
+                        final isForward =
+                            widget.navigationShell.currentIndex >=
+                            _previousIndex;
+
+                        final beginOffset = isForward
+                            ? (isIncoming
+                                  ? const Offset(0.08, 0.0)
+                                  : const Offset(-0.08, 0.0))
+                            : (isIncoming
+                                  ? const Offset(-0.08, 0.0)
+                                  : const Offset(0.08, 0.0));
+
                         return FadeTransition(
-                          opacity: CurvedAnimation(
-                            parent: animation,
-                            curve: const Interval(
-                              0.0,
-                              1.0,
-                              curve: Curves.easeOutCubic,
-                            ),
-                          ),
-                          child: ScaleTransition(
-                            scale: Tween<double>(begin: 0.97, end: 1.0).animate(
-                              CurvedAnimation(
-                                parent: animation,
-                                curve: const Interval(
-                                  0.0,
-                                  1.0,
-                                  curve: Curves.easeOutCubic,
-                                ),
-                              ),
-                            ),
+                          opacity: animation,
+                          child: SlideTransition(
+                            position: Tween<Offset>(
+                              begin: beginOffset,
+                              end: Offset.zero,
+                            ).animate(animation),
                             child: child,
                           ),
                         );
                       },
                       child: RepaintBoundary(
-                        key: ValueKey<int>(navigationShell.currentIndex),
-                        child: navigationShell,
+                        key: ValueKey<int>(widget.navigationShell.currentIndex),
+                        child: widget.navigationShell,
                       ),
                     ),
                   ),
@@ -114,7 +138,8 @@ class LifePilotScaffold extends StatelessWidget {
                                     selectedIcon: _destinations[i].selectedIcon,
                                     label: _destinations[i].label,
                                     isSelected:
-                                        navigationShell.currentIndex == i,
+                                        widget.navigationShell.currentIndex ==
+                                        i,
                                     onTap: () => _goBranch(i),
                                   ),
                                 ),
@@ -134,9 +159,9 @@ class LifePilotScaffold extends StatelessWidget {
   }
 
   void _goBranch(int index) {
-    navigationShell.goBranch(
+    widget.navigationShell.goBranch(
       index,
-      initialLocation: index == navigationShell.currentIndex,
+      initialLocation: index == widget.navigationShell.currentIndex,
     );
   }
 }
