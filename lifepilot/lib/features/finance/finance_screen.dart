@@ -482,7 +482,11 @@ class _TransactionHistory extends ConsumerWidget {
         error: (error, _) => ErrorState(error: error),
         data: (items) {
           if (items.isEmpty) {
-            return const Text('No transactions match this filter.');
+            return const EmptyState(
+              icon: Icons.receipt_long_rounded,
+              title: 'No transactions found',
+              message: 'Your ledger is empty for this filter range.',
+            );
           }
           return accountsAsync.when(
             loading: () => const LoadingState(),
@@ -493,52 +497,84 @@ class _TransactionHistory extends ConsumerWidget {
               return Column(
                 children: [
                   for (final entry in items)
-                    ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      leading: GlassIcon(
-                        icon: entry.type == 'income'
-                            ? Icons.arrow_downward_rounded
-                            : entry.type == 'transfer'
-                            ? Icons.swap_horiz
-                            : Icons.arrow_upward_rounded,
-                        color: entry.type == 'income'
-                            ? Theme.of(context).colorScheme.primary
-                            : entry.type == 'transfer'
-                            ? Theme.of(context).colorScheme.secondary
-                            : Theme.of(context).colorScheme.error,
+                    Dismissible(
+                      key: ValueKey('tx-${entry.id}'),
+                      direction: DismissDirection.horizontal,
+                      movementDuration: const Duration(milliseconds: 260),
+                      dismissThresholds: const {
+                        DismissDirection.startToEnd: 0.34,
+                        DismissDirection.endToStart: 0.34,
+                      },
+                      background: const _SwipeActionBackground(
+                        icon: Icons.edit_rounded,
+                        alignment: Alignment.centerLeft,
+                        startColor: Color(0x3324E38A),
+                        endColor: Color(0x8820C997),
                       ),
-                      title: Text(entry.title),
-                      subtitle: Text(
-                        entry.type == 'transfer'
-                            ? 'Transfer: ${accountMap[entry.accountId] ?? 'Unknown'} ➔ ${accountMap[entry.transferTargetAccountId] ?? 'Unknown'} • ${shortDate(entry.date)}'
-                            : '${entry.category} • ${accountMap[entry.accountId] ?? 'Primary'} • ${shortDate(entry.date)}',
+                      secondaryBackground: const _SwipeActionBackground(
+                        icon: Icons.delete_forever_rounded,
+                        alignment: Alignment.centerRight,
+                        startColor: Color(0x33FF2E55),
+                        endColor: Color(0x88A2122F),
                       ),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            money(entry.amount, currency),
-                            style: const TextStyle(fontWeight: FontWeight.w700),
-                          ),
-                          PopupMenuButton<String>(
-                            onSelected: (value) async {
-                              if (value == 'edit') {
-                                showTransactionForm(context, ref, entry: entry);
-                              } else if (value == 'delete') {
-                                await database.deleteFinanceEntryWithBalance(
-                                  entry.id,
-                                );
-                              }
-                            },
-                            itemBuilder: (context) => const [
-                              PopupMenuItem(value: 'edit', child: Text('Edit')),
-                              PopupMenuItem(
-                                value: 'delete',
-                                child: Text('Delete'),
-                              ),
-                            ],
-                          ),
-                        ],
+                      confirmDismiss: (direction) async {
+                        if (direction == DismissDirection.startToEnd) {
+                          showTransactionForm(context, ref, entry: entry);
+                          return false;
+                        }
+                        final shouldDelete = await _confirmDelete(context);
+                        if (shouldDelete) {
+                          await database.deleteFinanceEntryWithBalance(entry.id);
+                        }
+                        return false;
+                      },
+                      child: ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: GlassIcon(
+                          icon: entry.type == 'income'
+                              ? Icons.arrow_downward_rounded
+                              : entry.type == 'transfer'
+                                  ? Icons.swap_horiz
+                                  : Icons.arrow_upward_rounded,
+                          color: entry.type == 'income'
+                              ? Theme.of(context).colorScheme.primary
+                              : entry.type == 'transfer'
+                                  ? Theme.of(context).colorScheme.secondary
+                                  : Theme.of(context).colorScheme.error,
+                        ),
+                        title: Text(entry.title),
+                        subtitle: Text(
+                          entry.type == 'transfer'
+                              ? 'Transfer: ${accountMap[entry.accountId] ?? 'Unknown'} ➔ ${accountMap[entry.transferTargetAccountId] ?? 'Unknown'} • ${shortDate(entry.date)}'
+                              : '${entry.category} • ${accountMap[entry.accountId] ?? 'Primary'} • ${shortDate(entry.date)}',
+                        ),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              money(entry.amount, currency),
+                              style: const TextStyle(fontWeight: FontWeight.w700),
+                            ),
+                            PopupMenuButton<String>(
+                              onSelected: (value) async {
+                                if (value == 'edit') {
+                                  showTransactionForm(context, ref, entry: entry);
+                                } else if (value == 'delete') {
+                                  await database.deleteFinanceEntryWithBalance(
+                                    entry.id,
+                                  );
+                                }
+                              },
+                              itemBuilder: (context) => const [
+                                PopupMenuItem(value: 'edit', child: Text('Edit')),
+                                PopupMenuItem(
+                                  value: 'delete',
+                                  child: Text('Delete'),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                 ],
@@ -1531,7 +1567,13 @@ class _AccountsList extends ConsumerWidget {
       loading: () => const SizedBox(),
       error: (_, __) => const SizedBox(),
       data: (accounts) {
-        if (accounts.isEmpty) return const SizedBox();
+        if (accounts.isEmpty) {
+          return const EmptyState(
+            icon: Icons.account_balance_wallet_outlined,
+            title: 'No accounts found',
+            message: 'Create your first wallet to track cash flow.',
+          );
+        }
         return SectionCard(
           title: 'Accounts & Wallets',
           child: SizedBox(
@@ -1639,6 +1681,62 @@ class _AccountsList extends ConsumerWidget {
         padding: EdgeInsets.zero,
         child: const _AddAccountForm(),
       ),
+    );
+  }
+}
+
+Future<bool> _confirmDelete(BuildContext context) async {
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('Delete transaction?'),
+      content: const Text('This entry will be removed from your local ledger.'),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context, false),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.pop(context, true),
+          child: const Text('Delete'),
+        ),
+      ],
+    ),
+  );
+  return confirmed == true;
+}
+
+class _SwipeActionBackground extends StatelessWidget {
+  const _SwipeActionBackground({
+    required this.icon,
+    required this.alignment,
+    required this.startColor,
+    required this.endColor,
+  });
+
+  final IconData icon;
+  final Alignment alignment;
+  final Color startColor;
+  final Color endColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(22),
+        gradient: LinearGradient(
+          begin: alignment == Alignment.centerLeft
+              ? Alignment.centerLeft
+              : Alignment.centerRight,
+          end: alignment == Alignment.centerLeft
+              ? Alignment.centerRight
+              : Alignment.centerLeft,
+          colors: [startColor, endColor],
+        ),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 22),
+      alignment: alignment,
+      child: Icon(icon, color: Colors.white),
     );
   }
 }

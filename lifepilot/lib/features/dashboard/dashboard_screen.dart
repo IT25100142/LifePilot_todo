@@ -10,7 +10,6 @@ import '../../core/widgets/glass_panel.dart';
 import '../../core/widgets/section_card.dart';
 import '../../core/widgets/state_views.dart';
 import '../../data/database/app_database.dart';
-import '../../data/database/database_provider.dart';
 import '../calendar/calendar_providers.dart';
 import '../finance/finance_providers.dart';
 import '../settings/settings_providers.dart';
@@ -22,91 +21,84 @@ class DashboardScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final seed = ref.watch(seedDataProvider);
     final currency =
         ref.watch(settingsControllerProvider).valueOrNull?.currency ?? 'LKR';
     final tasks = ref.watch(tasksProvider);
     final events = ref.watch(eventsProvider);
     final entries = ref.watch(financeEntriesProvider);
 
-    return seed.when(
-      loading: () => const LoadingState(),
-      error: (error, _) => ErrorState(error: error),
-      data: (_) {
-        return Scaffold(
-          backgroundColor: Colors.transparent,
-          body: Stack(
-            children: [
-              const Positioned.fill(child: _AmbientBackdrop()),
-              CustomScrollView(
-                slivers: [
-                  SliverAppBar.large(
-                    backgroundColor: Colors.transparent,
-                    elevation: 0,
-                    scrolledUnderElevation: 0,
-                    title: const Text('LifePilot'),
-                    actions: [
-                      IconButton(
-                        tooltip: 'Settings',
-                        onPressed: () => context.go('/settings'),
-                        icon: const Icon(Icons.settings_outlined),
-                      ),
-                    ],
-                  ),
-                  SliverPadding(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-                    sliver: SliverList(
-                      delegate: SliverChildListDelegate([
-                        const _SearchBar(),
-                        const SizedBox(height: 16),
-                        if (ref.watch(searchQueryProvider).trim().isEmpty) ...[
-                          AnimatedGlassItem(
-                            child: _HeroHeader(
-                              currency: currency,
-                              entries: entries,
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          _QuickActions(ref: ref),
-                          const SizedBox(height: 16),
-                          LayoutBuilder(
-                            builder: (context, constraints) {
-                              final wide = constraints.maxWidth >= 900;
-                              final children = [
-                                _TodayTasks(tasks: tasks),
-                                _UpcomingEvents(events: events),
-                              ];
-                              if (!wide) {
-                                return Column(
-                                  children: [
-                                    children[0],
-                                    const SizedBox(height: 16),
-                                    children[1],
-                                  ],
-                                );
-                              }
-                              return Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Expanded(child: children[0]),
-                                  const SizedBox(width: 16),
-                                  Expanded(child: children[1]),
-                                ],
-                              );
-                            },
-                          ),
-                        ] else ...[
-                          _SearchResultsView(currency: currency),
-                        ],
-                      ]),
-                    ),
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      body: Stack(
+        children: [
+          const Positioned.fill(child: _AmbientBackdrop()),
+          CustomScrollView(
+            slivers: [
+              SliverAppBar.large(
+                backgroundColor: Colors.transparent,
+                elevation: 0,
+                scrolledUnderElevation: 0,
+                title: const Text('LifePilot'),
+                actions: [
+                  IconButton(
+                    tooltip: 'Settings',
+                    onPressed: () => context.go('/settings'),
+                    icon: const Icon(Icons.settings_outlined),
                   ),
                 ],
               ),
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                sliver: SliverList(
+                  delegate: SliverChildListDelegate([
+                    const _SearchBar(),
+                    const SizedBox(height: 16),
+                    if (ref.watch(searchQueryProvider).trim().isEmpty) ...[
+                      AnimatedGlassItem(
+                        child: _HeroHeader(
+                          currency: currency,
+                          entries: entries,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      _QuickActions(ref: ref),
+                      const SizedBox(height: 16),
+                      LayoutBuilder(
+                        builder: (context, constraints) {
+                          final wide = constraints.maxWidth >= 900;
+                          final children = [
+                            _TodayTasks(tasks: tasks),
+                            _UpcomingEvents(events: events),
+                          ];
+                          if (!wide) {
+                            return Column(
+                              children: [
+                                children[0],
+                                const SizedBox(height: 16),
+                                children[1],
+                              ],
+                            );
+                          }
+                          return Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(child: children[0]),
+                              const SizedBox(width: 16),
+                              Expanded(child: children[1]),
+                            ],
+                          );
+                        },
+                      ),
+                    ] else ...[
+                      _SearchResultsView(currency: currency),
+                    ],
+                  ]),
+                ),
+              ),
             ],
           ),
-        );
-      },
+        ],
+      ),
     );
   }
 }

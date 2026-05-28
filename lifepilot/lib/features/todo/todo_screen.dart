@@ -58,8 +58,9 @@ class TodoScreen extends ConsumerWidget {
               if (items.isEmpty) {
                 return EmptyState(
                   icon: Icons.checklist,
-                  title: 'No matching tasks',
-                  message: 'Add a task or adjust filters to see more.',
+                  title: 'All caught up',
+                  message:
+                      'No tasks yet. Add your first task to start a focused day.',
                   action: FilledButton.icon(
                     onPressed: () => showTaskForm(context, ref),
                     icon: const Icon(Icons.add),
@@ -177,72 +178,161 @@ class _TaskTile extends ConsumerWidget {
       shadowColor = amberColor.withValues(alpha: 0.04);
     }
 
-    return LifePilotGlassCard(
-      radius: 24,
-      padding: EdgeInsets.zero,
-      borderGradient: borderGradient,
-      shadowColor: shadowColor,
-      child: ListTile(
-        minVerticalPadding: 14,
-        leading: Checkbox(
-          value: task.isCompleted,
-          onChanged: (_) async {
-            await ref.read(toggleTaskCompletionProvider)(task);
-          },
-        ),
-        title: Text(
-          task.title,
-          style: TextStyle(
-            decoration: task.isCompleted ? TextDecoration.lineThrough : null,
-            fontWeight: FontWeight.w700,
-            letterSpacing: -0.5,
+    return Dismissible(
+      key: ValueKey('task-${task.id}'),
+      direction: DismissDirection.horizontal,
+      movementDuration: const Duration(milliseconds: 260),
+      dismissThresholds: const {
+        DismissDirection.startToEnd: 0.34,
+        DismissDirection.endToStart: 0.34,
+      },
+      background: const _SwipeActionBackground(
+        icon: Icons.check_circle_rounded,
+        alignment: Alignment.centerLeft,
+        startColor: Color(0x3324E38A),
+        endColor: Color(0x8820C997),
+      ),
+      secondaryBackground: const _SwipeActionBackground(
+        icon: Icons.delete_forever_rounded,
+        alignment: Alignment.centerRight,
+        startColor: Color(0x33FF2E55),
+        endColor: Color(0x88A2122F),
+      ),
+      confirmDismiss: (direction) async {
+        if (direction == DismissDirection.startToEnd) {
+          await ref.read(toggleTaskCompletionProvider)(task);
+          return false;
+        }
+        final shouldDelete = await _confirmDelete(context);
+        if (shouldDelete) {
+          await ref.read(notificationServiceProvider).cancel(taskReminderId(task.id));
+          await database.deleteTask(task.id);
+        }
+        return false;
+      },
+      child: LifePilotGlassCard(
+        radius: 24,
+        padding: EdgeInsets.zero,
+        borderGradient: borderGradient,
+        shadowColor: shadowColor,
+        child: ListTile(
+          minVerticalPadding: 14,
+          leading: Checkbox(
+            value: task.isCompleted,
+            onChanged: (_) async {
+              await ref.read(toggleTaskCompletionProvider)(task);
+            },
           ),
-        ),
-        subtitle: Padding(
-          padding: const EdgeInsets.only(top: 6),
-          child: Wrap(
-            spacing: 8,
-            runSpacing: 6,
-            children: [
-              _Chip(
-                label: shortDate(task.dueDate),
-                color: overdue
-                    ? theme.colorScheme.error
-                    : theme.colorScheme.secondary,
-              ),
-              if (task.tags.isNotEmpty)
-                _Chip(label: task.tags, color: theme.colorScheme.outline),
-              if (task.recurrencePattern != null &&
-                  task.recurrencePattern != 'none')
+          title: Text(
+            task.title,
+            style: TextStyle(
+              decoration: task.isCompleted ? TextDecoration.lineThrough : null,
+              fontWeight: FontWeight.w700,
+              letterSpacing: -0.5,
+            ),
+          ),
+          subtitle: Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 6,
+              children: [
                 _Chip(
-                  label: switch (task.recurrencePattern) {
-                    'daily' => 'Daily',
-                    'weekly' => 'Weekly',
-                    'monthly' => 'Monthly',
-                    _ => '',
-                  },
-                  color: const Color(0xFF286C63),
+                  label: shortDate(task.dueDate),
+                  color: overdue
+                      ? theme.colorScheme.error
+                      : theme.colorScheme.secondary,
                 ),
+                if (task.tags.isNotEmpty)
+                  _Chip(label: task.tags, color: theme.colorScheme.outline),
+                if (task.recurrencePattern != null &&
+                    task.recurrencePattern != 'none')
+                  _Chip(
+                    label: switch (task.recurrencePattern) {
+                      'daily' => 'Daily',
+                      'weekly' => 'Weekly',
+                      'monthly' => 'Monthly',
+                      _ => '',
+                    },
+                    color: const Color(0xFF286C63),
+                  ),
+              ],
+            ),
+          ),
+          trailing: PopupMenuButton<String>(
+            onSelected: (value) async {
+              if (value == 'edit') {
+                showTaskForm(context, ref, task: task);
+              } else if (value == 'delete') {
+                await ref
+                    .read(notificationServiceProvider)
+                    .cancel(taskReminderId(task.id));
+                await database.deleteTask(task.id);
+              }
+            },
+            itemBuilder: (context) => const [
+              PopupMenuItem(value: 'edit', child: Text('Edit')),
+              PopupMenuItem(value: 'delete', child: Text('Delete')),
             ],
           ),
         ),
-        trailing: PopupMenuButton<String>(
-          onSelected: (value) async {
-            if (value == 'edit') {
-              showTaskForm(context, ref, task: task);
-            } else if (value == 'delete') {
-              await ref
-                  .read(notificationServiceProvider)
-                  .cancel(taskReminderId(task.id));
-              await database.deleteTask(task.id);
-            }
-          },
-          itemBuilder: (context) => const [
-            PopupMenuItem(value: 'edit', child: Text('Edit')),
-            PopupMenuItem(value: 'delete', child: Text('Delete')),
-          ],
+      ),
+    );
+  }
+
+  Future<bool> _confirmDelete(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete task?'),
+        content: const Text('This task will be removed from your local data.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    return confirmed == true;
+  }
+}
+
+class _SwipeActionBackground extends StatelessWidget {
+  const _SwipeActionBackground({
+    required this.icon,
+    required this.alignment,
+    required this.startColor,
+    required this.endColor,
+  });
+
+  final IconData icon;
+  final Alignment alignment;
+  final Color startColor;
+  final Color endColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        gradient: LinearGradient(
+          begin: alignment == Alignment.centerLeft
+              ? Alignment.centerLeft
+              : Alignment.centerRight,
+          end: alignment == Alignment.centerLeft
+              ? Alignment.centerRight
+              : Alignment.centerLeft,
+          colors: [startColor, endColor],
         ),
       ),
+      padding: const EdgeInsets.symmetric(horizontal: 22),
+      alignment: alignment,
+      child: Icon(icon, color: Colors.white),
     );
   }
 }
