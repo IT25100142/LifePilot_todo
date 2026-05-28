@@ -6,8 +6,23 @@ import 'package:file_picker/file_picker.dart';
 import 'package:file_saver/file_saver.dart';
 
 import '../models/backup_payload_v2.dart';
+import '../models/backup_summary.dart';
 import '../utils/crypto_helpers.dart';
 import '../../data/database/app_database.dart';
+
+enum BackupImportRoute { v2, legacy }
+
+class PreparedBackupImport {
+  const PreparedBackupImport({
+    required this.summary,
+    required this.payload,
+    required this.route,
+  });
+
+  final BackupSummary summary;
+  final Map<String, dynamic> payload;
+  final BackupImportRoute route;
+}
 
 class ExportService {
   ExportService(this.database);
@@ -116,7 +131,9 @@ class ExportService {
     return true;
   }
 
-  Future<bool> importEncryptedBackup({required String password}) async {
+  Future<PreparedBackupImport?> prepareEncryptedBackupImport({
+    required String password,
+  }) async {
     final result = await FilePicker.pickFiles(
       type: FileType.custom,
       allowedExtensions: ['lpbackup'],
@@ -124,7 +141,7 @@ class ExportService {
     );
     final file = result?.files.single;
     final bytes = file?.bytes;
-    if (bytes == null) return false;
+    if (bytes == null) return null;
 
     final decryptedJson = await decryptBackupJson(bytes: bytes, password: password);
     final decoded = jsonDecode(decryptedJson);
@@ -133,15 +150,52 @@ class ExportService {
     }
     final formatVersion = (decoded['formatVersion'] as num?)?.toInt();
     if (formatVersion == 2) {
-      await database.importBackupV2(decoded);
-      return true;
+      final payload = BackupPayloadV2.fromJson(decoded);
+      final exportedAt = DateTime.tryParse(payload.exportedAt) ?? DateTime.now();
+      return PreparedBackupImport(
+        summary: BackupSummary(
+          formatVersion: payload.formatVersion,
+          exportedAt: exportedAt,
+          taskCount: payload.tasks.length,
+          eventCount: payload.events.length,
+          accountCount: payload.accounts.length,
+          transactionCount: payload.transactions.length,
+          currency: payload.settings.currency,
+          dbSchemaVersion: payload.dbSchemaVersion,
+        ),
+        payload: decoded,
+        route: BackupImportRoute.v2,
+      );
     }
 
     if (_isLegacyPayload(decoded)) {
-      await database.importJson(decoded);
-      return true;
+      final exportedAt =
+          DateTime.tryParse(decoded['exportedAt'] as String? ?? '') ?? DateTime.now();
+      return PreparedBackupImport(
+        summary: BackupSummary(
+          formatVersion: 1,
+          exportedAt: exportedAt,
+          taskCount: (decoded['tasks'] as List<dynamic>? ?? const []).length,
+          eventCount: (decoded['events'] as List<dynamic>? ?? const []).length,
+          accountCount: 0,
+          transactionCount: (decoded['transactions'] as List<dynamic>? ?? const []).length,
+          currency: decoded['currency'] as String?,
+          isLegacy: true,
+        ),
+        payload: decoded,
+        route: BackupImportRoute.legacy,
+      );
     }
     throw const BackupCryptoException('Invalid backup file format.');
+  }
+
+  Future<void> applyPreparedBackupImport(PreparedBackupImport prepared) async {
+    switch (prepared.route) {
+      case BackupImportRoute.v2:
+        await database.importBackupV2(prepared.payload);
+      case BackupImportRoute.legacy:
+        await database.importJson(prepared.payload);
+    }
   }
 
   bool _isLegacyPayload(Map<String, dynamic> payload) {

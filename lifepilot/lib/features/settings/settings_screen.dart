@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants/app_constants.dart';
+import '../../core/models/backup_summary.dart';
 import '../../core/services/export_service.dart';
 import '../../core/utils/crypto_helpers.dart';
+import '../../data/database/app_database.dart';
 import '../../core/widgets/glass.dart';
 import '../../core/widgets/section_card.dart';
 import '../../core/widgets/state_views.dart';
@@ -185,18 +187,29 @@ class _DataSection extends ConsumerWidget {
             label: const Text('Export CSV'),
           ),
           FilledButton.tonalIcon(
-            onPressed: () => _guard(context, () async {
+            onPressed: () => _guard(
+              context,
+              () async {
               final password = await _promptImportPassword(context);
               if (password == null) return;
-              final imported = await service.importEncryptedBackup(
+              final prepared = await service.prepareEncryptedBackupImport(
                 password: password,
               );
-              if (context.mounted && imported) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Import complete')),
-                );
+              if (prepared == null || !context.mounted) return;
+              final confirmed = await _confirmRestoreSummary(
+                context,
+                prepared.summary,
+              );
+              if (!confirmed || !context.mounted) return;
+              await service.applyPreparedBackupImport(prepared);
+              if (context.mounted) {
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(const SnackBar(content: Text('Import complete')));
               }
-            }),
+            },
+              showSuccess: false,
+            ),
             icon: const Icon(Icons.upload_file),
             label: const Text('Import Encrypted Backup'),
           ),
@@ -206,14 +219,18 @@ class _DataSection extends ConsumerWidget {
             label: const Text('Export JSON (legacy)'),
           ),
           FilledButton.tonalIcon(
-            onPressed: () => _guard(context, () async {
+            onPressed: () => _guard(
+              context,
+              () async {
               final imported = await service.importJson();
               if (context.mounted && imported) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Import complete')),
                 );
               }
-            }),
+            },
+              showSuccess: false,
+            ),
             icon: const Icon(Icons.file_open_outlined),
             label: const Text('Import JSON (legacy)'),
           ),
@@ -230,15 +247,22 @@ class _DataSection extends ConsumerWidget {
   Future<void> _guard(
     BuildContext context,
     Future<void> Function() action,
+    {bool showSuccess = true}
   ) async {
     try {
       await action();
-      if (context.mounted) {
+      if (context.mounted && showSuccess) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(const SnackBar(content: Text('Done')));
       }
     } on BackupCryptoException catch (error) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.message)));
+      }
+    } on BackupRestoreException catch (error) {
       if (context.mounted) {
         ScaffoldMessenger.of(
           context,
@@ -438,6 +462,68 @@ class _DataSection extends ConsumerWidget {
 
     controller.dispose();
     return result;
+  }
+
+  Future<bool> _confirmRestoreSummary(
+    BuildContext context,
+    BackupSummary summary,
+  ) async {
+    final exportedMonth = _monthLabel(summary.exportedAt.month);
+    final exportedText =
+        '${summary.exportedAt.day} $exportedMonth ${summary.exportedAt.year}';
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Restore backup data?'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Backup date: $exportedText'),
+            const SizedBox(height: 8),
+            Text('Tasks: ${summary.taskCount}'),
+            Text('Events: ${summary.eventCount}'),
+            Text('Accounts: ${summary.accountCount}'),
+            Text('Transactions: ${summary.transactionCount}'),
+            if (summary.currency != null) Text('Currency: ${summary.currency}'),
+            const SizedBox(height: 12),
+            const Text(
+              'This action will replace your current local data and cannot be undone.',
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Replace Data'),
+          ),
+        ],
+      ),
+    );
+    return result == true;
+  }
+
+  String _monthLabel(int month) {
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    if (month < 1 || month > 12) return 'Unknown';
+    return months[month - 1];
   }
 }
 
