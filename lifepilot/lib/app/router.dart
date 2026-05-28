@@ -10,6 +10,8 @@ import '../features/settings/settings_screen.dart';
 import '../features/todo/todo_screen.dart';
 import '../features/habits/habits_screen.dart';
 import '../features/focus/focus_screen.dart';
+import '../features/auth/auth_provider.dart';
+import '../features/auth/login_screen.dart';
 
 final pendingQuickActionProvider = StateProvider<QuickAction?>((ref) => null);
 
@@ -24,11 +26,38 @@ final _shellNavigatorCalendarKey = GlobalKey<NavigatorState>();
 final _shellNavigatorFinanceKey = GlobalKey<NavigatorState>();
 final _shellNavigatorSettingsKey = GlobalKey<NavigatorState>();
 
+class RouterRefreshListenable extends ChangeNotifier {
+  RouterRefreshListenable(Ref ref) {
+    ref.listen(authProvider, (previous, next) {
+      notifyListeners();
+    });
+  }
+}
+
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     navigatorKey: _rootNavigatorKey,
     initialLocation: '/',
+    refreshListenable: RouterRefreshListenable(ref),
+    redirect: (context, state) {
+      final isLocked = ref.read(authProvider);
+      final goingToLogin = state.matchedLocation == '/login';
+
+      if (isLocked && !goingToLogin) {
+        return '/login';
+      }
+      if (!isLocked && goingToLogin) {
+        return '/';
+      }
+      return null;
+    },
     routes: [
+      GoRoute(
+        path: '/login',
+        parentNavigatorKey: _rootNavigatorKey,
+        pageBuilder: (context, state) =>
+            const NoTransitionPage(child: LoginScreen()),
+      ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) {
           return LifePilotScaffold(navigationShell: navigationShell);
