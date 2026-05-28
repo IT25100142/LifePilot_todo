@@ -6,6 +6,7 @@ import '../../app/router.dart';
 import '../../core/services/notification_provider.dart';
 import '../../core/services/notification_service.dart';
 import '../../core/utils/date_helpers.dart';
+import '../../core/widgets/glass.dart';
 import '../../core/widgets/section_card.dart';
 import '../../core/widgets/state_views.dart';
 import '../../data/database/app_database.dart';
@@ -191,16 +192,22 @@ class _CalendarDay extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return InkWell(
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(18),
       onTap: onTap,
-      child: Container(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 260),
+        curve: Curves.easeOutCubic,
         decoration: BoxDecoration(
-          color: selected ? theme.colorScheme.primaryContainer : null,
-          borderRadius: BorderRadius.circular(8),
+          color: selected
+              ? theme.colorScheme.primaryContainer.withValues(alpha: 0.72)
+              : theme.colorScheme.surface.withValues(
+                  alpha: theme.brightness == Brightness.dark ? 0.12 : 0.42,
+                ),
+          borderRadius: BorderRadius.circular(18),
           border: Border.all(
             color: selected
                 ? theme.colorScheme.primary
-                : theme.colorScheme.outlineVariant,
+                : Colors.white.withValues(alpha: 0.35),
           ),
         ),
         child: Column(
@@ -259,28 +266,35 @@ class _EventTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final database = ref.watch(appDatabaseProvider);
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
-      leading: const Icon(Icons.schedule),
-      title: Text(event.title),
-      subtitle: Text(
-        '${timeLabel(event.startTime)} - ${timeLabel(event.endTime)}',
-      ),
-      trailing: PopupMenuButton<String>(
-        onSelected: (value) async {
-          if (value == 'edit') {
-            showEventForm(context, ref, event: event);
-          } else if (value == 'delete') {
-            await ref
-                .read(notificationServiceProvider)
-                .cancel(eventReminderId(event.id));
-            await database.deleteEvent(event.id);
-          }
-        },
-        itemBuilder: (context) => const [
-          PopupMenuItem(value: 'edit', child: Text('Edit')),
-          PopupMenuItem(value: 'delete', child: Text('Delete')),
-        ],
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: GlassPanel(
+        radius: 22,
+        padding: EdgeInsets.zero,
+        child: ListTile(
+          contentPadding: const EdgeInsets.symmetric(horizontal: 14),
+          leading: const GlassIcon(icon: Icons.schedule),
+          title: Text(event.title),
+          subtitle: Text(
+            '${timeLabel(event.startTime)} - ${timeLabel(event.endTime)}',
+          ),
+          trailing: PopupMenuButton<String>(
+            onSelected: (value) async {
+              if (value == 'edit') {
+                showEventForm(context, ref, event: event);
+              } else if (value == 'delete') {
+                await ref
+                    .read(notificationServiceProvider)
+                    .cancel(eventReminderId(event.id));
+                await database.deleteEvent(event.id);
+              }
+            },
+            itemBuilder: (context) => const [
+              PopupMenuItem(value: 'edit', child: Text('Edit')),
+              PopupMenuItem(value: 'delete', child: Text('Delete')),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -330,7 +344,12 @@ Future<void> showEventForm(
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
-    builder: (context) => _EventForm(event: event),
+    backgroundColor: Colors.transparent,
+    builder: (context) => GlassPanel(
+      radius: 32,
+      padding: EdgeInsets.zero,
+      child: _EventForm(event: event),
+    ),
   );
 }
 

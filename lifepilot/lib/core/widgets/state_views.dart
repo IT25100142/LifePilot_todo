@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'glass.dart';
+
 class EmptyState extends StatelessWidget {
   const EmptyState({
     required this.icon,
@@ -19,19 +21,20 @@ class EmptyState extends StatelessWidget {
     final theme = Theme.of(context);
     return Center(
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 360),
-        child: Padding(
-          padding: const EdgeInsets.all(24),
+        constraints: const BoxConstraints(maxWidth: 420),
+        child: GlassPanel(
+          padding: const EdgeInsets.all(28),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, size: 44, color: theme.colorScheme.primary),
+              GlassIcon(icon: icon, color: theme.colorScheme.primary),
               const SizedBox(height: 16),
               Text(
                 title,
                 textAlign: TextAlign.center,
                 style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0,
                 ),
               ),
               const SizedBox(height: 8),
@@ -40,6 +43,7 @@ class EmptyState extends StatelessWidget {
                 textAlign: TextAlign.center,
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
+                  height: 1.45,
                 ),
               ),
               if (action != null) ...[const SizedBox(height: 18), action!],
@@ -71,6 +75,15 @@ class LoadingState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(child: CircularProgressIndicator());
+    return Center(
+      child: GlassPanel(
+        radius: 24,
+        padding: const EdgeInsets.all(20),
+        child: const SizedBox.square(
+          dimension: 34,
+          child: CircularProgressIndicator(strokeWidth: 3),
+        ),
+      ),
+    );
   }
 }

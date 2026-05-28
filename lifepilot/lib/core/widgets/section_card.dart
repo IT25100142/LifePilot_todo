@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 
+import 'glass.dart';
+
 class SectionCard extends StatelessWidget {
   const SectionCard({
     required this.child,
     this.title,
     this.subtitle,
     this.action,
-    this.padding = const EdgeInsets.all(18),
+    this.padding = const EdgeInsets.all(20),
     super.key,
   });
 
@@ -19,9 +21,8 @@ class SectionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Card(
-      color: theme.colorScheme.surfaceContainerLow,
-      child: Padding(
+    return AnimatedGlassItem(
+      child: GlassPanel(
         padding: padding,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -38,15 +39,17 @@ class SectionCard extends StatelessWidget {
                           Text(
                             title!,
                             style: theme.textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w700,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 0,
                             ),
                           ),
                         if (subtitle != null) ...[
-                          const SizedBox(height: 4),
+                          const SizedBox(height: 5),
                           Text(
                             subtitle!,
                             style: theme.textTheme.bodySmall?.copyWith(
                               color: theme.colorScheme.onSurfaceVariant,
+                              height: 1.35,
                             ),
                           ),
                         ],
@@ -56,7 +59,7 @@ class SectionCard extends StatelessWidget {
                   if (action != null) action!,
                 ],
               ),
-            if (title != null || action != null) const SizedBox(height: 14),
+            if (title != null || action != null) const SizedBox(height: 16),
             child,
           ],
         ),

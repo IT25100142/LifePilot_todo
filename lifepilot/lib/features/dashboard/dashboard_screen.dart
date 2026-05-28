@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../app/router.dart';
 import '../../core/utils/date_helpers.dart';
 import '../../core/utils/formatters.dart';
+import '../../core/widgets/glass.dart';
 import '../../core/widgets/section_card.dart';
 import '../../core/widgets/state_views.dart';
 import '../../data/database/app_database.dart';
@@ -47,7 +48,9 @@ class DashboardScreen extends ConsumerWidget {
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
                 sliver: SliverList(
                   delegate: SliverChildListDelegate([
-                    _HeroHeader(currency: currency, entries: entries),
+                    AnimatedGlassItem(
+                      child: _HeroHeader(currency: currency, entries: entries),
+                    ),
                     const SizedBox(height: 16),
                     _QuickActions(ref: ref),
                     const SizedBox(height: 16),
@@ -110,29 +113,36 @@ class _HeroHeader extends StatelessWidget {
                 .toList(),
           );
 
-    return Container(
-      padding: const EdgeInsets.all(22),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(8),
-        gradient: LinearGradient(
-          colors: [theme.colorScheme.primary, theme.colorScheme.tertiary],
-        ),
-      ),
+    return GlassPanel(
+      padding: const EdgeInsets.all(26),
+      opacity: theme.brightness == Brightness.dark ? 0.18 : 0.5,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Today at a glance',
-            style: theme.textTheme.titleMedium?.copyWith(
-              color: theme.colorScheme.onPrimary,
-              fontWeight: FontWeight.w700,
-            ),
+          Row(
+            children: [
+              GlassIcon(
+                icon: Icons.auto_awesome_rounded,
+                color: theme.colorScheme.primary,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Today at a glance',
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0,
+                  ),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 8),
           Text(
-            monthLabel(DateTime.now()),
+            '${monthLabel(DateTime.now())} forecast across tasks, calendar, and money.',
             style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onPrimary.withValues(alpha: 0.82),
+              color: theme.colorScheme.onSurfaceVariant,
+              height: 1.4,
             ),
           ),
           const SizedBox(height: 22),
@@ -140,9 +150,21 @@ class _HeroHeader extends StatelessWidget {
             spacing: 12,
             runSpacing: 12,
             children: [
-              _MetricPill('Income', money(summary?.income ?? 0, currency)),
-              _MetricPill('Expenses', money(summary?.expenses ?? 0, currency)),
-              _MetricPill('Balance', money(summary?.balance ?? 0, currency)),
+              _MetricPill(
+                label: 'Income',
+                value: money(summary?.income ?? 0, currency),
+                icon: Icons.trending_up_rounded,
+              ),
+              _MetricPill(
+                label: 'Expenses',
+                value: money(summary?.expenses ?? 0, currency),
+                icon: Icons.trending_down_rounded,
+              ),
+              _MetricPill(
+                label: 'Balance',
+                value: money(summary?.balance ?? 0, currency),
+                icon: Icons.account_balance_wallet_rounded,
+              ),
             ],
           ),
         ],
@@ -152,34 +174,47 @@ class _HeroHeader extends StatelessWidget {
 }
 
 class _MetricPill extends StatelessWidget {
-  const _MetricPill(this.label, this.value);
+  const _MetricPill({
+    required this.label,
+    required this.value,
+    required this.icon,
+  });
 
   final String label;
   final String value;
+  final IconData icon;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Container(
+    return GlassPanel(
       constraints: const BoxConstraints(minWidth: 160),
+      radius: 22,
       padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.onPrimary.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: theme.colorScheme.onPrimary.withValues(alpha: 0.18),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      opacity: theme.brightness == Brightness.dark ? 0.18 : 0.42,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Text(label, style: TextStyle(color: theme.colorScheme.onPrimary)),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: theme.textTheme.titleLarge?.copyWith(
-              color: theme.colorScheme.onPrimary,
-              fontWeight: FontWeight.w800,
+          Icon(icon, color: theme.colorScheme.primary),
+          const SizedBox(width: 12),
+          Flexible(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: theme.textTheme.labelMedium),
+                const SizedBox(height: 4),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    value,
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 0,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ],

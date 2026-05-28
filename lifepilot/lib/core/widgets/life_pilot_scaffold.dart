@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import 'glass.dart';
+
 class LifePilotScaffold extends StatelessWidget {
   const LifePilotScaffold({required this.navigationShell, super.key});
 
@@ -34,48 +36,72 @@ class LifePilotScaffold extends StatelessWidget {
 
     if (isCompact) {
       return Scaffold(
-        body: SafeArea(child: navigationShell),
-        bottomNavigationBar: NavigationBar(
-          selectedIndex: navigationShell.currentIndex,
-          onDestinationSelected: _goBranch,
-          destinations: [
-            for (final item in _destinations)
-              NavigationDestination(
-                icon: Icon(item.icon),
-                selectedIcon: Icon(item.selectedIcon),
-                label: item.label,
-              ),
-          ],
+        extendBody: true,
+        backgroundColor: Colors.transparent,
+        body: LiquidBackground(child: SafeArea(child: navigationShell)),
+        bottomNavigationBar: SafeArea(
+          minimum: const EdgeInsets.fromLTRB(14, 0, 14, 10),
+          child: GlassPanel(
+            radius: 32,
+            padding: EdgeInsets.zero,
+            opacity: Theme.of(context).brightness == Brightness.dark
+                ? 0.24
+                : 0.62,
+            child: NavigationBar(
+              selectedIndex: navigationShell.currentIndex,
+              onDestinationSelected: _goBranch,
+              destinations: [
+                for (final item in _destinations)
+                  NavigationDestination(
+                    icon: Icon(item.icon),
+                    selectedIcon: Icon(item.selectedIcon),
+                    label: item.label,
+                  ),
+              ],
+            ),
+          ),
         ),
       );
     }
 
     return Scaffold(
-      body: SafeArea(
-        child: Row(
-          children: [
-            NavigationRail(
-              extended: isExpanded,
-              selectedIndex: navigationShell.currentIndex,
-              onDestinationSelected: _goBranch,
-              leading: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 18),
-                child: isExpanded
-                    ? const _BrandHeader()
-                    : const Icon(Icons.flight_takeoff_rounded, size: 30),
-              ),
-              destinations: [
-                for (final item in _destinations)
-                  NavigationRailDestination(
-                    icon: Icon(item.icon),
-                    selectedIcon: Icon(item.selectedIcon),
-                    label: Text(item.label),
+      backgroundColor: Colors.transparent,
+      body: LiquidBackground(
+        child: SafeArea(
+          child: Row(
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(14),
+                child: GlassPanel(
+                  radius: 34,
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  opacity: Theme.of(context).brightness == Brightness.dark
+                      ? 0.18
+                      : 0.58,
+                  child: NavigationRail(
+                    extended: isExpanded,
+                    selectedIndex: navigationShell.currentIndex,
+                    onDestinationSelected: _goBranch,
+                    leading: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      child: isExpanded
+                          ? const _BrandHeader()
+                          : const GlassIcon(icon: Icons.flight_takeoff_rounded),
+                    ),
+                    destinations: [
+                      for (final item in _destinations)
+                        NavigationRailDestination(
+                          icon: Icon(item.icon),
+                          selectedIcon: Icon(item.selectedIcon),
+                          label: Text(item.label),
+                        ),
+                    ],
                   ),
-              ],
-            ),
-            const VerticalDivider(width: 1),
-            Expanded(child: navigationShell),
-          ],
+                ),
+              ),
+              Expanded(child: navigationShell),
+            ],
+          ),
         ),
       ),
     );
@@ -99,10 +125,9 @@ class _BrandHeader extends StatelessWidget {
       width: 190,
       child: Row(
         children: [
-          CircleAvatar(
-            backgroundColor: theme.colorScheme.primaryContainer,
-            foregroundColor: theme.colorScheme.onPrimaryContainer,
-            child: const Icon(Icons.flight_takeoff_rounded),
+          GlassIcon(
+            icon: Icons.flight_takeoff_rounded,
+            color: theme.colorScheme.primary,
           ),
           const SizedBox(width: 12),
           Text(

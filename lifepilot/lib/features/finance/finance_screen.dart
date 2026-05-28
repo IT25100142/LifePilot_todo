@@ -7,6 +7,7 @@ import '../../app/router.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/utils/date_helpers.dart';
 import '../../core/utils/formatters.dart';
+import '../../core/widgets/glass.dart';
 import '../../core/widgets/section_card.dart';
 import '../../core/widgets/state_views.dart';
 import '../../data/database/app_database.dart';
@@ -219,7 +220,7 @@ class _FinanceMetric extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: theme.colorScheme.primary),
+          GlassIcon(icon: icon, color: theme.colorScheme.primary),
           const SizedBox(height: 10),
           Text(label, style: theme.textTheme.labelMedium),
           const SizedBox(height: 4),
@@ -388,10 +389,13 @@ class _TransactionHistory extends ConsumerWidget {
               for (final entry in items)
                 ListTile(
                   contentPadding: EdgeInsets.zero,
-                  leading: Icon(
-                    entry.type == 'income'
-                        ? Icons.arrow_downward
-                        : Icons.arrow_upward,
+                  leading: GlassIcon(
+                    icon: entry.type == 'income'
+                        ? Icons.arrow_downward_rounded
+                        : Icons.arrow_upward_rounded,
+                    color: entry.type == 'income'
+                        ? Theme.of(context).colorScheme.primary
+                        : Theme.of(context).colorScheme.error,
                   ),
                   title: Text(entry.title),
                   subtitle: Text(
@@ -437,7 +441,12 @@ Future<void> showTransactionForm(
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
-    builder: (context) => _TransactionForm(entry: entry),
+    backgroundColor: Colors.transparent,
+    builder: (context) => GlassPanel(
+      radius: 32,
+      padding: EdgeInsets.zero,
+      child: _TransactionForm(entry: entry),
+    ),
   );
 }
 

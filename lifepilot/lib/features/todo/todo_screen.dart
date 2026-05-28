@@ -6,6 +6,7 @@ import '../../app/router.dart';
 import '../../core/services/notification_provider.dart';
 import '../../core/services/notification_service.dart';
 import '../../core/utils/date_helpers.dart';
+import '../../core/widgets/glass.dart';
 import '../../core/widgets/section_card.dart';
 import '../../core/widgets/state_views.dart';
 import '../../data/database/app_database.dart';
@@ -148,8 +149,12 @@ class _TaskTile extends ConsumerWidget {
         task.dueDate!.isBefore(DateTime.now()) &&
         !task.isCompleted;
 
-    return Card(
+    return GlassPanel(
+      radius: 24,
+      padding: EdgeInsets.zero,
+      opacity: Theme.of(context).brightness == Brightness.dark ? 0.14 : 0.48,
       child: ListTile(
+        minVerticalPadding: 14,
         leading: Checkbox(
           value: task.isCompleted,
           onChanged: (_) async {
@@ -230,7 +235,12 @@ Future<void> showTaskForm(BuildContext context, WidgetRef ref, {Task? task}) {
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
-    builder: (context) => _TaskForm(task: task),
+    backgroundColor: Colors.transparent,
+    builder: (context) => GlassPanel(
+      radius: 32,
+      padding: EdgeInsets.zero,
+      child: _TaskForm(task: task),
+    ),
   );
 }
 

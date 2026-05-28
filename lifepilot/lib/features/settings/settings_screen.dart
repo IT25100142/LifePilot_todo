@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants/app_constants.dart';
 import '../../core/services/export_service.dart';
+import '../../core/widgets/glass.dart';
 import '../../core/widgets/section_card.dart';
 import '../../core/widgets/state_views.dart';
 import '../../data/database/database_provider.dart';
@@ -47,30 +48,34 @@ class _ThemeSection extends ConsumerWidget {
     return SectionCard(
       title: 'Appearance',
       subtitle: 'Choose how LifePilot follows your device theme.',
-      child: SegmentedButton<ThemeMode>(
-        segments: const [
-          ButtonSegment(
-            value: ThemeMode.system,
-            label: Text('System'),
-            icon: Icon(Icons.brightness_auto_outlined),
-          ),
-          ButtonSegment(
-            value: ThemeMode.light,
-            label: Text('Light'),
-            icon: Icon(Icons.light_mode_outlined),
-          ),
-          ButtonSegment(
-            value: ThemeMode.dark,
-            label: Text('Dark'),
-            icon: Icon(Icons.dark_mode_outlined),
-          ),
-        ],
-        selected: {themeMode},
-        onSelectionChanged: (selection) {
-          ref
-              .read(settingsControllerProvider.notifier)
-              .setThemeMode(selection.first);
-        },
+      child: GlassPanel(
+        radius: 22,
+        padding: const EdgeInsets.all(6),
+        child: SegmentedButton<ThemeMode>(
+          segments: const [
+            ButtonSegment(
+              value: ThemeMode.system,
+              label: Text('System'),
+              icon: Icon(Icons.brightness_auto_outlined),
+            ),
+            ButtonSegment(
+              value: ThemeMode.light,
+              label: Text('Light'),
+              icon: Icon(Icons.light_mode_outlined),
+            ),
+            ButtonSegment(
+              value: ThemeMode.dark,
+              label: Text('Dark'),
+              icon: Icon(Icons.dark_mode_outlined),
+            ),
+          ],
+          selected: {themeMode},
+          onSelectionChanged: (selection) {
+            ref
+                .read(settingsControllerProvider.notifier)
+                .setThemeMode(selection.first);
+          },
+        ),
       ),
     );
   }
