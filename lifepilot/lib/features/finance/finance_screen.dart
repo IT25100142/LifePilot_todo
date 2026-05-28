@@ -658,7 +658,7 @@ class _CategoryBudgetStatusSection extends ConsumerWidget {
                           Row(
                             children: [
                               CircleAvatar(
-                                backgroundColor: Color(item.category.colorValue).withOpacity(0.2),
+                                backgroundColor: Color(item.category.colorValue).withValues(alpha: 0.2),
                                 radius: 12,
                                 child: Icon(
                                   Icons.circle,
@@ -694,7 +694,7 @@ class _CategoryBudgetStatusSection extends ConsumerWidget {
                         child: LinearProgressIndicator(
                           value: item.ratio.clamp(0.0, 1.0),
                           minHeight: 8,
-                          backgroundColor: theme.colorScheme.surfaceContainerHighest.withOpacity(0.38),
+                          backgroundColor: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.38),
                           color: item.isOverLimit
                               ? theme.colorScheme.error
                               : item.isNearLimit
@@ -825,7 +825,7 @@ class _BudgetSettingsFormState extends ConsumerState<_BudgetSettingsForm> {
                       child: Row(
                         children: [
                           CircleAvatar(
-                            backgroundColor: Color(cat.colorValue).withOpacity(0.2),
+                            backgroundColor: Color(cat.colorValue).withValues(alpha: 0.2),
                             radius: 18,
                             child: Icon(
                               Icons.category,
@@ -897,7 +897,7 @@ class _BudgetSettingsFormState extends ConsumerState<_BudgetSettingsForm> {
                       ),
                     );
                   }
-                  if (mounted) {
+                  if (context.mounted) {
                     Navigator.pop(context);
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text('Budgets updated successfully')),

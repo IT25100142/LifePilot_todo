@@ -368,7 +368,7 @@ class _TaskFormState extends ConsumerState<_TaskForm> {
                       },
                     ),
                     selected: _recurrencePattern == pattern,
-                    selectedColor: const Color(0xFF286C63).withOpacity(0.24),
+                    selectedColor: const Color(0xFF286C63).withValues(alpha: 0.24),
                     checkmarkColor: const Color(0xFF286C63),
                     labelStyle: TextStyle(
                       color: _recurrencePattern == pattern

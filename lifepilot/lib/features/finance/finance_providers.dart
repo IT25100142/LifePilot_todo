@@ -1,8 +1,6 @@
-import 'package:drift/drift.dart' show Value;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/services/notification_provider.dart';
-import '../../core/services/notification_service.dart';
 import '../../core/utils/date_helpers.dart';
 import '../../data/database/app_database.dart';
 import '../../data/database/database_provider.dart';
