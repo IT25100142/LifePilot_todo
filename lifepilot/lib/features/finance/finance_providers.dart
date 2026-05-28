@@ -72,7 +72,7 @@ FinanceSummary buildFinanceSummary(List<FinanceEntry> entries) {
   for (final entry in entries) {
     if (entry.type == 'income') {
       income += entry.amount;
-    } else {
+    } else if (entry.type == 'expense') {
       expenses += entry.amount;
       byCategory.update(
         entry.category,
@@ -110,6 +110,11 @@ class CategoryBudgetStatus {
 final categoriesStreamProvider = StreamProvider<List<Category>>((ref) {
   final database = ref.watch(appDatabaseProvider);
   return database.watchCategories();
+});
+
+final accountsStreamProvider = StreamProvider<List<Account>>((ref) {
+  final database = ref.watch(appDatabaseProvider);
+  return database.watchAccounts();
 });
 
 final categoryBudgetStatusProvider = Provider<AsyncValue<List<CategoryBudgetStatus>>>((ref) {
@@ -201,7 +206,7 @@ final saveFinanceTransactionProvider = Provider((ref) {
         }
 
         final spentAfter = spentBefore + entryAmount;
-        final newId = await db.saveFinanceEntry(transactionCompanion);
+        final newId = await db.saveFinanceEntryWithBalance(transactionCompanion);
 
         final beforeRatio = spentBefore / budget;
         final afterRatio = spentAfter / budget;
@@ -226,7 +231,7 @@ final saveFinanceTransactionProvider = Provider((ref) {
       }
     }
 
-    return db.saveFinanceEntry(transactionCompanion);
+    return db.saveFinanceEntryWithBalance(transactionCompanion);
   };
 });
 

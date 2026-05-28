@@ -58,6 +58,18 @@ class FinanceEntries extends Table {
   TextColumn get type => text().withDefault(const Constant('expense'))();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
   DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
+  IntColumn get accountId => integer().nullable().references(Accounts, #id)();
+  IntColumn get transferTargetAccountId => integer().nullable().references(Accounts, #id)();
+}
+
+class Accounts extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get name => text().withLength(min: 1, max: 80)();
+  RealColumn get initialBalance => real().withDefault(const Constant(0.0))();
+  RealColumn get currentBalance => real().withDefault(const Constant(0.0))();
+  IntColumn get colorValue =>
+      integer().withDefault(const Constant(0xFF286C63))();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
 }
 
 class Categories extends Table {
@@ -82,7 +94,14 @@ class AppSettingsTable extends Table {
 }
 
 @DriftDatabase(
-  tables: [Tasks, CalendarEvents, FinanceEntries, Categories, AppSettingsTable],
+  tables: [
+    Tasks,
+    CalendarEvents,
+    FinanceEntries,
+    Categories,
+    AppSettingsTable,
+    Accounts
+  ],
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
@@ -127,7 +146,7 @@ class AppDatabase extends _$AppDatabase {
   }
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -142,6 +161,21 @@ class AppDatabase extends _$AppDatabase {
           if (from < 3) {
             await m.addColumn(categories, categories.monthlyBudget);
           }
+          if (from < 4) {
+            await m.createTable(accounts);
+            await m.addColumn(financeEntries, financeEntries.accountId);
+            await m.addColumn(financeEntries,
+                financeEntries.transferTargetAccountId);
+
+            // Insert a default Primary Account
+            final nowStr = DateTime.now().toIso8601String();
+            final defaultAccountId = await customInsert(
+                "INSERT INTO accounts (name, initial_balance, current_balance, color_value, created_at) "
+                "VALUES ('Primary Account', 0.0, 0.0, 4280806499, '$nowStr');");
+            // Set all existing transactions to point to this Primary Account
+            await customUpdate(
+                "UPDATE transactions SET account_id = $defaultAccountId WHERE account_id IS NULL;");
+          }
         },
       );
 
@@ -151,9 +185,11 @@ class AppDatabase extends _$AppDatabase {
 
     await transaction(() async {
       await _seedCategories();
+      await _seedAccounts();
       await _seedTasks();
       await _seedEvents();
       await _seedFinanceEntries();
+      await recalculateAccountBalances();
       await update(
         appSettingsTable,
       ).replace(settings.copyWith(demoSeeded: true));
@@ -443,8 +479,42 @@ class AppDatabase extends _$AppDatabase {
     });
   }
 
+  Future<void> _seedAccounts() async {
+    final existing = await select(accounts).get();
+    if (existing.isNotEmpty) return;
+
+    await batch((batch) {
+      batch.insertAll(accounts, [
+        AccountsCompanion.insert(
+          name: 'Bank',
+          initialBalance: const Value(50000.0),
+          currentBalance: const Value(50000.0),
+          colorValue: const Value(0xFF286C63),
+        ),
+        AccountsCompanion.insert(
+          name: 'Cash',
+          initialBalance: const Value(5000.0),
+          currentBalance: const Value(5000.0),
+          colorValue: const Value(0xFF4B66D3),
+        ),
+        AccountsCompanion.insert(
+          name: 'Savings',
+          initialBalance: const Value(200000.0),
+          currentBalance: const Value(200000.0),
+          colorValue: const Value(0xFFC77D2B),
+        ),
+      ]);
+    });
+  }
+
   Future<void> _seedFinanceEntries() async {
     if ((await select(financeEntries).get()).isNotEmpty) return;
+
+    final allAccounts = await select(accounts).get();
+    final bankAccount = allAccounts.firstWhere((a) => a.name == 'Bank',
+        orElse: () => allAccounts.first);
+    final cashAccount = allAccounts.firstWhere((a) => a.name == 'Cash',
+        orElse: () => allAccounts.first);
 
     final now = DateTime.now();
     await batch((batch) {
@@ -455,6 +525,7 @@ class AppDatabase extends _$AppDatabase {
           category: const Value('Salary'),
           date: DateTime(now.year, now.month, 1),
           type: const Value('income'),
+          accountId: Value(bankAccount.id),
         ),
         FinanceEntriesCompanion.insert(
           title: 'Groceries',
@@ -462,6 +533,7 @@ class AppDatabase extends _$AppDatabase {
           category: const Value('Food'),
           date: now.subtract(const Duration(days: 2)),
           type: const Value('expense'),
+          accountId: Value(cashAccount.id),
         ),
         FinanceEntriesCompanion.insert(
           title: 'Internet bill',
@@ -469,6 +541,7 @@ class AppDatabase extends _$AppDatabase {
           category: const Value('Bills'),
           date: now.subtract(const Duration(days: 4)),
           type: const Value('expense'),
+          accountId: Value(bankAccount.id),
         ),
         FinanceEntriesCompanion.insert(
           title: 'Train pass',
@@ -476,8 +549,76 @@ class AppDatabase extends _$AppDatabase {
           category: const Value('Transport'),
           date: now.subtract(const Duration(days: 7)),
           type: const Value('expense'),
+          accountId: Value(cashAccount.id),
         ),
       ]);
+    });
+  }
+
+  Stream<List<Account>> watchAccounts() {
+    return (select(accounts)..orderBy([(a) => OrderingTerm.asc(a.name)]))
+        .watch();
+  }
+
+  Future<int> saveAccount(AccountsCompanion entry) async {
+    return transaction(() async {
+      final id = await into(accounts).insertOnConflictUpdate(entry);
+      await recalculateAccountBalances();
+      return id;
+    });
+  }
+
+  Future<void> deleteAccount(int id) async {
+    await transaction(() async {
+      await (delete(accounts)..where((a) => a.id.equals(id))).go();
+      await (delete(financeEntries)
+            ..where((t) =>
+                t.accountId.equals(id) |
+                t.transferTargetAccountId.equals(id)))
+          .go();
+      await recalculateAccountBalances();
+    });
+  }
+
+  Future<void> recalculateAccountBalances() async {
+    await transaction(() async {
+      final allAccounts = await select(accounts).get();
+      final allEntries = await select(financeEntries).get();
+
+      for (final account in allAccounts) {
+        var balance = account.initialBalance;
+        for (final entry in allEntries) {
+          if (entry.accountId == account.id) {
+            if (entry.type == 'income') {
+              balance += entry.amount;
+            } else if (entry.type == 'expense' || entry.type == 'transfer') {
+              balance -= entry.amount;
+            }
+          }
+          if (entry.transferTargetAccountId == account.id &&
+              entry.type == 'transfer') {
+            balance += entry.amount;
+          }
+        }
+        await (update(accounts)..where((a) => a.id.equals(account.id))).write(
+          AccountsCompanion(currentBalance: Value(balance)),
+        );
+      }
+    });
+  }
+
+  Future<int> saveFinanceEntryWithBalance(FinanceEntriesCompanion entry) async {
+    return transaction(() async {
+      final id = await into(financeEntries).insertOnConflictUpdate(entry);
+      await recalculateAccountBalances();
+      return id;
+    });
+  }
+
+  Future<void> deleteFinanceEntryWithBalance(int id) async {
+    await transaction(() async {
+      await (delete(financeEntries)..where((t) => t.id.equals(id))).go();
+      await recalculateAccountBalances();
     });
   }
 }
