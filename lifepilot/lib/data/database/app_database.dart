@@ -58,6 +58,8 @@ class FinanceEntries extends Table {
   DateTimeColumn get date => dateTime()();
   TextColumn get note => text().withDefault(const Constant(''))();
   TextColumn get type => text().withDefault(const Constant('expense'))();
+  TextColumn get currency =>
+      text().withDefault(const Constant(AppConstants.defaultCurrency))();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
   DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
   IntColumn get accountId => integer().nullable().references(Accounts, #id)();
@@ -162,7 +164,7 @@ class AppDatabase extends _$AppDatabase {
   }
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -195,6 +197,9 @@ class AppDatabase extends _$AppDatabase {
         await customUpdate(
           "UPDATE transactions SET account_id = $defaultAccountId WHERE account_id IS NULL;",
         );
+      }
+      if (from < 5) {
+        await m.addColumn(financeEntries, financeEntries.currency);
       }
     },
   );
@@ -348,6 +353,9 @@ class AppDatabase extends _$AppDatabase {
             date: _date(json['date']) ?? DateTime.now(),
             note: Value(json['note'] as String? ?? ''),
             type: Value(json['type'] as String? ?? 'expense'),
+            currency: Value(
+              (json['currency'] as String?) ?? AppConstants.defaultCurrency,
+            ),
             createdAt: Value(_date(json['createdAt']) ?? DateTime.now()),
             updatedAt: Value(_date(json['updatedAt']) ?? DateTime.now()),
           ),
@@ -474,6 +482,7 @@ class AppDatabase extends _$AppDatabase {
             date: _date(tx.date) ?? DateTime.now(),
             note: Value(tx.note),
             type: Value(tx.type),
+            currency: Value(tx.currency),
             createdAt: Value(_date(tx.createdAt) ?? DateTime.now()),
             updatedAt: Value(_date(tx.updatedAt) ?? DateTime.now()),
             accountId: Value(remappedAccountId),
@@ -692,6 +701,7 @@ class AppDatabase extends _$AppDatabase {
           category: const Value('Salary'),
           date: DateTime(now.year, now.month, 1),
           type: const Value('income'),
+          currency: const Value(AppConstants.defaultCurrency),
           accountId: Value(bankAccount.id),
         ),
         FinanceEntriesCompanion.insert(
@@ -700,6 +710,7 @@ class AppDatabase extends _$AppDatabase {
           category: const Value('Food'),
           date: now.subtract(const Duration(days: 2)),
           type: const Value('expense'),
+          currency: const Value(AppConstants.defaultCurrency),
           accountId: Value(cashAccount.id),
         ),
         FinanceEntriesCompanion.insert(
@@ -708,6 +719,7 @@ class AppDatabase extends _$AppDatabase {
           category: const Value('Bills'),
           date: now.subtract(const Duration(days: 4)),
           type: const Value('expense'),
+          currency: const Value(AppConstants.defaultCurrency),
           accountId: Value(bankAccount.id),
         ),
         FinanceEntriesCompanion.insert(
@@ -716,6 +728,7 @@ class AppDatabase extends _$AppDatabase {
           category: const Value('Transport'),
           date: now.subtract(const Duration(days: 7)),
           type: const Value('expense'),
+          currency: const Value(AppConstants.defaultCurrency),
           accountId: Value(cashAccount.id),
         ),
       ]);

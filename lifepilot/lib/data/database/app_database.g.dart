@@ -1765,6 +1765,18 @@ class $FinanceEntriesTable extends FinanceEntries
     requiredDuringInsert: false,
     defaultValue: const Constant('expense'),
   );
+  static const VerificationMeta _currencyMeta = const VerificationMeta(
+    'currency',
+  );
+  @override
+  late final GeneratedColumn<String> currency = GeneratedColumn<String>(
+    'currency',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(AppConstants.defaultCurrency),
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -1826,6 +1838,7 @@ class $FinanceEntriesTable extends FinanceEntries
     date,
     note,
     type,
+    currency,
     createdAt,
     updatedAt,
     accountId,
@@ -1886,6 +1899,12 @@ class $FinanceEntriesTable extends FinanceEntries
       context.handle(
         _typeMeta,
         type.isAcceptableOrUnknown(data['type']!, _typeMeta),
+      );
+    }
+    if (data.containsKey('currency')) {
+      context.handle(
+        _currencyMeta,
+        currency.isAcceptableOrUnknown(data['currency']!, _currencyMeta),
       );
     }
     if (data.containsKey('created_at')) {
@@ -1952,6 +1971,10 @@ class $FinanceEntriesTable extends FinanceEntries
         DriftSqlType.string,
         data['${effectivePrefix}type'],
       )!,
+      currency: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}currency'],
+      )!,
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -1985,6 +2008,7 @@ class FinanceEntry extends DataClass implements Insertable<FinanceEntry> {
   final DateTime date;
   final String note;
   final String type;
+  final String currency;
   final DateTime createdAt;
   final DateTime updatedAt;
   final int? accountId;
@@ -1997,6 +2021,7 @@ class FinanceEntry extends DataClass implements Insertable<FinanceEntry> {
     required this.date,
     required this.note,
     required this.type,
+    required this.currency,
     required this.createdAt,
     required this.updatedAt,
     this.accountId,
@@ -2012,6 +2037,7 @@ class FinanceEntry extends DataClass implements Insertable<FinanceEntry> {
     map['date'] = Variable<DateTime>(date);
     map['note'] = Variable<String>(note);
     map['type'] = Variable<String>(type);
+    map['currency'] = Variable<String>(currency);
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
     if (!nullToAbsent || accountId != null) {
@@ -2034,6 +2060,7 @@ class FinanceEntry extends DataClass implements Insertable<FinanceEntry> {
       date: Value(date),
       note: Value(note),
       type: Value(type),
+      currency: Value(currency),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
       accountId: accountId == null && nullToAbsent
@@ -2058,6 +2085,7 @@ class FinanceEntry extends DataClass implements Insertable<FinanceEntry> {
       date: serializer.fromJson<DateTime>(json['date']),
       note: serializer.fromJson<String>(json['note']),
       type: serializer.fromJson<String>(json['type']),
+      currency: serializer.fromJson<String>(json['currency']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
       accountId: serializer.fromJson<int?>(json['accountId']),
@@ -2077,6 +2105,7 @@ class FinanceEntry extends DataClass implements Insertable<FinanceEntry> {
       'date': serializer.toJson<DateTime>(date),
       'note': serializer.toJson<String>(note),
       'type': serializer.toJson<String>(type),
+      'currency': serializer.toJson<String>(currency),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
       'accountId': serializer.toJson<int?>(accountId),
@@ -2094,6 +2123,7 @@ class FinanceEntry extends DataClass implements Insertable<FinanceEntry> {
     DateTime? date,
     String? note,
     String? type,
+    String? currency,
     DateTime? createdAt,
     DateTime? updatedAt,
     Value<int?> accountId = const Value.absent(),
@@ -2106,6 +2136,7 @@ class FinanceEntry extends DataClass implements Insertable<FinanceEntry> {
     date: date ?? this.date,
     note: note ?? this.note,
     type: type ?? this.type,
+    currency: currency ?? this.currency,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
     accountId: accountId.present ? accountId.value : this.accountId,
@@ -2122,6 +2153,7 @@ class FinanceEntry extends DataClass implements Insertable<FinanceEntry> {
       date: data.date.present ? data.date.value : this.date,
       note: data.note.present ? data.note.value : this.note,
       type: data.type.present ? data.type.value : this.type,
+      currency: data.currency.present ? data.currency.value : this.currency,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
       accountId: data.accountId.present ? data.accountId.value : this.accountId,
@@ -2141,6 +2173,7 @@ class FinanceEntry extends DataClass implements Insertable<FinanceEntry> {
           ..write('date: $date, ')
           ..write('note: $note, ')
           ..write('type: $type, ')
+          ..write('currency: $currency, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('accountId: $accountId, ')
@@ -2158,6 +2191,7 @@ class FinanceEntry extends DataClass implements Insertable<FinanceEntry> {
     date,
     note,
     type,
+    currency,
     createdAt,
     updatedAt,
     accountId,
@@ -2174,6 +2208,7 @@ class FinanceEntry extends DataClass implements Insertable<FinanceEntry> {
           other.date == this.date &&
           other.note == this.note &&
           other.type == this.type &&
+          other.currency == this.currency &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt &&
           other.accountId == this.accountId &&
@@ -2188,6 +2223,7 @@ class FinanceEntriesCompanion extends UpdateCompanion<FinanceEntry> {
   final Value<DateTime> date;
   final Value<String> note;
   final Value<String> type;
+  final Value<String> currency;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
   final Value<int?> accountId;
@@ -2200,6 +2236,7 @@ class FinanceEntriesCompanion extends UpdateCompanion<FinanceEntry> {
     this.date = const Value.absent(),
     this.note = const Value.absent(),
     this.type = const Value.absent(),
+    this.currency = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.accountId = const Value.absent(),
@@ -2213,6 +2250,7 @@ class FinanceEntriesCompanion extends UpdateCompanion<FinanceEntry> {
     required DateTime date,
     this.note = const Value.absent(),
     this.type = const Value.absent(),
+    this.currency = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.accountId = const Value.absent(),
@@ -2228,6 +2266,7 @@ class FinanceEntriesCompanion extends UpdateCompanion<FinanceEntry> {
     Expression<DateTime>? date,
     Expression<String>? note,
     Expression<String>? type,
+    Expression<String>? currency,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
     Expression<int>? accountId,
@@ -2241,6 +2280,7 @@ class FinanceEntriesCompanion extends UpdateCompanion<FinanceEntry> {
       if (date != null) 'date': date,
       if (note != null) 'note': note,
       if (type != null) 'type': type,
+      if (currency != null) 'currency': currency,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (accountId != null) 'account_id': accountId,
@@ -2257,6 +2297,7 @@ class FinanceEntriesCompanion extends UpdateCompanion<FinanceEntry> {
     Value<DateTime>? date,
     Value<String>? note,
     Value<String>? type,
+    Value<String>? currency,
     Value<DateTime>? createdAt,
     Value<DateTime>? updatedAt,
     Value<int?>? accountId,
@@ -2270,6 +2311,7 @@ class FinanceEntriesCompanion extends UpdateCompanion<FinanceEntry> {
       date: date ?? this.date,
       note: note ?? this.note,
       type: type ?? this.type,
+      currency: currency ?? this.currency,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       accountId: accountId ?? this.accountId,
@@ -2302,6 +2344,9 @@ class FinanceEntriesCompanion extends UpdateCompanion<FinanceEntry> {
     if (type.present) {
       map['type'] = Variable<String>(type.value);
     }
+    if (currency.present) {
+      map['currency'] = Variable<String>(currency.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -2329,6 +2374,7 @@ class FinanceEntriesCompanion extends UpdateCompanion<FinanceEntry> {
           ..write('date: $date, ')
           ..write('note: $note, ')
           ..write('type: $type, ')
+          ..write('currency: $currency, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('accountId: $accountId, ')
@@ -3896,6 +3942,7 @@ typedef $$FinanceEntriesTableCreateCompanionBuilder =
       required DateTime date,
       Value<String> note,
       Value<String> type,
+      Value<String> currency,
       Value<DateTime> createdAt,
       Value<DateTime> updatedAt,
       Value<int?> accountId,
@@ -3910,6 +3957,7 @@ typedef $$FinanceEntriesTableUpdateCompanionBuilder =
       Value<DateTime> date,
       Value<String> note,
       Value<String> type,
+      Value<String> currency,
       Value<DateTime> createdAt,
       Value<DateTime> updatedAt,
       Value<int?> accountId,
@@ -4009,6 +4057,11 @@ class $$FinanceEntriesTableFilterComposer
 
   ColumnFilters<String> get type => $composableBuilder(
     column: $table.type,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get currency => $composableBuilder(
+    column: $table.currency,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -4113,6 +4166,11 @@ class $$FinanceEntriesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get currency => $composableBuilder(
+    column: $table.currency,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -4199,6 +4257,9 @@ class $$FinanceEntriesTableAnnotationComposer
 
   GeneratedColumn<String> get type =>
       $composableBuilder(column: $table.type, builder: (column) => column);
+
+  GeneratedColumn<String> get currency =>
+      $composableBuilder(column: $table.currency, builder: (column) => column);
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -4290,6 +4351,7 @@ class $$FinanceEntriesTableTableManager
                 Value<DateTime> date = const Value.absent(),
                 Value<String> note = const Value.absent(),
                 Value<String> type = const Value.absent(),
+                Value<String> currency = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<int?> accountId = const Value.absent(),
@@ -4302,6 +4364,7 @@ class $$FinanceEntriesTableTableManager
                 date: date,
                 note: note,
                 type: type,
+                currency: currency,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 accountId: accountId,
@@ -4316,6 +4379,7 @@ class $$FinanceEntriesTableTableManager
                 required DateTime date,
                 Value<String> note = const Value.absent(),
                 Value<String> type = const Value.absent(),
+                Value<String> currency = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<int?> accountId = const Value.absent(),
@@ -4328,6 +4392,7 @@ class $$FinanceEntriesTableTableManager
                 date: date,
                 note: note,
                 type: type,
+                currency: currency,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 accountId: accountId,

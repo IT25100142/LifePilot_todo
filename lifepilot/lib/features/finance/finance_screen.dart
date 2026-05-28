@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import '../../app/router.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/utils/date_helpers.dart';
+import '../../core/utils/expression_parser.dart';
 import '../../core/utils/formatters.dart';
 import '../../core/widgets/glass.dart';
 import '../../core/widgets/glass_panel.dart';
@@ -31,8 +32,7 @@ class FinanceScreen extends ConsumerWidget {
       }
     });
 
-    final currency =
-        ref.watch(settingsControllerProvider).valueOrNull?.currency ?? 'LKR';
+    final currency = ref.watch(activeCurrencyCodeProvider);
     final summary = ref.watch(financeSummaryProvider);
     final entries = ref.watch(filteredFinanceEntriesProvider);
 
@@ -524,7 +524,9 @@ class _TransactionHistory extends ConsumerWidget {
                         }
                         final shouldDelete = await _confirmDelete(context);
                         if (shouldDelete) {
-                          await database.deleteFinanceEntryWithBalance(entry.id);
+                          await database.deleteFinanceEntryWithBalance(
+                            entry.id,
+                          );
                         }
                         return false;
                       },
@@ -534,13 +536,13 @@ class _TransactionHistory extends ConsumerWidget {
                           icon: entry.type == 'income'
                               ? Icons.arrow_downward_rounded
                               : entry.type == 'transfer'
-                                  ? Icons.swap_horiz
-                                  : Icons.arrow_upward_rounded,
+                              ? Icons.swap_horiz
+                              : Icons.arrow_upward_rounded,
                           color: entry.type == 'income'
                               ? Theme.of(context).colorScheme.primary
                               : entry.type == 'transfer'
-                                  ? Theme.of(context).colorScheme.secondary
-                                  : Theme.of(context).colorScheme.error,
+                              ? Theme.of(context).colorScheme.secondary
+                              : Theme.of(context).colorScheme.error,
                         ),
                         title: Text(entry.title),
                         subtitle: Text(
@@ -552,13 +554,24 @@ class _TransactionHistory extends ConsumerWidget {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(
-                              money(entry.amount, currency),
-                              style: const TextStyle(fontWeight: FontWeight.w700),
+                              money(
+                                entry.amount,
+                                entry.currency.isEmpty
+                                    ? currency
+                                    : entry.currency,
+                              ),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                              ),
                             ),
                             PopupMenuButton<String>(
                               onSelected: (value) async {
                                 if (value == 'edit') {
-                                  showTransactionForm(context, ref, entry: entry);
+                                  showTransactionForm(
+                                    context,
+                                    ref,
+                                    entry: entry,
+                                  );
                                 } else if (value == 'delete') {
                                   await database.deleteFinanceEntryWithBalance(
                                     entry.id,
@@ -566,7 +579,10 @@ class _TransactionHistory extends ConsumerWidget {
                                 }
                               },
                               itemBuilder: (context) => const [
-                                PopupMenuItem(value: 'edit', child: Text('Edit')),
+                                PopupMenuItem(
+                                  value: 'edit',
+                                  child: Text('Edit'),
+                                ),
                                 PopupMenuItem(
                                   value: 'delete',
                                   child: Text('Delete'),
@@ -621,6 +637,7 @@ class _TransactionFormState extends ConsumerState<_TransactionForm> {
   late final TextEditingController _note;
   late String _category;
   late String _type;
+  late String _currency;
   late DateTime _date;
   int? _accountId;
   int? _transferTargetAccountId;
@@ -634,6 +651,7 @@ class _TransactionFormState extends ConsumerState<_TransactionForm> {
     _note = TextEditingController(text: entry?.note ?? '');
     _category = entry?.category ?? 'Food';
     _type = entry?.type ?? 'expense';
+    _currency = entry?.currency ?? ref.read(activeCurrencyCodeProvider);
     _date = entry?.date ?? DateTime.now();
     _accountId = entry?.accountId;
     _transferTargetAccountId = entry?.transferTargetAccountId;
@@ -733,12 +751,53 @@ class _TransactionFormState extends ConsumerState<_TransactionForm> {
                     decimal: true,
                   ),
                   validator: (value) {
-                    final amount = double.tryParse(value ?? '');
-                    if (amount == null || amount <= 0) {
+                    final result = evaluateExpression(
+                      value ?? '',
+                      strict: true,
+                    );
+                    if (!result.isValid || (result.value ?? 0) <= 0) {
                       return 'Enter a valid amount';
                     }
                     return null;
                   },
+                ),
+                ValueListenableBuilder<TextEditingValue>(
+                  valueListenable: _amount,
+                  builder: (context, amountValue, _) {
+                    final result = evaluateExpression(
+                      amountValue.text,
+                      strict: false,
+                    );
+                    if (!result.isValid || result.value == null) {
+                      return const SizedBox.shrink();
+                    }
+                    final textTheme = Theme.of(context).textTheme;
+                    final color = Theme.of(
+                      context,
+                    ).colorScheme.onSurfaceVariant.withValues(alpha: 0.8);
+                    final prefix = result.isComplete
+                        ? 'Total'
+                        : 'Partial total';
+                    return Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Text(
+                        '$prefix: ${money(result.value!, _currency)}',
+                        style: textTheme.bodySmall?.copyWith(color: color),
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  initialValue: _currency,
+                  decoration: const InputDecoration(labelText: 'Currency'),
+                  items: [
+                    for (final code in AppConstants.supportedCurrencyCodes)
+                      DropdownMenuItem(value: code, child: Text(code)),
+                  ],
+                  onChanged: (value) => setState(
+                    () => _currency = value ?? AppConstants.defaultCurrency,
+                  ),
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<int>(
@@ -826,17 +885,23 @@ class _TransactionFormState extends ConsumerState<_TransactionForm> {
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
+    final amountResult = evaluateExpression(_amount.text, strict: true);
+    final parsedAmount = amountResult.value;
+    if (!amountResult.isValid || parsedAmount == null || parsedAmount <= 0) {
+      return;
+    }
     final now = DateTime.now();
     final existing = widget.entry;
     await ref.read(saveFinanceTransactionProvider)(
       FinanceEntriesCompanion.insert(
         id: existing == null ? const Value.absent() : Value(existing.id),
         title: _title.text.trim(),
-        amount: double.parse(_amount.text),
+        amount: parsedAmount,
         category: Value(_type == 'transfer' ? 'Transfer' : _category),
         date: _date,
         note: Value(_note.text.trim()),
         type: Value(_type),
+        currency: Value(_currency),
         createdAt: Value(existing?.createdAt ?? now),
         updatedAt: Value(now),
         accountId: Value(_accountId),
@@ -1317,8 +1382,7 @@ class _FinancialTrendChart extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final trendAsync = ref.watch(financialTrendProvider);
     final theme = Theme.of(context);
-    final currency =
-        ref.watch(settingsControllerProvider).valueOrNull?.currency ?? 'LKR';
+    final currency = ref.watch(activeCurrencyCodeProvider);
     final dark = theme.brightness == Brightness.dark;
 
     return LifePilotGlassCard(

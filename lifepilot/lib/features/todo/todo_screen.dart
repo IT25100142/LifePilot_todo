@@ -205,7 +205,9 @@ class _TaskTile extends ConsumerWidget {
         }
         final shouldDelete = await _confirmDelete(context);
         if (shouldDelete) {
-          await ref.read(notificationServiceProvider).cancel(taskReminderId(task.id));
+          await ref
+              .read(notificationServiceProvider)
+              .cancel(taskReminderId(task.id));
           await database.deleteTask(task.id);
         }
         return false;

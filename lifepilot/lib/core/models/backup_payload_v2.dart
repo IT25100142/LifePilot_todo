@@ -1,3 +1,5 @@
+import '../constants/app_constants.dart';
+
 class BackupPayloadV2 {
   const BackupPayloadV2({
     required this.formatVersion,
@@ -83,7 +85,7 @@ class BackupSettingsV2 {
 
   static BackupSettingsV2 fromJson(Map<String, dynamic> json) {
     return BackupSettingsV2(
-      currency: json['currency'] as String? ?? 'LKR',
+      currency: json['currency'] as String? ?? AppConstants.defaultCurrency,
       themeMode: json['themeMode'] as String?,
     );
   }
@@ -302,6 +304,7 @@ class BackupTransactionV2 {
     required this.date,
     required this.note,
     required this.type,
+    required this.currency,
     required this.createdAt,
     required this.updatedAt,
     required this.accountId,
@@ -315,6 +318,7 @@ class BackupTransactionV2 {
   final String date;
   final String note;
   final String type;
+  final String currency;
   final String createdAt;
   final String updatedAt;
   final int? accountId;
@@ -328,6 +332,7 @@ class BackupTransactionV2 {
     'date': date,
     'note': note,
     'type': type,
+    'currency': currency,
     'createdAt': createdAt,
     'updatedAt': updatedAt,
     'accountId': accountId,
@@ -346,6 +351,7 @@ class BackupTransactionV2 {
       date: json['date'] as String? ?? DateTime.now().toIso8601String(),
       note: json['note'] as String? ?? '',
       type: json['type'] as String? ?? 'expense',
+      currency: json['currency'] as String? ?? AppConstants.defaultCurrency,
       createdAt:
           json['createdAt'] as String? ?? DateTime.now().toIso8601String(),
       updatedAt:

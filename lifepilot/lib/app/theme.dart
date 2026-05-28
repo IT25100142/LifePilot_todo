@@ -164,7 +164,9 @@ class LifePilotTheme {
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: premiumScheme.surfaceContainerHighest.withValues(alpha: 0.44),
+        fillColor: premiumScheme.surfaceContainerHighest.withValues(
+          alpha: 0.44,
+        ),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 18,
           vertical: 16,
@@ -215,8 +217,12 @@ class LifePilotTheme {
       ),
       chipTheme: ChipThemeData(
         shape: const StadiumBorder(),
-        side: BorderSide(color: premiumScheme.outlineVariant.withValues(alpha: 0.36)),
-        backgroundColor: premiumScheme.surfaceContainerHighest.withValues(alpha: 0.42),
+        side: BorderSide(
+          color: premiumScheme.outlineVariant.withValues(alpha: 0.36),
+        ),
+        backgroundColor: premiumScheme.surfaceContainerHighest.withValues(
+          alpha: 0.42,
+        ),
         selectedColor: premiumScheme.primaryContainer.withValues(alpha: 0.72),
       ),
       navigationBarTheme: NavigationBarThemeData(
@@ -237,7 +243,9 @@ class LifePilotTheme {
         labelType: NavigationRailLabelType.all,
         backgroundColor: Colors.transparent,
         indicatorColor: premiumScheme.primaryContainer.withValues(alpha: 0.70),
-        selectedIconTheme: IconThemeData(color: premiumScheme.onPrimaryContainer),
+        selectedIconTheme: IconThemeData(
+          color: premiumScheme.onPrimaryContainer,
+        ),
         selectedLabelTextStyle: TextStyle(
           color: premiumScheme.onSurface,
           fontWeight: FontWeight.w700,

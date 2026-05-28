@@ -220,40 +220,13 @@ class _GlassSegmentedSelector<T> extends StatelessWidget {
   }
 }
 
-class _CurrencySection extends ConsumerStatefulWidget {
+class _CurrencySection extends ConsumerWidget {
   const _CurrencySection({required this.currency});
 
   final String currency;
 
   @override
-  ConsumerState<_CurrencySection> createState() => _CurrencySectionState();
-}
-
-class _CurrencySectionState extends ConsumerState<_CurrencySection> {
-  late final TextEditingController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = TextEditingController(text: widget.currency);
-  }
-
-  @override
-  void didUpdateWidget(covariant _CurrencySection oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.currency != widget.currency) {
-      _controller.text = widget.currency;
-    }
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
@@ -264,7 +237,7 @@ class _CurrencySectionState extends ConsumerState<_CurrencySection> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Default is LKR, but any short currency code works offline.',
+            'Choose your default currency for new transactions.',
             style: theme.textTheme.bodyMedium?.copyWith(
               color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
             ),
@@ -292,7 +265,7 @@ class _CurrencySectionState extends ConsumerState<_CurrencySection> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Currency Code',
+                      'Default Currency',
                       style: theme.textTheme.bodyLarge?.copyWith(
                         fontWeight: FontWeight.w700,
                         fontSize: 15,
@@ -302,38 +275,39 @@ class _CurrencySectionState extends ConsumerState<_CurrencySection> {
                 ),
               ),
               const SizedBox(width: 8),
-              SizedBox(
-                width: 70,
-                child: TextField(
-                  controller: _controller,
-                  textCapitalization: TextCapitalization.characters,
-                  maxLength: 6,
-                  textAlign: TextAlign.end,
-                  style: theme.textTheme.bodyLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+              Expanded(
+                child: DropdownButtonFormField<String>(
+                  initialValue: currency,
                   decoration: const InputDecoration(
-                    counterText: '',
-                    hintText: 'LKR',
                     border: InputBorder.none,
                     enabledBorder: InputBorder.none,
                     focusedBorder: InputBorder.none,
                     contentPadding: EdgeInsets.zero,
                     filled: false,
                   ),
+                  alignment: AlignmentDirectional.centerEnd,
+                  items: [
+                    for (final code in AppConstants.supportedCurrencyCodes)
+                      DropdownMenuItem(
+                        value: code,
+                        child: Align(
+                          alignment: Alignment.centerRight,
+                          child: Text(
+                            code,
+                            style: theme.textTheme.bodyLarge?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                  onChanged: (value) {
+                    if (value == null) return;
+                    ref
+                        .read(settingsControllerProvider.notifier)
+                        .setCurrency(value);
+                  },
                 ),
-              ),
-              const SizedBox(width: 8),
-              IconButton(
-                icon: const Icon(Icons.save_outlined),
-                color: theme.colorScheme.primary,
-                tooltip: 'Save',
-                onPressed: () {
-                  ref
-                      .read(settingsControllerProvider.notifier)
-                      .setCurrency(_controller.text);
-                  FocusScope.of(context).unfocus();
-                },
               ),
             ],
           ),
@@ -1012,12 +986,12 @@ class _AmbientBackdrop extends StatelessWidget {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    final primaryGlow = const Color(0xFFD6BD92).withValues(
-      alpha: isDark ? 0.12 : 0.10,
-    );
-    final secondaryGlow = const Color(0xFFC8A97A).withValues(
-      alpha: isDark ? 0.10 : 0.08,
-    );
+    final primaryGlow = const Color(
+      0xFFD6BD92,
+    ).withValues(alpha: isDark ? 0.12 : 0.10);
+    final secondaryGlow = const Color(
+      0xFFC8A97A,
+    ).withValues(alpha: isDark ? 0.10 : 0.08);
 
     return Stack(
       children: [

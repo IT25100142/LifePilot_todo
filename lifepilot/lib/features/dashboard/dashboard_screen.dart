@@ -21,8 +21,7 @@ class DashboardScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final currency =
-        ref.watch(settingsControllerProvider).valueOrNull?.currency ?? 'LKR';
+    final currency = ref.watch(activeCurrencyCodeProvider);
     final tasks = ref.watch(tasksProvider);
     final events = ref.watch(eventsProvider);
     final entries = ref.watch(financeEntriesProvider);
@@ -661,7 +660,10 @@ class _SearchResultsView extends ConsumerWidget {
                       ),
                       subtitle: Text('${tx.category} • ${shortDate(tx.date)}'),
                       trailing: Text(
-                        money(tx.amount, currency),
+                        money(
+                          tx.amount,
+                          tx.currency.isEmpty ? currency : tx.currency,
+                        ),
                         style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
                       onTap: () => context.go('/finance'),
@@ -714,12 +716,12 @@ class _AmbientBackdrop extends StatelessWidget {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    final primaryGlow = const Color(0xFFD6BD92).withValues(
-      alpha: isDark ? 0.12 : 0.10,
-    );
-    final secondaryGlow = const Color(0xFFC8A97A).withValues(
-      alpha: isDark ? 0.10 : 0.08,
-    );
+    final primaryGlow = const Color(
+      0xFFD6BD92,
+    ).withValues(alpha: isDark ? 0.12 : 0.10);
+    final secondaryGlow = const Color(
+      0xFFC8A97A,
+    ).withValues(alpha: isDark ? 0.10 : 0.08);
 
     return Stack(
       children: [

@@ -67,13 +67,13 @@ class _LiquidBackgroundState extends State<LiquidBackground>
                       begin: Alignment.topRight,
                       end: Alignment.bottomLeft,
                       colors: [
-                        const Color(0xFFD6BD92).withValues(
-                          alpha: dark ? 0.12 : 0.16,
-                        ),
+                        const Color(
+                          0xFFD6BD92,
+                        ).withValues(alpha: dark ? 0.12 : 0.16),
                         Colors.transparent,
-                        const Color(0xFFC8A97A).withValues(
-                          alpha: dark ? 0.10 : 0.14,
-                        ),
+                        const Color(
+                          0xFFC8A97A,
+                        ).withValues(alpha: dark ? 0.10 : 0.14),
                       ],
                     ),
                   ),
