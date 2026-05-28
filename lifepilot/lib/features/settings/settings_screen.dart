@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/models/backup_summary.dart';
 import '../../core/services/export_service.dart';
+import '../../core/services/export_provider.dart';
 import '../../core/utils/crypto_helpers.dart';
 import '../../data/database/app_database.dart';
 import '../../core/widgets/glass.dart';
@@ -159,7 +160,7 @@ class _DataSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final database = ref.watch(appDatabaseProvider);
-    final service = ExportService(database);
+    final service = ref.watch(exportServiceProvider);
 
     return SectionCard(
       title: 'Local data',
@@ -397,8 +398,10 @@ class _DataSection extends ConsumerWidget {
       },
     );
 
-    passwordController.dispose();
-    confirmController.dispose();
+    Future.delayed(const Duration(milliseconds: 500), () {
+      passwordController.dispose();
+      confirmController.dispose();
+    });
     return result;
   }
 
@@ -460,7 +463,9 @@ class _DataSection extends ConsumerWidget {
       },
     );
 
-    controller.dispose();
+    Future.delayed(const Duration(milliseconds: 500), () {
+      controller.dispose();
+    });
     return result;
   }
 
