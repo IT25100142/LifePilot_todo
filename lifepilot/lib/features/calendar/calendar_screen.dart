@@ -398,7 +398,7 @@ class _LinkedTasks extends StatelessWidget {
                         ),
                       ),
                       subtitle: Text(
-                        '${task.priority.substring(0, 1).toUpperCase()}${task.priority.substring(1)} Priority',
+                        '${_toTitleCase(task.priority)} Priority',
                         style: theme.textTheme.labelSmall?.copyWith(
                           color: theme.colorScheme.onSurfaceVariant,
                         ),
@@ -412,6 +412,11 @@ class _LinkedTasks extends StatelessWidget {
       ),
     );
   }
+}
+
+String _toTitleCase(String value) {
+  if (value.isEmpty) return value;
+  return '${value.substring(0, 1).toUpperCase()}${value.substring(1)}';
 }
 
 Future<void> showEventForm(

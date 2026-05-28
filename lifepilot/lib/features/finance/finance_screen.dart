@@ -250,7 +250,7 @@ class _FinanceMetric extends StatelessWidget {
               value,
               style: theme.textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.w900,
-                letterSpacing: -1.0,
+                letterSpacing: 0.4,
               ),
             ),
           ),
@@ -277,7 +277,7 @@ class _IncomeExpenseChart extends StatelessWidget {
             'Income vs expense',
             style: theme.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.w800,
-              letterSpacing: -0.5,
+              letterSpacing: 0.8,
             ),
           ),
           const SizedBox(height: 16),
@@ -413,7 +413,7 @@ class _CategoryChart extends StatelessWidget {
             'Category spending',
             style: theme.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.w800,
-              letterSpacing: -0.5,
+              letterSpacing: 0.8,
             ),
           ),
           const SizedBox(height: 16),
@@ -508,14 +508,14 @@ class _TransactionHistory extends ConsumerWidget {
                       background: const _SwipeActionBackground(
                         icon: Icons.edit_rounded,
                         alignment: Alignment.centerLeft,
-                        startColor: Color(0x3324E38A),
-                        endColor: Color(0x8820C997),
+                        startColor: Color(0x33C8B892),
+                        endColor: Color(0x889D8B63),
                       ),
                       secondaryBackground: const _SwipeActionBackground(
                         icon: Icons.delete_forever_rounded,
                         alignment: Alignment.centerRight,
-                        startColor: Color(0x33FF2E55),
-                        endColor: Color(0x88A2122F),
+                        startColor: Color(0x33C7847D),
+                        endColor: Color(0x887F4D4A),
                       ),
                       confirmDismiss: (direction) async {
                         if (direction == DismissDirection.startToEnd) {
@@ -877,7 +877,7 @@ class _CategoryBudgetStatusSection extends ConsumerWidget {
                 'Category budgets',
                 style: theme.textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w800,
-                  letterSpacing: -0.5,
+                  letterSpacing: 0.8,
                 ),
               ),
             ),
@@ -950,7 +950,7 @@ class _CategoryBudgetCardState extends State<_CategoryBudgetCard>
       if (widget.item.isOverLimit) {
         final alphaFactor = 0.36 + (pulseVal * 0.44); // 0.36 to 0.80
         final shadowAlpha = 0.08 + (pulseVal * 0.16); // 0.08 to 0.24
-        final crimsonColor = const Color(0xFFFF2E55);
+        final crimsonColor = const Color(0xFFA36461);
 
         cardGrad = LinearGradient(
           begin: Alignment.topLeft,
@@ -1330,7 +1330,7 @@ class _FinancialTrendChart extends ConsumerWidget {
             'Financial Trend',
             style: theme.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.w800,
-              letterSpacing: -0.5,
+              letterSpacing: 0.8,
             ),
           ),
           const SizedBox(height: 4),
@@ -1444,7 +1444,7 @@ class _FinancialTrendChart extends ConsumerWidget {
                           spots: incomeSpots,
                           isCurved: true,
                           gradient: LinearGradient(
-                            colors: [incomeColor, const Color(0xFF00F2FE)],
+                            colors: [incomeColor, const Color(0xFFD3C1A4)],
                           ),
                           barWidth: 4,
                           isStrokeCapRound: true,
@@ -1474,7 +1474,7 @@ class _FinancialTrendChart extends ConsumerWidget {
                           spots: expenseSpots,
                           isCurved: true,
                           gradient: LinearGradient(
-                            colors: [expenseColor, const Color(0xFFFF4B2B)],
+                            colors: [expenseColor, const Color(0xFFC89A82)],
                           ),
                           barWidth: 4,
                           isStrokeCapRound: true,
@@ -1653,7 +1653,7 @@ class _AccountsList extends ConsumerWidget {
                               money(acc.currentBalance, currency),
                               style: theme.textTheme.titleMedium?.copyWith(
                                 fontWeight: FontWeight.w900,
-                                letterSpacing: -1.0,
+                                letterSpacing: 0.4,
                               ),
                             ),
                           ),

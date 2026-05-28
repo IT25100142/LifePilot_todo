@@ -47,14 +47,14 @@ class _LiquidBackgroundState extends State<LiquidBackground>
               end: Alignment(0.9 - t * 0.18, 1),
               colors: dark
                   ? const [
-                      Color(0xFF061312),
-                      Color(0xFF0E1824),
-                      Color(0xFF101015),
+                      Color(0xFF151316),
+                      Color(0xFF1A171A),
+                      Color(0xFF1D1A1E),
                     ]
                   : const [
-                      Color(0xFFEAFDFC),
-                      Color(0xFFF4F7FF),
-                      Color(0xFFFFFFFF),
+                      Color(0xFFF7F3EC),
+                      Color(0xFFF9F6F0),
+                      Color(0xFFFFFCF8),
                     ],
             ),
           ),
@@ -67,12 +67,12 @@ class _LiquidBackgroundState extends State<LiquidBackground>
                       begin: Alignment.topRight,
                       end: Alignment.bottomLeft,
                       colors: [
-                        theme.colorScheme.primary.withValues(
-                          alpha: dark ? 0.16 : 0.22,
+                        const Color(0xFFD6BD92).withValues(
+                          alpha: dark ? 0.12 : 0.16,
                         ),
                         Colors.transparent,
-                        theme.colorScheme.tertiary.withValues(
-                          alpha: dark ? 0.14 : 0.2,
+                        const Color(0xFFC8A97A).withValues(
+                          alpha: dark ? 0.10 : 0.14,
                         ),
                       ],
                     ),
@@ -133,10 +133,10 @@ class GlassIcon extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return GlassPanel(
-      radius: 18,
+      radius: 22,
       blur: 18,
       padding: const EdgeInsets.all(10),
-      opacity: theme.brightness == Brightness.dark ? 0.22 : 0.66,
+      opacity: theme.brightness == Brightness.dark ? 0.28 : 0.70,
       child: Icon(icon, color: color ?? theme.colorScheme.primary, size: 20),
     );
   }

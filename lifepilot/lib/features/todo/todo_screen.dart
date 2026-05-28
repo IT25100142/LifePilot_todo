@@ -155,7 +155,7 @@ class _TaskTile extends ConsumerWidget {
     Color? shadowColor;
 
     if (task.priority == 'high') {
-      final crimsonColor = const Color(0xFFFF2E55);
+      final crimsonColor = const Color(0xFFA36461);
       borderGradient = LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
@@ -189,14 +189,14 @@ class _TaskTile extends ConsumerWidget {
       background: const _SwipeActionBackground(
         icon: Icons.check_circle_rounded,
         alignment: Alignment.centerLeft,
-        startColor: Color(0x3324E38A),
-        endColor: Color(0x8820C997),
+        startColor: Color(0x33C8B892),
+        endColor: Color(0x889D8B63),
       ),
       secondaryBackground: const _SwipeActionBackground(
         icon: Icons.delete_forever_rounded,
         alignment: Alignment.centerRight,
-        startColor: Color(0x33FF2E55),
-        endColor: Color(0x88A2122F),
+        startColor: Color(0x33C7847D),
+        endColor: Color(0x887F4D4A),
       ),
       confirmDismiss: (direction) async {
         if (direction == DismissDirection.startToEnd) {
@@ -228,7 +228,7 @@ class _TaskTile extends ConsumerWidget {
             style: TextStyle(
               decoration: task.isCompleted ? TextDecoration.lineThrough : null,
               fontWeight: FontWeight.w700,
-              letterSpacing: -0.5,
+              letterSpacing: 0.4,
             ),
           ),
           subtitle: Padding(

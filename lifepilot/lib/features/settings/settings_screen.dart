@@ -65,12 +65,12 @@ class _SettingsGroupHeader extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(left: 8, bottom: 8, top: 8),
       child: Text(
-        title.toUpperCase(),
+        title,
         style: theme.textTheme.labelMedium?.copyWith(
-          color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
-          fontWeight: FontWeight.w800,
+          color: theme.colorScheme.onSurface.withValues(alpha: 0.56),
+          fontWeight: FontWeight.w700,
           letterSpacing: 1.2,
-          fontSize: 11,
+          fontSize: 12,
         ),
       ),
     );
@@ -841,23 +841,23 @@ class _DestructiveActionTileState extends State<_DestructiveActionTile> {
 
   @override
   Widget build(BuildContext context) {
-    const crimsonText = Color(0xFFFF453A); // Bright iOS system red color
+    const dangerText = Color(0xFFA36562);
 
     final cardGradient = _isHoveredOrPressed
         ? LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              Colors.red.withValues(alpha: 0.16),
-              Colors.red.withValues(alpha: 0.04),
+              const Color(0xFFD19994).withValues(alpha: 0.20),
+              const Color(0xFF8F6764).withValues(alpha: 0.06),
             ],
           )
         : LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              Colors.red.withValues(alpha: 0.06),
-              Colors.red.withValues(alpha: 0.01),
+              const Color(0xFFD19994).withValues(alpha: 0.10),
+              const Color(0xFF8F6764).withValues(alpha: 0.03),
             ],
           );
 
@@ -866,22 +866,22 @@ class _DestructiveActionTileState extends State<_DestructiveActionTile> {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              Colors.redAccent.withValues(alpha: 0.4),
-              Colors.redAccent.withValues(alpha: 0.12),
+              const Color(0xFFD9A79B).withValues(alpha: 0.48),
+              const Color(0xFF9C7A75).withValues(alpha: 0.16),
             ],
           )
         : LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              Colors.redAccent.withValues(alpha: 0.18),
-              Colors.redAccent.withValues(alpha: 0.04),
+              const Color(0xFFD9A79B).withValues(alpha: 0.24),
+              const Color(0xFF9C7A75).withValues(alpha: 0.08),
             ],
           );
 
     final shadowColor = _isHoveredOrPressed
-        ? Colors.red.withValues(alpha: 0.16)
-        : Colors.red.withValues(alpha: 0.03);
+        ? const Color(0xFF8A6661).withValues(alpha: 0.20)
+        : const Color(0xFF8A6661).withValues(alpha: 0.08);
 
     return LifePilotGlassCard(
       radius: 24,
@@ -902,12 +902,12 @@ class _DestructiveActionTileState extends State<_DestructiveActionTile> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.red.withValues(alpha: 0.15),
+                  color: const Color(0xFFC69288).withValues(alpha: 0.24),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: const Icon(
                   Icons.delete_forever_outlined,
-                  color: crimsonText,
+                  color: dangerText,
                   size: 20,
                 ),
               ),
@@ -919,7 +919,7 @@ class _DestructiveActionTileState extends State<_DestructiveActionTile> {
                     const Text(
                       'Clear data',
                       style: TextStyle(
-                        color: crimsonText,
+                        color: dangerText,
                         fontWeight: FontWeight.bold,
                         fontSize: 15,
                       ),
@@ -928,7 +928,7 @@ class _DestructiveActionTileState extends State<_DestructiveActionTile> {
                     Text(
                       'This removes tasks, events, transactions, categories, and settings from this device.',
                       style: TextStyle(
-                        color: crimsonText.withValues(alpha: 0.6),
+                        color: dangerText.withValues(alpha: 0.72),
                         fontSize: 12,
                       ),
                     ),
@@ -938,7 +938,7 @@ class _DestructiveActionTileState extends State<_DestructiveActionTile> {
               const SizedBox(width: 8),
               const Icon(
                 Icons.warning_amber_rounded,
-                color: crimsonText,
+                color: dangerText,
                 size: 20,
               ),
             ],
@@ -1012,18 +1012,18 @@ class _AmbientBackdrop extends StatelessWidget {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    final primaryGlow = theme.colorScheme.primary.withValues(
-      alpha: isDark ? 0.18 : 0.12,
+    final primaryGlow = const Color(0xFFD6BD92).withValues(
+      alpha: isDark ? 0.12 : 0.10,
     );
-    final secondaryGlow = theme.colorScheme.tertiary.withValues(
-      alpha: isDark ? 0.14 : 0.08,
+    final secondaryGlow = const Color(0xFFC8A97A).withValues(
+      alpha: isDark ? 0.10 : 0.08,
     );
 
     return Stack(
       children: [
         Positioned.fill(
           child: Container(
-            color: isDark ? const Color(0xFF060B0C) : const Color(0xFFF4FAFB),
+            color: isDark ? const Color(0xFF151316) : const Color(0xFFF7F3EC),
           ),
         ),
         Positioned(

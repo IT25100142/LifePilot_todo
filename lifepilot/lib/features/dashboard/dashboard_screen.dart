@@ -142,7 +142,7 @@ class _HeroHeader extends StatelessWidget {
                   'Today at a glance',
                   style: theme.textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.w900,
-                    letterSpacing: -0.75,
+                    letterSpacing: 0.6,
                   ),
                 ),
               ),
@@ -228,7 +228,7 @@ class _MetricPill extends StatelessWidget {
                     value,
                     style: theme.textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.w900,
-                      letterSpacing: -0.75,
+                      letterSpacing: 0.4,
                     ),
                   ),
                 ),
@@ -587,7 +587,7 @@ class _SearchResultsView extends ConsumerWidget {
                           ? Text(task.description)
                           : null,
                       trailing: Text(
-                        task.priority.toUpperCase(),
+                        _priorityLabel(task.priority),
                         style: TextStyle(
                           color: switch (task.priority) {
                             'high' => theme.colorScheme.error,
@@ -701,6 +701,11 @@ class _ResultSectionHeader extends StatelessWidget {
   }
 }
 
+String _priorityLabel(String priority) {
+  if (priority.isEmpty) return '';
+  return '${priority.substring(0, 1).toUpperCase()}${priority.substring(1)}';
+}
+
 class _AmbientBackdrop extends StatelessWidget {
   const _AmbientBackdrop();
 
@@ -709,18 +714,18 @@ class _AmbientBackdrop extends StatelessWidget {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    final primaryGlow = theme.colorScheme.primary.withValues(
-      alpha: isDark ? 0.18 : 0.12,
+    final primaryGlow = const Color(0xFFD6BD92).withValues(
+      alpha: isDark ? 0.12 : 0.10,
     );
-    final secondaryGlow = theme.colorScheme.tertiary.withValues(
-      alpha: isDark ? 0.14 : 0.08,
+    final secondaryGlow = const Color(0xFFC8A97A).withValues(
+      alpha: isDark ? 0.10 : 0.08,
     );
 
     return Stack(
       children: [
         Positioned.fill(
           child: Container(
-            color: isDark ? const Color(0xFF060B0C) : const Color(0xFFF4FAFB),
+            color: isDark ? const Color(0xFF151316) : const Color(0xFFF7F3EC),
           ),
         ),
         Positioned(

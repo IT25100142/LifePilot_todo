@@ -68,7 +68,7 @@ class LifePilotGlassCard extends StatelessWidget {
                 ],
         );
 
-    final resolvedBlurSigma = blurSigma ?? glassExt?.blurSigma ?? 20.0;
+    final resolvedBlurSigma = blurSigma ?? glassExt?.blurSigma ?? 22.0;
     final resolvedShadowColor =
         shadowColor ??
         glassExt?.shadowColor ??
@@ -87,12 +87,14 @@ class LifePilotGlassCard extends StatelessWidget {
         boxShadow: [
           BoxShadow(
             color: resolvedShadowColor,
-            blurRadius: 32,
-            offset: const Offset(0, 16),
+            blurRadius: 40,
+            offset: const Offset(0, 18),
           ),
           BoxShadow(
-            color: Colors.white.withValues(alpha: dark ? 0.02 : 0.45),
-            blurRadius: 1,
+            color: dark
+                ? const Color(0xFFF2EBDD).withValues(alpha: 0.06)
+                : const Color(0xFFFFFFFF).withValues(alpha: 0.55),
+            blurRadius: 2,
             offset: const Offset(0, 1),
           ),
         ],
