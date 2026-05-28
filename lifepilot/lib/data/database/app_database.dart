@@ -22,6 +22,8 @@ class Tasks extends Table {
   BoolColumn get isCompleted => boolean().withDefault(const Constant(false))();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
   DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
+  TextColumn get recurrencePattern => text().nullable()();
+  IntColumn get recurrenceParentId => integer().nullable()();
 }
 
 class CalendarEvents extends Table {
@@ -92,7 +94,20 @@ class AppDatabase extends _$AppDatabase {
       );
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
+
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+        onCreate: (m) async {
+          await m.createAll();
+        },
+        onUpgrade: (m, from, to) async {
+          if (from < 2) {
+            await m.addColumn(tasks, tasks.recurrencePattern);
+            await m.addColumn(tasks, tasks.recurrenceParentId);
+          }
+        },
+      );
 
   Future<void> ensureSeedData() async {
     final settings = await _settingsRow();
@@ -215,6 +230,8 @@ class AppDatabase extends _$AppDatabase {
             isCompleted: Value(json['isCompleted'] as bool? ?? false),
             createdAt: Value(_date(json['createdAt']) ?? DateTime.now()),
             updatedAt: Value(_date(json['updatedAt']) ?? DateTime.now()),
+            recurrencePattern: Value(json['recurrencePattern'] as String?),
+            recurrenceParentId: Value(json['recurrenceParentId'] as int?),
           ),
         );
       }

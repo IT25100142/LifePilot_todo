@@ -129,6 +129,28 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, Task> {
     requiredDuringInsert: false,
     defaultValue: currentDateAndTime,
   );
+  static const VerificationMeta _recurrencePatternMeta = const VerificationMeta(
+    'recurrencePattern',
+  );
+  @override
+  late final GeneratedColumn<String> recurrencePattern =
+      GeneratedColumn<String>(
+        'recurrence_pattern',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _recurrenceParentIdMeta =
+      const VerificationMeta('recurrenceParentId');
+  @override
+  late final GeneratedColumn<int> recurrenceParentId = GeneratedColumn<int>(
+    'recurrence_parent_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -141,6 +163,8 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, Task> {
     isCompleted,
     createdAt,
     updatedAt,
+    recurrencePattern,
+    recurrenceParentId,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -219,6 +243,24 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, Task> {
         updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
       );
     }
+    if (data.containsKey('recurrence_pattern')) {
+      context.handle(
+        _recurrencePatternMeta,
+        recurrencePattern.isAcceptableOrUnknown(
+          data['recurrence_pattern']!,
+          _recurrencePatternMeta,
+        ),
+      );
+    }
+    if (data.containsKey('recurrence_parent_id')) {
+      context.handle(
+        _recurrenceParentIdMeta,
+        recurrenceParentId.isAcceptableOrUnknown(
+          data['recurrence_parent_id']!,
+          _recurrenceParentIdMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -268,6 +310,14 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, Task> {
         DriftSqlType.dateTime,
         data['${effectivePrefix}updated_at'],
       )!,
+      recurrencePattern: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}recurrence_pattern'],
+      ),
+      recurrenceParentId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}recurrence_parent_id'],
+      ),
     );
   }
 
@@ -288,6 +338,8 @@ class Task extends DataClass implements Insertable<Task> {
   final bool isCompleted;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final String? recurrencePattern;
+  final int? recurrenceParentId;
   const Task({
     required this.id,
     required this.title,
@@ -299,6 +351,8 @@ class Task extends DataClass implements Insertable<Task> {
     required this.isCompleted,
     required this.createdAt,
     required this.updatedAt,
+    this.recurrencePattern,
+    this.recurrenceParentId,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -317,6 +371,12 @@ class Task extends DataClass implements Insertable<Task> {
     map['is_completed'] = Variable<bool>(isCompleted);
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
+    if (!nullToAbsent || recurrencePattern != null) {
+      map['recurrence_pattern'] = Variable<String>(recurrencePattern);
+    }
+    if (!nullToAbsent || recurrenceParentId != null) {
+      map['recurrence_parent_id'] = Variable<int>(recurrenceParentId);
+    }
     return map;
   }
 
@@ -336,6 +396,12 @@ class Task extends DataClass implements Insertable<Task> {
       isCompleted: Value(isCompleted),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
+      recurrencePattern: recurrencePattern == null && nullToAbsent
+          ? const Value.absent()
+          : Value(recurrencePattern),
+      recurrenceParentId: recurrenceParentId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(recurrenceParentId),
     );
   }
 
@@ -355,6 +421,10 @@ class Task extends DataClass implements Insertable<Task> {
       isCompleted: serializer.fromJson<bool>(json['isCompleted']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+      recurrencePattern: serializer.fromJson<String?>(
+        json['recurrencePattern'],
+      ),
+      recurrenceParentId: serializer.fromJson<int?>(json['recurrenceParentId']),
     );
   }
   @override
@@ -371,6 +441,8 @@ class Task extends DataClass implements Insertable<Task> {
       'isCompleted': serializer.toJson<bool>(isCompleted),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
+      'recurrencePattern': serializer.toJson<String?>(recurrencePattern),
+      'recurrenceParentId': serializer.toJson<int?>(recurrenceParentId),
     };
   }
 
@@ -385,6 +457,8 @@ class Task extends DataClass implements Insertable<Task> {
     bool? isCompleted,
     DateTime? createdAt,
     DateTime? updatedAt,
+    Value<String?> recurrencePattern = const Value.absent(),
+    Value<int?> recurrenceParentId = const Value.absent(),
   }) => Task(
     id: id ?? this.id,
     title: title ?? this.title,
@@ -396,6 +470,12 @@ class Task extends DataClass implements Insertable<Task> {
     isCompleted: isCompleted ?? this.isCompleted,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
+    recurrencePattern: recurrencePattern.present
+        ? recurrencePattern.value
+        : this.recurrencePattern,
+    recurrenceParentId: recurrenceParentId.present
+        ? recurrenceParentId.value
+        : this.recurrenceParentId,
   );
   Task copyWithCompanion(TasksCompanion data) {
     return Task(
@@ -415,6 +495,12 @@ class Task extends DataClass implements Insertable<Task> {
           : this.isCompleted,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      recurrencePattern: data.recurrencePattern.present
+          ? data.recurrencePattern.value
+          : this.recurrencePattern,
+      recurrenceParentId: data.recurrenceParentId.present
+          ? data.recurrenceParentId.value
+          : this.recurrenceParentId,
     );
   }
 
@@ -430,7 +516,9 @@ class Task extends DataClass implements Insertable<Task> {
           ..write('tags: $tags, ')
           ..write('isCompleted: $isCompleted, ')
           ..write('createdAt: $createdAt, ')
-          ..write('updatedAt: $updatedAt')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('recurrencePattern: $recurrencePattern, ')
+          ..write('recurrenceParentId: $recurrenceParentId')
           ..write(')'))
         .toString();
   }
@@ -447,6 +535,8 @@ class Task extends DataClass implements Insertable<Task> {
     isCompleted,
     createdAt,
     updatedAt,
+    recurrencePattern,
+    recurrenceParentId,
   );
   @override
   bool operator ==(Object other) =>
@@ -461,7 +551,9 @@ class Task extends DataClass implements Insertable<Task> {
           other.tags == this.tags &&
           other.isCompleted == this.isCompleted &&
           other.createdAt == this.createdAt &&
-          other.updatedAt == this.updatedAt);
+          other.updatedAt == this.updatedAt &&
+          other.recurrencePattern == this.recurrencePattern &&
+          other.recurrenceParentId == this.recurrenceParentId);
 }
 
 class TasksCompanion extends UpdateCompanion<Task> {
@@ -475,6 +567,8 @@ class TasksCompanion extends UpdateCompanion<Task> {
   final Value<bool> isCompleted;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
+  final Value<String?> recurrencePattern;
+  final Value<int?> recurrenceParentId;
   const TasksCompanion({
     this.id = const Value.absent(),
     this.title = const Value.absent(),
@@ -486,6 +580,8 @@ class TasksCompanion extends UpdateCompanion<Task> {
     this.isCompleted = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
+    this.recurrencePattern = const Value.absent(),
+    this.recurrenceParentId = const Value.absent(),
   });
   TasksCompanion.insert({
     this.id = const Value.absent(),
@@ -498,6 +594,8 @@ class TasksCompanion extends UpdateCompanion<Task> {
     this.isCompleted = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
+    this.recurrencePattern = const Value.absent(),
+    this.recurrenceParentId = const Value.absent(),
   }) : title = Value(title);
   static Insertable<Task> custom({
     Expression<int>? id,
@@ -510,6 +608,8 @@ class TasksCompanion extends UpdateCompanion<Task> {
     Expression<bool>? isCompleted,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
+    Expression<String>? recurrencePattern,
+    Expression<int>? recurrenceParentId,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -522,6 +622,9 @@ class TasksCompanion extends UpdateCompanion<Task> {
       if (isCompleted != null) 'is_completed': isCompleted,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
+      if (recurrencePattern != null) 'recurrence_pattern': recurrencePattern,
+      if (recurrenceParentId != null)
+        'recurrence_parent_id': recurrenceParentId,
     });
   }
 
@@ -536,6 +639,8 @@ class TasksCompanion extends UpdateCompanion<Task> {
     Value<bool>? isCompleted,
     Value<DateTime>? createdAt,
     Value<DateTime>? updatedAt,
+    Value<String?>? recurrencePattern,
+    Value<int?>? recurrenceParentId,
   }) {
     return TasksCompanion(
       id: id ?? this.id,
@@ -548,6 +653,8 @@ class TasksCompanion extends UpdateCompanion<Task> {
       isCompleted: isCompleted ?? this.isCompleted,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      recurrencePattern: recurrencePattern ?? this.recurrencePattern,
+      recurrenceParentId: recurrenceParentId ?? this.recurrenceParentId,
     );
   }
 
@@ -584,6 +691,12 @@ class TasksCompanion extends UpdateCompanion<Task> {
     if (updatedAt.present) {
       map['updated_at'] = Variable<DateTime>(updatedAt.value);
     }
+    if (recurrencePattern.present) {
+      map['recurrence_pattern'] = Variable<String>(recurrencePattern.value);
+    }
+    if (recurrenceParentId.present) {
+      map['recurrence_parent_id'] = Variable<int>(recurrenceParentId.value);
+    }
     return map;
   }
 
@@ -599,7 +712,9 @@ class TasksCompanion extends UpdateCompanion<Task> {
           ..write('tags: $tags, ')
           ..write('isCompleted: $isCompleted, ')
           ..write('createdAt: $createdAt, ')
-          ..write('updatedAt: $updatedAt')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('recurrencePattern: $recurrencePattern, ')
+          ..write('recurrenceParentId: $recurrenceParentId')
           ..write(')'))
         .toString();
   }
@@ -2369,6 +2484,8 @@ typedef $$TasksTableCreateCompanionBuilder =
       Value<bool> isCompleted,
       Value<DateTime> createdAt,
       Value<DateTime> updatedAt,
+      Value<String?> recurrencePattern,
+      Value<int?> recurrenceParentId,
     });
 typedef $$TasksTableUpdateCompanionBuilder =
     TasksCompanion Function({
@@ -2382,6 +2499,8 @@ typedef $$TasksTableUpdateCompanionBuilder =
       Value<bool> isCompleted,
       Value<DateTime> createdAt,
       Value<DateTime> updatedAt,
+      Value<String?> recurrencePattern,
+      Value<int?> recurrenceParentId,
     });
 
 class $$TasksTableFilterComposer extends Composer<_$AppDatabase, $TasksTable> {
@@ -2439,6 +2558,16 @@ class $$TasksTableFilterComposer extends Composer<_$AppDatabase, $TasksTable> {
 
   ColumnFilters<DateTime> get updatedAt => $composableBuilder(
     column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get recurrencePattern => $composableBuilder(
+    column: $table.recurrencePattern,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get recurrenceParentId => $composableBuilder(
+    column: $table.recurrenceParentId,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -2501,6 +2630,16 @@ class $$TasksTableOrderingComposer
     column: $table.updatedAt,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get recurrencePattern => $composableBuilder(
+    column: $table.recurrencePattern,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get recurrenceParentId => $composableBuilder(
+    column: $table.recurrenceParentId,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$TasksTableAnnotationComposer
@@ -2547,6 +2686,16 @@ class $$TasksTableAnnotationComposer
 
   GeneratedColumn<DateTime> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<String> get recurrencePattern => $composableBuilder(
+    column: $table.recurrencePattern,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get recurrenceParentId => $composableBuilder(
+    column: $table.recurrenceParentId,
+    builder: (column) => column,
+  );
 }
 
 class $$TasksTableTableManager
@@ -2587,6 +2736,8 @@ class $$TasksTableTableManager
                 Value<bool> isCompleted = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
+                Value<String?> recurrencePattern = const Value.absent(),
+                Value<int?> recurrenceParentId = const Value.absent(),
               }) => TasksCompanion(
                 id: id,
                 title: title,
@@ -2598,6 +2749,8 @@ class $$TasksTableTableManager
                 isCompleted: isCompleted,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
+                recurrencePattern: recurrencePattern,
+                recurrenceParentId: recurrenceParentId,
               ),
           createCompanionCallback:
               ({
@@ -2611,6 +2764,8 @@ class $$TasksTableTableManager
                 Value<bool> isCompleted = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
+                Value<String?> recurrencePattern = const Value.absent(),
+                Value<int?> recurrenceParentId = const Value.absent(),
               }) => TasksCompanion.insert(
                 id: id,
                 title: title,
@@ -2622,6 +2777,8 @@ class $$TasksTableTableManager
                 isCompleted: isCompleted,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
+                recurrencePattern: recurrencePattern,
+                recurrenceParentId: recurrenceParentId,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))

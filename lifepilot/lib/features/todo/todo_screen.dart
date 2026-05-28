@@ -158,7 +158,7 @@ class _TaskTile extends ConsumerWidget {
         leading: Checkbox(
           value: task.isCompleted,
           onChanged: (_) async {
-            await database.toggleTask(task);
+            await ref.read(toggleTaskCompletionProvider)(task);
           },
         ),
         title: Text(
@@ -190,6 +190,16 @@ class _TaskTile extends ConsumerWidget {
               ),
               if (task.tags.isNotEmpty)
                 _Chip(label: task.tags, color: theme.colorScheme.outline),
+              if (task.recurrencePattern != null && task.recurrencePattern != 'none')
+                _Chip(
+                  label: switch (task.recurrencePattern) {
+                    'daily' => 'Daily',
+                    'weekly' => 'Weekly',
+                    'monthly' => 'Monthly',
+                    _ => '',
+                  },
+                  color: const Color(0xFF286C63),
+                ),
             ],
           ),
         ),
@@ -259,6 +269,7 @@ class _TaskFormState extends ConsumerState<_TaskForm> {
   late final TextEditingController _description;
   late final TextEditingController _tags;
   late String _priority;
+  late String _recurrencePattern;
   DateTime? _dueDate;
   DateTime? _reminderAt;
 
@@ -270,6 +281,7 @@ class _TaskFormState extends ConsumerState<_TaskForm> {
     _description = TextEditingController(text: task?.description ?? '');
     _tags = TextEditingController(text: task?.tags ?? '');
     _priority = task?.priority ?? 'medium';
+    _recurrencePattern = task?.recurrencePattern ?? 'none';
     _dueDate = task?.dueDate;
     _reminderAt = task?.reminderAt;
   }
@@ -332,6 +344,47 @@ class _TaskFormState extends ConsumerState<_TaskForm> {
               ],
               onChanged: (value) =>
                   setState(() => _priority = value ?? 'medium'),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Repeat',
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              children: [
+                for (final pattern in ['none', 'daily', 'weekly', 'monthly'])
+                  ChoiceChip(
+                    label: Text(
+                      switch (pattern) {
+                        'none' => 'None',
+                        'daily' => 'Daily',
+                        'weekly' => 'Weekly',
+                        'monthly' => 'Monthly',
+                        _ => 'None',
+                      },
+                    ),
+                    selected: _recurrencePattern == pattern,
+                    selectedColor: const Color(0xFF286C63).withOpacity(0.24),
+                    checkmarkColor: const Color(0xFF286C63),
+                    labelStyle: TextStyle(
+                      color: _recurrencePattern == pattern
+                          ? const Color(0xFF286C63)
+                          : Theme.of(context).colorScheme.onSurfaceVariant,
+                      fontWeight: _recurrencePattern == pattern
+                          ? FontWeight.bold
+                          : null,
+                    ),
+                    onSelected: (selected) {
+                      if (selected) {
+                        setState(() => _recurrencePattern = pattern);
+                      }
+                    },
+                  ),
+              ],
             ),
             const SizedBox(height: 12),
             _DateTimeButtons(
@@ -419,6 +472,8 @@ class _TaskFormState extends ConsumerState<_TaskForm> {
       isCompleted: Value(existing?.isCompleted ?? false),
       createdAt: Value(existing?.createdAt ?? now),
       updatedAt: Value(now),
+      recurrencePattern: Value(_recurrencePattern == 'none' ? null : _recurrencePattern),
+      recurrenceParentId: Value(existing?.recurrenceParentId),
     );
     final savedId = await database.saveTask(entry);
     final id = existing?.id ?? savedId;
