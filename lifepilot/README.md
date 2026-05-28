@@ -19,7 +19,10 @@ LifePilot is an offline-first Flutter application that combines task management,
 - [Codebase Structure](#codebase-structure)
 - [Data Layer And Schema](#data-layer-and-schema)
 - [Security And Privacy Model](#security-and-privacy-model)
+- [Backup And Restore (Encrypted .lpbackup)](#backup-and-restore-encrypted-lpbackup)
 - [Getting Started For Developers](#getting-started-for-developers)
+- [Quick Usage Walkthrough](#quick-usage-walkthrough)
+- [Screenshots](#screenshots)
 - [Development Workflow](#development-workflow)
 - [Testing And Quality](#testing-and-quality)
 - [Troubleshooting](#troubleshooting)
@@ -142,7 +145,11 @@ Related files:
 
 - Theme mode (`system`, `light`, `dark`)
 - Custom currency code (default `LKR`)
-- JSON/CSV export and JSON import
+- Export Encrypted Backup (`.lpbackup`)
+- Import Encrypted Backup (`.lpbackup`)
+- Export CSV
+- Export JSON (legacy)
+- Import JSON (legacy)
 - Clear-all local data action
 
 Related files:
@@ -245,21 +252,105 @@ Implemented behavior:
 - App lock re-authenticates on resume and locks on paused/inactive lifecycle events.
 - Biometrics can be unavailable; app lock falls back to `notSupported` state.
 
+## Backup And Restore (Encrypted .lpbackup)
+
+Encrypted backup is available in **Settings -> Local data** and is the recommended backup path.
+
+### Backup Encryption Model
+
+- File extension: `.lpbackup`
+- Container type: UTF-8 encoded JSON structure
+- KDF: `PBKDF2-HMAC-SHA256`
+- Iterations: `100000`
+- Cipher: `AES-256-GCM`
+- Key length: `256-bit`
+- Random salt/nonce generated per backup
+
+Backup container fields:
+
+- `format` (`lifepilot-backup-v1`)
+- `kdf`
+- `iterations`
+- `cipher`
+- `salt` (base64)
+- `nonce` (base64)
+- `ciphertext` (base64)
+- `mac` (base64)
+
+### Export Password Flow
+
+- User taps **Export Encrypted Backup**.
+- Dialog: **Create backup password**.
+- Validation:
+  - minimum length: 8 characters
+  - password and confirmation must match
+- On success, app writes `lifepilot-backup.lpbackup`.
+
+### Restore Password Flow
+
+- User taps **Import Encrypted Backup**.
+- Dialog: **Unlock encrypted backup**.
+- Password is required before decrypting.
+- On successful decrypt and parse, payload is sent to `database.importJson(...)`.
+
+### Error Handling Shown To Users
+
+- `Wrong password or corrupted backup file.`
+- `Invalid backup file format.`
+- `Unable to decrypt backup file.`
+
+### Current Backup Scope And Limitations
+
+Included in encrypted backup payload:
+
+- `tasks`
+- `events`
+- `transactions`
+- `categories`
+- `currency`
+- metadata such as `app` and `exportedAt`
+
+Current restore limitations (as currently implemented):
+
+- Accounts are not exported/imported as full account records.
+- Transaction account linkage and transfer relationships are not fully restored.
+- Backed-up custom categories are not restored one-to-one; category seeding occurs during import flow.
+- Full app settings are not restored; currency is restored, but theme and other settings are not fully replicated.
+
+Legacy compatibility:
+
+- JSON import/export remains available via **Export JSON (legacy)** and **Import JSON (legacy)**.
+
 ## Getting Started For Developers
 
 ### Prerequisites
 
-- Flutter SDK (compatible with Dart `^3.9.0`)
-- Platform tooling for your target (Android SDK / Xcode / desktop prerequisites)
-- At least one emulator/simulator/device
+- Flutter SDK compatible with Dart `^3.9.0`
+- Run environment checks:
+  - `flutter --version`
+  - `flutter doctor -v`
+- Platform toolchains for target platforms:
+  - Android: Android SDK + emulator/device
+  - iOS/macOS: Xcode + CocoaPods (macOS)
+  - Windows desktop: Visual Studio with Desktop C++ workload
+  - Linux desktop: GTK/build dependencies required by Flutter docs
+- Git and terminal access
+- At least one runnable target confirmed with `flutter devices`
 
-### 1) Install Dependencies
+### 1) Validate Environment
+
+```bash
+flutter --version
+flutter doctor -v
+```
+
+### 2) Install Dependencies
 
 ```bash
 flutter pub get
 ```
 
-### 2) Generate Drift Code
+### 3) Generate Drift Code
 
 ```bash
 dart run build_runner build --delete-conflicting-outputs
@@ -271,22 +362,66 @@ Use watch mode during active schema/model changes:
 dart run build_runner watch --delete-conflicting-outputs
 ```
 
-### 3) Run The App
+### 4) Run The App
 
 ```bash
 flutter run
 ```
 
-### 4) Run Tests
+Platform-specific examples:
+
+```bash
+flutter run -d chrome
+flutter run -d windows
+flutter run -d android
+```
+
+### 5) Run Tests
 
 ```bash
 flutter test
 ```
 
-### 5) Run Static Analysis
+### 6) Run Static Analysis
 
 ```bash
 flutter analyze
+```
+
+## Quick Usage Walkthrough
+
+Suggested first-run flow:
+
+1. Open **Dashboard** and review summary cards.
+2. Add a task in **Todo**, including priority and optional recurrence.
+3. Add an event in **Calendar** with optional reminder time.
+4. Add income/expense entries in **Finance** and review category/trend visuals.
+5. Open **Settings** to configure currency/theme.
+6. In **Settings -> Local data**, export an encrypted `.lpbackup`.
+7. Test restore by importing the `.lpbackup` with the same password.
+
+## Screenshots
+
+Place screenshots in `screenshots/` (or `docs/screenshots/`) and keep filenames stable:
+
+- `dashboard.png`
+- `todo.png`
+- `calendar.png`
+- `finance.png`
+- `settings-local-data.png`
+- `backup-password-dialog.png`
+- `restore-password-dialog.png`
+
+Suggested markdown placeholders:
+
+```md
+![Dashboard](screenshots/dashboard.png)
+![Todo](screenshots/todo.png)
+![Calendar](screenshots/calendar.png)
+![Finance](screenshots/finance.png)
+![Settings Local Data](screenshots/settings-local-data.png)
+![Backup Password Dialog](screenshots/backup-password-dialog.png)
+![Restore Password Dialog](screenshots/restore-password-dialog.png)
 ```
 
 ## Development Workflow

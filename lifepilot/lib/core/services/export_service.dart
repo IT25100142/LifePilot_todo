@@ -5,6 +5,7 @@ import 'package:csv/csv.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:file_saver/file_saver.dart';
 
+import '../models/backup_payload_v2.dart';
 import '../utils/crypto_helpers.dart';
 import '../../data/database/app_database.dart';
 
@@ -30,8 +31,8 @@ class ExportService {
     required String currency,
     required String password,
   }) async {
-    final payload = await _payload(currency);
-    final json = const JsonEncoder.withIndent('  ').convert(payload);
+    final payload = await _payloadV2(currency);
+    final json = const JsonEncoder.withIndent('  ').convert(payload.toJson());
     final bytes = await encryptBackupJson(json: json, password: password);
     await FileSaver.instance.saveFile(
       name: 'lifepilot-backup',
@@ -130,24 +131,173 @@ class ExportService {
     if (decoded is! Map<String, dynamic>) {
       throw const BackupCryptoException('Invalid backup file format.');
     }
-    await database.importJson(decoded);
-    return true;
+    final formatVersion = (decoded['formatVersion'] as num?)?.toInt();
+    if (formatVersion == 2) {
+      await database.importBackupV2(decoded);
+      return true;
+    }
+
+    if (_isLegacyPayload(decoded)) {
+      await database.importJson(decoded);
+      return true;
+    }
+    throw const BackupCryptoException('Invalid backup file format.');
   }
 
-  Future<Map<String, dynamic>> _payload(String currency) async {
+  bool _isLegacyPayload(Map<String, dynamic> payload) {
+    return payload['tasks'] is List ||
+        payload['events'] is List ||
+        payload['transactions'] is List;
+  }
+
+  Future<BackupPayloadV2> _payloadV2(String currency) async {
     final tasks = await database.select(database.tasks).get();
     final events = await database.select(database.calendarEvents).get();
     final entries = await database.select(database.financeEntries).get();
     final categories = await database.select(database.categories).get();
+    final accounts = await database.select(database.accounts).get();
+    final settings = await database.readSettings();
 
+    return BackupPayloadV2(
+      formatVersion: 2,
+      app: 'LifePilot',
+      exportedAt: DateTime.now().toIso8601String(),
+      dbSchemaVersion: database.schemaVersion,
+      settings: BackupSettingsV2(
+        currency: currency,
+        themeMode: settings.themeMode,
+      ),
+      tasks: [
+        for (final item in tasks)
+          BackupTaskV2(
+            sourceId: item.id,
+            title: item.title,
+            description: item.description,
+            dueDate: item.dueDate?.toIso8601String(),
+            reminderAt: item.reminderAt?.toIso8601String(),
+            priority: item.priority,
+            tags: item.tags,
+            isCompleted: item.isCompleted,
+            createdAt: item.createdAt.toIso8601String(),
+            updatedAt: item.updatedAt.toIso8601String(),
+            recurrencePattern: item.recurrencePattern,
+            recurrenceParentId: item.recurrenceParentId,
+          ),
+      ],
+      events: [
+        for (final item in events)
+          BackupEventV2(
+            sourceId: item.id,
+            title: item.title,
+            description: item.description,
+            date: item.date.toIso8601String(),
+            startTime: item.startTime.toIso8601String(),
+            endTime: item.endTime.toIso8601String(),
+            reminderAt: item.reminderAt?.toIso8601String(),
+            createdAt: item.createdAt.toIso8601String(),
+            updatedAt: item.updatedAt.toIso8601String(),
+          ),
+      ],
+      categories: [
+        for (final item in categories)
+          BackupCategoryV2(
+            sourceId: item.id,
+            name: item.name,
+            type: item.type,
+            colorValue: item.colorValue,
+            iconName: item.iconName,
+            monthlyBudget: item.monthlyBudget,
+          ),
+      ],
+      accounts: [
+        for (final item in accounts)
+          BackupAccountV2(
+            sourceId: item.id,
+            name: item.name,
+            initialBalance: item.initialBalance,
+            currentBalance: item.currentBalance,
+            colorValue: item.colorValue,
+            createdAt: item.createdAt.toIso8601String(),
+          ),
+      ],
+      transactions: [
+        for (final item in entries)
+          BackupTransactionV2(
+            sourceId: item.id,
+            title: item.title,
+            amount: item.amount,
+            category: item.category,
+            date: item.date.toIso8601String(),
+            note: item.note,
+            type: item.type,
+            createdAt: item.createdAt.toIso8601String(),
+            updatedAt: item.updatedAt.toIso8601String(),
+            accountId: item.accountId,
+            transferTargetAccountId: item.transferTargetAccountId,
+          ),
+      ],
+    );
+  }
+
+  Future<Map<String, dynamic>> _payload(String currency) async {
+    final payload = await _payloadV2(currency);
+    final json = payload.toJson();
     return {
-      'app': 'LifePilot',
-      'exportedAt': DateTime.now().toIso8601String(),
-      'currency': currency,
-      'tasks': [for (final item in tasks) item.toJson()],
-      'events': [for (final item in events) item.toJson()],
-      'transactions': [for (final item in entries) item.toJson()],
-      'categories': [for (final item in categories) item.toJson()],
+      'app': json['app'],
+      'exportedAt': json['exportedAt'],
+      'currency': payload.settings.currency,
+      'tasks': [
+        for (final item in payload.tasks)
+          {
+            'title': item.title,
+            'description': item.description,
+            'dueDate': item.dueDate,
+            'reminderAt': item.reminderAt,
+            'priority': item.priority,
+            'tags': item.tags,
+            'isCompleted': item.isCompleted,
+            'createdAt': item.createdAt,
+            'updatedAt': item.updatedAt,
+            'recurrencePattern': item.recurrencePattern,
+            'recurrenceParentId': item.recurrenceParentId,
+          }
+      ],
+      'events': [
+        for (final item in payload.events)
+          {
+            'title': item.title,
+            'description': item.description,
+            'date': item.date,
+            'startTime': item.startTime,
+            'endTime': item.endTime,
+            'reminderAt': item.reminderAt,
+            'createdAt': item.createdAt,
+            'updatedAt': item.updatedAt,
+          }
+      ],
+      'transactions': [
+        for (final item in payload.transactions)
+          {
+            'title': item.title,
+            'amount': item.amount,
+            'category': item.category,
+            'date': item.date,
+            'note': item.note,
+            'type': item.type,
+            'createdAt': item.createdAt,
+            'updatedAt': item.updatedAt,
+          }
+      ],
+      'categories': [
+        for (final item in payload.categories)
+          {
+            'name': item.name,
+            'type': item.type,
+            'colorValue': item.colorValue,
+            'iconName': item.iconName,
+            'monthlyBudget': item.monthlyBudget,
+          }
+      ],
     };
   }
 }

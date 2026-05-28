@@ -5,6 +5,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 import '../../core/constants/app_constants.dart';
+import '../../core/models/backup_payload_v2.dart';
 import '../../core/services/encryption_service.dart';
 
 part 'app_database.g.dart';
@@ -105,6 +106,7 @@ class AppSettingsTable extends Table {
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
+  AppDatabase.forTesting(super.executor);
 
   static QueryExecutor _openConnection() {
     return LazyDatabase(() async {
@@ -275,24 +277,13 @@ class AppDatabase extends _$AppDatabase {
 
   Future<void> clearAllData() async {
     await transaction(() async {
-      await delete(tasks).go();
-      await delete(calendarEvents).go();
-      await delete(financeEntries).go();
-      await delete(categories).go();
-      await delete(appSettingsTable).go();
-      await into(appSettingsTable).insert(
-        const AppSettingsTableCompanion(
-          currency: Value(AppConstants.defaultCurrency),
-          themeMode: Value('system'),
-          demoSeeded: Value(true),
-        ),
-      );
+      await _clearAllDataInTransaction();
     });
   }
 
   Future<void> importJson(Map<String, dynamic> payload) async {
     await transaction(() async {
-      await clearAllData();
+      await _clearAllDataInTransaction();
       for (final item in (payload['tasks'] as List<dynamic>? ?? const [])) {
         final json = item as Map<String, dynamic>;
         await into(tasks).insert(
@@ -353,6 +344,159 @@ class AppDatabase extends _$AppDatabase {
         ),
       );
     });
+  }
+
+  Future<void> importBackupV2(Map<String, dynamic> payload) async {
+    final backup = BackupPayloadV2.fromJson(payload);
+    if (backup.formatVersion != 2) {
+      throw const BackupRestoreException('Unsupported backup format version.');
+    }
+
+    await transaction(() async {
+      await _clearAllDataInTransaction();
+
+      final accountIdMap = <int, int>{};
+      final categoryIdMap = <int, int>{};
+
+      final settings = await _settingsRow();
+      await update(appSettingsTable).replace(
+        settings.copyWith(
+          currency: backup.settings.currency,
+          themeMode: backup.settings.themeMode ?? settings.themeMode,
+          demoSeeded: true,
+        ),
+      );
+
+      for (final category in backup.categories) {
+        final newId = await into(categories).insert(
+          CategoriesCompanion.insert(
+            name: category.name,
+            type: Value(category.type),
+            colorValue: Value(category.colorValue),
+            iconName: Value(category.iconName),
+            monthlyBudget: Value(category.monthlyBudget),
+          ),
+        );
+        categoryIdMap[category.sourceId] = newId;
+      }
+      if (backup.categories.isNotEmpty &&
+          categoryIdMap.length != backup.categories.length) {
+        throw const BackupRestoreException(
+          'Category mapping failed during backup restore.',
+        );
+      }
+
+      for (final account in backup.accounts) {
+        final newId = await into(accounts).insert(
+          AccountsCompanion.insert(
+            name: account.name,
+            initialBalance: Value(account.initialBalance),
+            currentBalance: Value(account.currentBalance),
+            colorValue: Value(account.colorValue),
+            createdAt: Value(_date(account.createdAt) ?? DateTime.now()),
+          ),
+        );
+        accountIdMap[account.sourceId] = newId;
+      }
+
+      for (final task in backup.tasks) {
+        await into(tasks).insert(
+          TasksCompanion.insert(
+            title: task.title,
+            description: Value(task.description),
+            dueDate: Value(_date(task.dueDate)),
+            reminderAt: Value(_date(task.reminderAt)),
+            priority: Value(task.priority),
+            tags: Value(task.tags),
+            isCompleted: Value(task.isCompleted),
+            createdAt: Value(_date(task.createdAt) ?? DateTime.now()),
+            updatedAt: Value(_date(task.updatedAt) ?? DateTime.now()),
+            recurrencePattern: Value(task.recurrencePattern),
+            recurrenceParentId: Value(task.recurrenceParentId),
+          ),
+        );
+      }
+
+      for (final event in backup.events) {
+        final start = _date(event.startTime) ?? DateTime.now();
+        await into(calendarEvents).insert(
+          CalendarEventsCompanion.insert(
+            title: event.title,
+            description: Value(event.description),
+            date: _date(event.date) ?? start,
+            startTime: start,
+            endTime: _date(event.endTime) ?? start.add(const Duration(hours: 1)),
+            reminderAt: Value(_date(event.reminderAt)),
+            createdAt: Value(_date(event.createdAt) ?? DateTime.now()),
+            updatedAt: Value(_date(event.updatedAt) ?? DateTime.now()),
+          ),
+        );
+      }
+
+      for (final tx in backup.transactions) {
+        final remappedAccountId = _remapAccountId(
+          sourceAccountId: tx.accountId,
+          map: accountIdMap,
+          transactionSourceId: tx.sourceId,
+          fieldName: 'accountId',
+        );
+        final remappedTransferTargetId = _remapAccountId(
+          sourceAccountId: tx.transferTargetAccountId,
+          map: accountIdMap,
+          transactionSourceId: tx.sourceId,
+          fieldName: 'transferTargetAccountId',
+        );
+
+        await into(financeEntries).insert(
+          FinanceEntriesCompanion.insert(
+            title: tx.title,
+            amount: tx.amount,
+            category: Value(tx.category),
+            date: _date(tx.date) ?? DateTime.now(),
+            note: Value(tx.note),
+            type: Value(tx.type),
+            createdAt: Value(_date(tx.createdAt) ?? DateTime.now()),
+            updatedAt: Value(_date(tx.updatedAt) ?? DateTime.now()),
+            accountId: Value(remappedAccountId),
+            transferTargetAccountId: Value(remappedTransferTargetId),
+          ),
+        );
+      }
+
+      await recalculateAccountBalances();
+    });
+  }
+
+  Future<void> _clearAllDataInTransaction() async {
+    await delete(tasks).go();
+    await delete(calendarEvents).go();
+    await delete(financeEntries).go();
+    await delete(categories).go();
+    await delete(accounts).go();
+    await delete(appSettingsTable).go();
+    await into(appSettingsTable).insert(
+      const AppSettingsTableCompanion(
+        currency: Value(AppConstants.defaultCurrency),
+        themeMode: Value('system'),
+        demoSeeded: Value(true),
+      ),
+    );
+  }
+
+  int? _remapAccountId({
+    required int? sourceAccountId,
+    required Map<int, int> map,
+    required int transactionSourceId,
+    required String fieldName,
+  }) {
+    if (sourceAccountId == null) return null;
+    final remapped = map[sourceAccountId];
+    if (remapped == null) {
+      throw BackupRestoreException(
+        'Missing account mapping for transaction $transactionSourceId ($fieldName -> $sourceAccountId).',
+      );
+    }
+    return remapped;
   }
 
   DateTime? _date(Object? value) {
@@ -621,4 +765,13 @@ class AppDatabase extends _$AppDatabase {
       await recalculateAccountBalances();
     });
   }
+}
+
+class BackupRestoreException implements Exception {
+  const BackupRestoreException(this.message);
+
+  final String message;
+
+  @override
+  String toString() => message;
 }
