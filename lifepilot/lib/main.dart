@@ -5,5 +5,10 @@ import 'app/app.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(const ProviderScope(child: LifePilotApp()));
+  runApp(
+    const ProviderScope(
+      child: LifePilotApp(),
+    ),
+  );
 }
+

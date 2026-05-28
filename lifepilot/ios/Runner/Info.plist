@@ -45,5 +45,7 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSFaceIDUsageDescription</key>
+	<string>LifePilot needs FaceID authentication to unlock the application.</string>
 </dict>
 </plist>

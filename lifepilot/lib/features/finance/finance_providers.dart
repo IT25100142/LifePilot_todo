@@ -229,3 +229,65 @@ final saveFinanceTransactionProvider = Provider((ref) {
     return db.saveFinanceEntry(transactionCompanion);
   };
 });
+
+class MonthlyTrendPoint {
+  const MonthlyTrendPoint({
+    required this.month,
+    required this.income,
+    required this.expense,
+  });
+
+  final DateTime month;
+  final double income;
+  final double expense;
+}
+
+final financialTrendProvider = Provider<AsyncValue<List<MonthlyTrendPoint>>>((ref) {
+  return ref.watch(financeEntriesProvider).whenData(calculateFinancialTrends);
+});
+
+List<MonthlyTrendPoint> calculateFinancialTrends(List<FinanceEntry> entries) {
+  if (entries.isEmpty) return const [];
+
+  // Group entries by calendar month
+  final grouped = <DateTime, List<FinanceEntry>>{};
+  for (final entry in entries) {
+    final monthKey = DateTime(entry.date.year, entry.date.month);
+    grouped.putIfAbsent(monthKey, () => []).add(entry);
+  }
+
+  // Sort months chronologically
+  final sortedMonths = grouped.keys.toList()..sort();
+
+  // Compute running totals
+  final trendPoints = <MonthlyTrendPoint>[];
+  var runningIncome = 0.0;
+  var runningExpense = 0.0;
+
+  for (final month in sortedMonths) {
+    final monthEntries = grouped[month]!;
+    var monthIncome = 0.0;
+    var monthExpense = 0.0;
+
+    for (final entry in monthEntries) {
+      if (entry.type == 'income') {
+        monthIncome += entry.amount;
+      } else if (entry.type == 'expense') {
+        monthExpense += entry.amount;
+      }
+    }
+
+    runningIncome += monthIncome;
+    runningExpense += monthExpense;
+
+    trendPoints.add(MonthlyTrendPoint(
+      month: month,
+      income: runningIncome,
+      expense: runningExpense,
+    ));
+  }
+
+  return trendPoints;
+}
+
+
