@@ -2,8 +2,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'app_database.dart';
 
+final databaseKeyProvider = Provider<String>((ref) {
+  throw UnimplementedError('databaseKeyProvider must be overridden in main()');
+});
+
 final appDatabaseProvider = Provider<AppDatabase>((ref) {
-  final database = AppDatabase.defaults();
+  final key = ref.watch(databaseKeyProvider);
+  final database = AppDatabase.defaults(key);
   ref.onDispose(database.close);
   return database;
 });

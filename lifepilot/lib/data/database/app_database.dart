@@ -1,5 +1,8 @@
+import 'dart:io';
 import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
 
 import '../../core/constants/app_constants.dart';
 
@@ -83,16 +86,40 @@ class AppSettingsTable extends Table {
 class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
 
-  AppDatabase.defaults()
-    : super(
-        driftDatabase(
-          name: 'lifepilot',
-          web: DriftWebOptions(
-            sqlite3Wasm: Uri.parse('sqlite3.wasm'),
-            driftWorker: Uri.parse('drift_worker.dart.js'),
-          ),
+  AppDatabase.defaults(String encryptionKey)
+      : super(_openConnection(encryptionKey));
+
+  static QueryExecutor _openConnection(String encryptionKey) {
+    return LazyDatabase(() async {
+      final dbFolder = await getApplicationDocumentsDirectory();
+      final file = File(p.join(dbFolder.path, 'lifepilot.sqlite'));
+
+      return driftDatabase(
+        name: 'lifepilot',
+        web: DriftWebOptions(
+          sqlite3Wasm: Uri.parse('sqlite3.wasm'),
+          driftWorker: Uri.parse('drift_worker.dart.js'),
+        ),
+        native: DriftNativeOptions(
+          setup: (rawDb) {
+            rawDb.execute("PRAGMA key = '$encryptionKey';");
+            try {
+              // Verify encryption key succeeds on decrypting SQLite pages
+              rawDb.select('SELECT name FROM sqlite_schema LIMIT 1;');
+            } catch (e) {
+              // Delete corrupted/mismatched DB file so app doesn't crash permanently
+              try {
+                if (file.existsSync()) {
+                  file.deleteSync();
+                }
+              } catch (_) {}
+              throw Exception('Database decryption failed. Local database has been reset.');
+            }
+          },
         ),
       );
+    });
+  }
 
   @override
   int get schemaVersion => 3;
