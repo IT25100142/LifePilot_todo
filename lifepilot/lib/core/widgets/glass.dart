@@ -1,8 +1,7 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 
 import '../../app/theme.dart';
+import 'glass_panel.dart';
 
 class LiquidBackground extends StatefulWidget {
   const LiquidBackground({required this.child, super.key});
@@ -90,6 +89,7 @@ class _LiquidBackgroundState extends State<LiquidBackground>
   }
 }
 
+
 class GlassPanel extends StatelessWidget {
   const GlassPanel({
     required this.child,
@@ -114,56 +114,13 @@ class GlassPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final dark = theme.brightness == Brightness.dark;
-    final fillOpacity = opacity ?? (dark ? 0.16 : 0.58);
-    final strokeOpacity = borderOpacity ?? (dark ? 0.2 : 0.72);
-
-    Widget content = ClipRRect(
-      borderRadius: BorderRadius.circular(radius),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
-        child: AnimatedContainer(
-          duration: LifePilotTheme.pageDuration,
-          curve: LifePilotTheme.quickCurve,
-          padding: padding,
-          constraints: constraints,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(radius),
-            color: theme.colorScheme.surface.withValues(alpha: fillOpacity),
-            border: Border.all(
-              color: Colors.white.withValues(alpha: strokeOpacity),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: dark ? 0.28 : 0.08),
-                blurRadius: 34,
-                offset: const Offset(0, 18),
-              ),
-              BoxShadow(
-                color: Colors.white.withValues(alpha: dark ? 0.04 : 0.56),
-                blurRadius: 1,
-                offset: const Offset(0, 1),
-              ),
-            ],
-          ),
-          child: child,
-        ),
-      ),
+    return LifePilotGlassCard(
+      padding: padding,
+      radius: radius,
+      constraints: constraints,
+      onTap: onTap,
+      child: child,
     );
-
-    if (onTap != null) {
-      content = Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(radius),
-          onTap: onTap,
-          child: content,
-        ),
-      );
-    }
-
-    return content;
   }
 }
 

@@ -38,27 +38,49 @@ class LifePilotScaffold extends StatelessWidget {
       return Scaffold(
         extendBody: true,
         backgroundColor: Colors.transparent,
-        body: LiquidBackground(child: SafeArea(child: navigationShell)),
-        bottomNavigationBar: SafeArea(
-          minimum: const EdgeInsets.fromLTRB(14, 0, 14, 10),
-          child: GlassPanel(
-            radius: 32,
-            padding: EdgeInsets.zero,
-            opacity: Theme.of(context).brightness == Brightness.dark
-                ? 0.24
-                : 0.62,
-            child: NavigationBar(
-              selectedIndex: navigationShell.currentIndex,
-              onDestinationSelected: _goBranch,
-              destinations: [
-                for (final item in _destinations)
-                  NavigationDestination(
-                    icon: Icon(item.icon),
-                    selectedIcon: Icon(item.selectedIcon),
-                    label: item.label,
+        body: LiquidBackground(
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: Padding(
+                  // Reserve space for the floating dock so content is not obscured
+                  padding: const EdgeInsets.only(bottom: 96),
+                  child: SafeArea(child: navigationShell),
+                ),
+              ),
+              Positioned(
+                left: 16,
+                right: 16,
+                bottom: 16,
+                child: SafeArea(
+                  child: Hero(
+                    tag: 'navigation-dock',
+                    child: GlassPanel(
+                      radius: 32,
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 4,
+                        horizontal: 12,
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: [
+                          for (int i = 0; i < _destinations.length; i++)
+                            Expanded(
+                              child: FloatingDockTab(
+                                icon: _destinations[i].icon,
+                                selectedIcon: _destinations[i].selectedIcon,
+                                label: _destinations[i].label,
+                                isSelected: navigationShell.currentIndex == i,
+                                onTap: () => _goBranch(i),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
                   ),
-              ],
-            ),
+                ),
+              ),
+            ],
           ),
         ),
       );
@@ -75,9 +97,6 @@ class LifePilotScaffold extends StatelessWidget {
                 child: GlassPanel(
                   radius: 34,
                   padding: const EdgeInsets.symmetric(vertical: 10),
-                  opacity: Theme.of(context).brightness == Brightness.dark
-                      ? 0.18
-                      : 0.58,
                   child: NavigationRail(
                     extended: isExpanded,
                     selectedIndex: navigationShell.currentIndex,
@@ -111,6 +130,106 @@ class LifePilotScaffold extends StatelessWidget {
     navigationShell.goBranch(
       index,
       initialLocation: index == navigationShell.currentIndex,
+    );
+  }
+}
+
+class FloatingDockTab extends StatefulWidget {
+  const FloatingDockTab({
+    required this.icon,
+    required this.selectedIcon,
+    required this.label,
+    required this.isSelected,
+    required this.onTap,
+    super.key,
+  });
+
+  final IconData icon;
+  final IconData selectedIcon;
+  final String label;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  @override
+  State<FloatingDockTab> createState() => _FloatingDockTabState();
+}
+
+class _FloatingDockTabState extends State<FloatingDockTab>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _scaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 100),
+    );
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.90).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final activeColor = theme.colorScheme.primary;
+    final inactiveColor = theme.colorScheme.onSurface.withValues(alpha: 0.54);
+    final color = widget.isSelected ? activeColor : inactiveColor;
+
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTapDown: (_) => _controller.forward(),
+      onTapUp: (_) {
+        _controller.reverse();
+        widget.onTap();
+      },
+      onTapCancel: () => _controller.reverse(),
+      child: ScaleTransition(
+        scale: _scaleAnimation,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: widget.isSelected
+                      ? activeColor.withValues(alpha: 0.12)
+                      : Colors.transparent,
+                ),
+                child: Icon(
+                  widget.isSelected ? widget.selectedIcon : widget.icon,
+                  color: color,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                widget.label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: color,
+                  fontWeight:
+                      widget.isSelected ? FontWeight.w800 : FontWeight.w600,
+                  fontSize: 10,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

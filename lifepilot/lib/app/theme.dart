@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 
 class LifePilotTheme {
@@ -24,12 +25,99 @@ class LifePilotTheme {
   }
 
   static ThemeData _themeFromScheme(ColorScheme scheme) {
+    final dark = scheme.brightness == Brightness.dark;
     return ThemeData(
       useMaterial3: true,
       colorScheme: scheme,
       scaffoldBackgroundColor: scheme.brightness == Brightness.dark
           ? const Color(0xFF060B0C)
           : const Color(0xFFF4FAFB),
+      textTheme: TextTheme(
+        displayLarge: TextStyle(
+          fontWeight: FontWeight.w900,
+          letterSpacing: -1.0,
+          color: scheme.onSurface,
+        ),
+        displayMedium: TextStyle(
+          fontWeight: FontWeight.w900,
+          letterSpacing: -0.8,
+          color: scheme.onSurface,
+        ),
+        displaySmall: TextStyle(
+          fontWeight: FontWeight.w800,
+          letterSpacing: -0.5,
+          color: scheme.onSurface,
+        ),
+        headlineLarge: TextStyle(
+          fontWeight: FontWeight.w800,
+          letterSpacing: -0.5,
+          color: scheme.onSurface,
+        ),
+        headlineMedium: TextStyle(
+          fontWeight: FontWeight.w700,
+          letterSpacing: -0.2,
+          color: scheme.onSurface,
+        ),
+        titleLarge: TextStyle(
+          fontWeight: FontWeight.w800,
+          letterSpacing: 0.0,
+          color: scheme.onSurface,
+        ),
+        titleMedium: TextStyle(
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.1,
+          color: scheme.onSurface,
+        ),
+        bodyLarge: TextStyle(
+          fontWeight: FontWeight.w500,
+          letterSpacing: 0.15,
+          color: scheme.onSurface.withValues(alpha: 0.95),
+        ),
+        bodyMedium: TextStyle(
+          fontWeight: FontWeight.w500,
+          letterSpacing: 0.2,
+          color: scheme.onSurface.withValues(alpha: 0.85),
+        ),
+        labelLarge: TextStyle(
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.3,
+          color: scheme.onSurface,
+        ),
+      ),
+      extensions: [
+        GlassThemeExtension(
+          cardGradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: dark
+                ? [
+                    Colors.white.withValues(alpha: 0.06),
+                    Colors.white.withValues(alpha: 0.01),
+                  ]
+                : [
+                    Colors.white.withValues(alpha: 0.12),
+                    Colors.white.withValues(alpha: 0.04),
+                  ],
+          ),
+          borderGradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: dark
+                ? [
+                    Colors.white.withValues(alpha: 0.16),
+                    Colors.white.withValues(alpha: 0.02),
+                  ]
+                : [
+                    Colors.white.withValues(alpha: 0.32),
+                    Colors.white.withValues(alpha: 0.06),
+                  ],
+          ),
+          blurSigma: 20.0,
+          shadowColor: dark
+              ? Colors.black.withValues(alpha: 0.24)
+              : Colors.black.withValues(alpha: 0.06),
+        ),
+      ],
       appBarTheme: AppBarTheme(
         centerTitle: false,
         elevation: 0,
@@ -142,6 +230,46 @@ class LifePilotTheme {
           TargetPlatform.linux: CupertinoPageTransitionsBuilder(),
         },
       ),
+    );
+  }
+}
+
+class GlassThemeExtension extends ThemeExtension<GlassThemeExtension> {
+  const GlassThemeExtension({
+    required this.cardGradient,
+    required this.borderGradient,
+    required this.blurSigma,
+    required this.shadowColor,
+  });
+
+  final Gradient cardGradient;
+  final Gradient borderGradient;
+  final double blurSigma;
+  final Color shadowColor;
+
+  @override
+  GlassThemeExtension copyWith({
+    Gradient? cardGradient,
+    Gradient? borderGradient,
+    double? blurSigma,
+    Color? shadowColor,
+  }) {
+    return GlassThemeExtension(
+      cardGradient: cardGradient ?? this.cardGradient,
+      borderGradient: borderGradient ?? this.borderGradient,
+      blurSigma: blurSigma ?? this.blurSigma,
+      shadowColor: shadowColor ?? this.shadowColor,
+    );
+  }
+
+  @override
+  GlassThemeExtension lerp(ThemeExtension<GlassThemeExtension>? other, double t) {
+    if (other is! GlassThemeExtension) return this;
+    return GlassThemeExtension(
+      cardGradient: Gradient.lerp(cardGradient, other.cardGradient, t)!,
+      borderGradient: Gradient.lerp(borderGradient, other.borderGradient, t)!,
+      blurSigma: lerpDouble(blurSigma, other.blurSigma, t)!,
+      shadowColor: Color.lerp(shadowColor, other.shadowColor, t)!,
     );
   }
 }
