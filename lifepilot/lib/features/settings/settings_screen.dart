@@ -1,8 +1,11 @@
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants/app_constants.dart';
 import '../../core/models/backup_summary.dart';
+import '../../core/services/exchange_rate_provider.dart';
 import '../../core/services/export_provider.dart';
 import '../../core/utils/crypto_helpers.dart';
 import '../../data/database/app_database.dart';
@@ -220,29 +223,79 @@ class _GlassSegmentedSelector<T> extends StatelessWidget {
   }
 }
 
-class _CurrencySection extends ConsumerWidget {
+class _CurrencySection extends ConsumerStatefulWidget {
   const _CurrencySection({required this.currency});
 
   final String currency;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_CurrencySection> createState() => _CurrencySectionState();
+}
+
+class _CurrencySectionState extends ConsumerState<_CurrencySection>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _syncPressController;
+  late final Animation<double> _syncPressScale;
+
+  @override
+  void initState() {
+    super.initState();
+    _syncPressController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 80),
+    );
+    _syncPressScale = Tween<double>(begin: 1.0, end: 0.95).animate(
+      CurvedAnimation(parent: _syncPressController, curve: Curves.easeOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _syncPressController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
+    // Watch exchange rate provider
+    final syncState = ref.watch(exchangeRateProvider);
+    final isSyncing = syncState.status == ExchangeRateSyncStatus.syncing;
+
+    // Format last sync time helper
+    String getSyncTimeString(DateTime? lastSyncTime) {
+      if (lastSyncTime == null) return 'Never synced';
+      final now = DateTime.now();
+      final difference = now.difference(lastSyncTime);
+      if (difference.inSeconds < 60) {
+        return 'Rates up to date • Just now';
+      } else if (difference.inMinutes < 60) {
+        return 'Last updated: ${difference.inMinutes}m ago';
+      } else {
+        final hour = lastSyncTime.hour.toString().padLeft(2, '0');
+        final minute = lastSyncTime.minute.toString().padLeft(2, '0');
+        return 'Last updated: $hour:$minute';
+      }
+    }
+
     return LifePilotGlassCard(
       radius: 24,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // ── Description ──
           Text(
-            'Choose your default currency for new transactions.',
+            'Choose your default currency for transactions and sync real-time market rates.',
             style: theme.textTheme.bodyMedium?.copyWith(
               color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
+
+          // ── Selector row ──
           Row(
             children: [
               Container(
@@ -261,23 +314,18 @@ class _CurrencySection extends ConsumerWidget {
               ),
               const SizedBox(width: 14),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Default Currency',
-                      style: theme.textTheme.bodyLarge?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 15,
-                      ),
-                    ),
-                  ],
+                child: Text(
+                  'Default Currency',
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 15,
+                  ),
                 ),
               ),
               const SizedBox(width: 8),
               Expanded(
                 child: DropdownButtonFormField<String>(
-                  initialValue: currency,
+                  initialValue: widget.currency,
                   decoration: const InputDecoration(
                     border: InputBorder.none,
                     enabledBorder: InputBorder.none,
@@ -307,6 +355,131 @@ class _CurrencySection extends ConsumerWidget {
                         .read(settingsControllerProvider.notifier)
                         .setCurrency(value);
                   },
+                ),
+              ),
+            ],
+          ),
+
+          // ── Divider ──
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: Divider(
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.08),
+              height: 1,
+            ),
+          ),
+
+          // ── Sync status & action row ──
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              // Icon & details
+              Expanded(
+                child: Row(
+                  children: [
+                    // Dynamic Sync status Icon
+                    switch (syncState.status) {
+                      ExchangeRateSyncStatus.syncing => const _SpinningIcon(
+                        icon: Icons.sync,
+                        color: Colors.grey,
+                      ),
+                      ExchangeRateSyncStatus.synced => const Icon(
+                        Icons.check_circle_outline,
+                        color: Colors.grey,
+                        size: 20,
+                      ),
+                      ExchangeRateSyncStatus.offlineErrorFallback => const Icon(
+                        Icons.warning_amber_rounded,
+                        color: Colors.redAccent,
+                        size: 20,
+                      ),
+                    },
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            switch (syncState.status) {
+                              ExchangeRateSyncStatus.syncing =>
+                                'Syncing latest rates...',
+                              ExchangeRateSyncStatus.synced => 'Exchange Rates',
+                              ExchangeRateSyncStatus.offlineErrorFallback =>
+                                'Offline Fallback',
+                            },
+                            style: theme.textTheme.bodyLarge?.copyWith(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 15,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            switch (syncState.status) {
+                              ExchangeRateSyncStatus.syncing =>
+                                'Updating from server...',
+                              ExchangeRateSyncStatus.synced =>
+                                getSyncTimeString(syncState.lastSyncTime),
+                              ExchangeRateSyncStatus.offlineErrorFallback =>
+                                'Offline • Using cached rates',
+                            },
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurface.withValues(
+                                alpha: 0.5,
+                              ),
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+
+              // Tactile Sync Now Button
+              GestureDetector(
+                onTapDown: isSyncing
+                    ? null
+                    : (_) => _syncPressController.forward(),
+                onTapCancel: isSyncing
+                    ? null
+                    : () => _syncPressController.reverse(),
+                onTapUp: isSyncing
+                    ? null
+                    : (_) {
+                        _syncPressController.reverse();
+                        ref.read(exchangeRateProvider.notifier).fetchRates();
+                      },
+                child: ScaleTransition(
+                  scale: _syncPressScale,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: isSyncing
+                          ? theme.colorScheme.onSurface.withValues(alpha: 0.05)
+                          : theme.colorScheme.primary.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: isSyncing
+                            ? Colors.transparent
+                            : theme.colorScheme.primary.withValues(alpha: 0.24),
+                        width: 1,
+                      ),
+                    ),
+                    child: Text(
+                      isSyncing ? 'Syncing...' : 'Sync Now',
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        color: isSyncing
+                            ? theme.colorScheme.onSurface.withValues(alpha: 0.4)
+                            : theme.colorScheme.primary,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -1029,6 +1202,48 @@ class _AmbientBackdrop extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _SpinningIcon extends StatefulWidget {
+  const _SpinningIcon({required this.icon, required this.color});
+  final IconData icon;
+  final Color color;
+
+  @override
+  State<_SpinningIcon> createState() => _SpinningIconState();
+}
+
+class _SpinningIconState extends State<_SpinningIcon>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    );
+    final isTesting =
+        !kIsWeb && Platform.environment.containsKey('FLUTTER_TEST');
+    if (!isTesting) {
+      _controller.repeat();
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return RotationTransition(
+      turns: _controller,
+      child: Icon(widget.icon, color: widget.color, size: 20),
     );
   }
 }
