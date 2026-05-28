@@ -16,6 +16,9 @@ import 'search_provider.dart';
 
 // Import features for integration
 import '../finance/finance_screen.dart';
+import '../focus/focus_providers.dart';
+import '../habits/habit_providers.dart';
+import '../habits/widgets/habit_heatmap.dart';
 import '../todo/todo_screen.dart';
 
 class DashboardScreen extends ConsumerWidget {
@@ -65,16 +68,33 @@ class DashboardScreen extends ConsumerWidget {
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // Left Column: Converted Analytics Window
+                            // Row 2 Left Column: Finance Analytics
                             const Expanded(
                               flex: 5,
                               child: LifePilotFinanceAnalytics(),
                             ),
                             const SizedBox(width: 24),
-                            // Right Column: High-Priority Task Canvas
+                            // Row 2 Right Column: Priority Tasks
                             const Expanded(
                               flex: 6,
                               child: _DashboardPriorityTasks(),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 24),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Row 3 Left Column: Habit Heatmap
+                            const Expanded(
+                              flex: 5,
+                              child: _DashboardHabitMesh(),
+                            ),
+                            const SizedBox(width: 24),
+                            // Row 3 Right Column: Quick Focus Deck
+                            const Expanded(
+                              flex: 6,
+                              child: _DashboardQuickFocus(),
                             ),
                           ],
                         ),
@@ -87,6 +107,10 @@ class DashboardScreen extends ConsumerWidget {
                         const LifePilotFinanceAnalytics(),
                         const SizedBox(height: 16),
                         const _DashboardPriorityTasks(),
+                        const SizedBox(height: 16),
+                        const _DashboardHabitMesh(),
+                        const SizedBox(height: 16),
+                        const _DashboardQuickFocus(),
                         const SizedBox(height: 96),
                       ],
                     ]),
@@ -723,6 +747,220 @@ class _AmbientBackdrop extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _DashboardHabitMesh extends ConsumerWidget {
+  const _DashboardHabitMesh();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final logsAsync = ref.watch(habitLogsProvider);
+
+    return LifePilotGlassCard(
+      radius: 20,
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'HABIT CONSISTENCY',
+                style: theme.textTheme.labelMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: theme.colorScheme.onSurfaceVariant.withValues(
+                    alpha: 0.6,
+                  ),
+                  letterSpacing: 1.2,
+                ),
+              ),
+              logsAsync.maybeWhen(
+                data: (logs) {
+                  final completedDates = logs
+                      .where((l) => l.isCompleted)
+                      .map(
+                        (l) =>
+                            '${l.date.year}-${l.date.month.toString().padLeft(2, '0')}-${l.date.day.toString().padLeft(2, '0')}',
+                      )
+                      .toSet();
+                  final streak = _calculateAggregatedStreak(completedDates);
+                  if (streak == 0) return const SizedBox.shrink();
+                  return Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: theme.colorScheme.primary.withValues(alpha: 0.2),
+                      ),
+                    ),
+                    child: Text(
+                      '$streak DAY STREAK',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        fontWeight: FontWeight.w800,
+                        color: theme.colorScheme.primary,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  );
+                },
+                orElse: () => const SizedBox.shrink(),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          logsAsync.when(
+            loading: () => const SizedBox(
+              height: 130,
+              child: Center(child: CircularProgressIndicator()),
+            ),
+            error: (err, _) => SizedBox(
+              height: 130,
+              child: Center(child: Text('Error loading habits')),
+            ),
+            data: (logs) {
+              final completedDates = logs
+                  .where((l) => l.isCompleted)
+                  .map(
+                    (l) =>
+                        '${l.date.year}-${l.date.month.toString().padLeft(2, '0')}-${l.date.day.toString().padLeft(2, '0')}',
+                  )
+                  .toSet();
+              return LifePilotHabitHeatmap(
+                completedDates: completedDates,
+                onDateTapped: (_, __) => context.go('/habits'),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  int _calculateAggregatedStreak(Set<String> completedDates) {
+    int streak = 0;
+    DateTime d = startOfDay(DateTime.now());
+    final todayStr =
+        '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+    final yesterday = d.subtract(const Duration(days: 1));
+    final yesterdayStr =
+        '${yesterday.year}-${yesterday.month.toString().padLeft(2, '0')}-${yesterday.day.toString().padLeft(2, '0')}';
+
+    if (!completedDates.contains(todayStr)) {
+      if (completedDates.contains(yesterdayStr)) {
+        d = yesterday;
+      } else {
+        return 0;
+      }
+    }
+
+    while (completedDates.contains(
+      '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}',
+    )) {
+      streak++;
+      d = d.subtract(const Duration(days: 1));
+    }
+    return streak;
+  }
+}
+
+class _DashboardQuickFocus extends ConsumerWidget {
+  const _DashboardQuickFocus();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+
+    return LifePilotGlassCard(
+      radius: 20,
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'QUICK FOCUS',
+            style: theme.textTheme.labelMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+              color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+              letterSpacing: 1.2,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Tap to enter deep immersion instantly.',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              for (final mins in [25, 45, 60])
+                Expanded(
+                  child: Padding(
+                    padding: EdgeInsets.only(
+                      left: mins == 25 ? 0 : 4,
+                      right: mins == 60 ? 0 : 4,
+                    ),
+                    child: _QuickFocusChip(
+                      minutes: mins,
+                      onTap: () {
+                        ref
+                            .read(focusTimerProvider.notifier)
+                            .start(Duration(minutes: mins), 'Deep Work');
+                        context.go('/focus');
+                      },
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _QuickFocusChip extends StatelessWidget {
+  const _QuickFocusChip({required this.minutes, required this.onTap});
+
+  final int minutes;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        alignment: Alignment.center,
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          color: theme.colorScheme.onSurface.withValues(alpha: 0.06),
+          border: Border.all(
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.1),
+            width: 1.2,
+          ),
+        ),
+        child: Text(
+          '${minutes}m',
+          style: theme.textTheme.titleSmall?.copyWith(
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.8,
+            color: theme.colorScheme.primary,
+          ),
+        ),
+      ),
     );
   }
 }
