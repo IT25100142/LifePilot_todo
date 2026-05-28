@@ -85,15 +85,31 @@ class CalendarScreen extends ConsumerWidget {
   }
 }
 
-class _MonthCard extends ConsumerWidget {
+class _MonthCard extends ConsumerStatefulWidget {
   const _MonthCard({required this.events});
 
   final AsyncValue<List<CalendarEvent>> events;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_MonthCard> createState() => _MonthCardState();
+}
+
+class _MonthCardState extends ConsumerState<_MonthCard> {
+  bool _isExpanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final visibleMonth = ref.watch(visibleCalendarMonthProvider);
     final selectedDay = ref.watch(selectedCalendarDayProvider);
+
+    // Week strip logic: find the Monday of the selected day's week
+    final monday = selectedDay.subtract(
+      Duration(days: selectedDay.weekday - 1),
+    );
+    final weekDays = List.generate(7, (i) => monday.add(Duration(days: i)));
+
+    // Month grid logic
     final firstWeekday = DateTime(
       visibleMonth.year,
       visibleMonth.month,
@@ -106,71 +122,160 @@ class _MonthCard extends ConsumerWidget {
     ).day;
     final totalCells = ((firstWeekday - 1 + daysInMonth) / 7).ceil() * 7;
 
-    return SectionCard(
-      title: monthLabel(visibleMonth),
-      action: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          IconButton(
-            tooltip: 'Previous month',
-            onPressed: () =>
-                ref.read(visibleCalendarMonthProvider.notifier).state =
-                    DateTime(visibleMonth.year, visibleMonth.month - 1),
-            icon: const Icon(Icons.chevron_left),
-          ),
-          IconButton(
-            tooltip: 'Next month',
-            onPressed: () =>
-                ref.read(visibleCalendarMonthProvider.notifier).state =
-                    DateTime(visibleMonth.year, visibleMonth.month + 1),
-            icon: const Icon(Icons.chevron_right),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Row(
+    return AnimatedSize(
+      duration: const Duration(milliseconds: 250),
+      curve: Curves.easeInOutCubic,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxHeight: _isExpanded ? 260.0 : 130.0),
+        child: SectionCard(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          title: _isExpanded
+              ? monthLabel(visibleMonth)
+              : 'Week of ${shortDate(selectedDay)}',
+          action: Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              for (final label in ['M', 'T', 'W', 'T', 'F', 'S', 'S'])
-                Expanded(child: Center(child: Text(label))),
+              if (_isExpanded) ...[
+                IconButton(
+                  visualDensity: VisualDensity.compact,
+                  tooltip: 'Previous month',
+                  onPressed: () =>
+                      ref.read(visibleCalendarMonthProvider.notifier).state =
+                          DateTime(visibleMonth.year, visibleMonth.month - 1),
+                  icon: const Icon(Icons.chevron_left, size: 20),
+                ),
+                IconButton(
+                  visualDensity: VisualDensity.compact,
+                  tooltip: 'Next month',
+                  onPressed: () =>
+                      ref.read(visibleCalendarMonthProvider.notifier).state =
+                          DateTime(visibleMonth.year, visibleMonth.month + 1),
+                  icon: const Icon(Icons.chevron_right, size: 20),
+                ),
+              ],
+              IconButton(
+                visualDensity: VisualDensity.compact,
+                tooltip: _isExpanded ? 'Show week' : 'Show month',
+                onPressed: () => setState(() => _isExpanded = !_isExpanded),
+                icon: Icon(
+                  _isExpanded
+                      ? Icons.keyboard_arrow_up
+                      : Icons.keyboard_arrow_down,
+                  size: 20,
+                  color: theme.colorScheme.primary,
+                ),
+              ),
             ],
           ),
-          const SizedBox(height: 8),
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 7,
-              mainAxisSpacing: 6,
-              crossAxisSpacing: 6,
-            ),
-            itemCount: totalCells,
-            itemBuilder: (context, index) {
-              final dayNumber = index - firstWeekday + 2;
-              if (dayNumber < 1 || dayNumber > daysInMonth) {
-                return const SizedBox.shrink();
-              }
-              final date = DateTime(
-                visibleMonth.year,
-                visibleMonth.month,
-                dayNumber,
-              );
-              final isSelected = isSameDate(date, selectedDay);
-              final hasEvent =
-                  events.valueOrNull?.any(
-                    (event) => isSameDate(event.date, date),
-                  ) ??
-                  false;
-              return _CalendarDay(
-                day: dayNumber,
-                selected: isSelected,
-                hasEvent: hasEvent,
-                onTap: () =>
-                    ref.read(selectedCalendarDayProvider.notifier).state = date,
-              );
-            },
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                children: [
+                  for (final label in ['M', 'T', 'W', 'T', 'F', 'S', 'S'])
+                    Expanded(
+                      child: Center(
+                        child: Text(
+                          label,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 10,
+                            color: theme.colorScheme.onSurface.withValues(
+                              alpha: 0.45,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              if (_isExpanded)
+                Flexible(
+                  child: GridView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 7,
+                          mainAxisSpacing: 4,
+                          crossAxisSpacing: 4,
+                          childAspectRatio: 1.5,
+                        ),
+                    itemCount: totalCells,
+                    itemBuilder: (context, index) {
+                      final dayNumber = index - firstWeekday + 2;
+                      if (dayNumber < 1 || dayNumber > daysInMonth) {
+                        return const SizedBox.shrink();
+                      }
+                      final date = DateTime(
+                        visibleMonth.year,
+                        visibleMonth.month,
+                        dayNumber,
+                      );
+                      final isSelected = isSameDate(date, selectedDay);
+                      final hasEvent =
+                          widget.events.valueOrNull?.any(
+                            (e) => isSameDate(e.date, date),
+                          ) ??
+                          false;
+
+                      return _CalendarDay(
+                        day: dayNumber,
+                        selected: isSelected,
+                        hasEvent: hasEvent,
+                        onTap: () {
+                          ref.read(selectedCalendarDayProvider.notifier).state =
+                              date;
+                        },
+                      );
+                    },
+                  ),
+                )
+              else
+                Row(
+                  children: [
+                    for (final date in weekDays)
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 2),
+                          child: AspectRatio(
+                            aspectRatio: 1.0,
+                            child: _CalendarDay(
+                              day: date.day,
+                              selected: isSameDate(date, selectedDay),
+                              hasEvent:
+                                  widget.events.valueOrNull?.any(
+                                    (e) => isSameDate(e.date, date),
+                                  ) ??
+                                  false,
+                              onTap: () {
+                                ref
+                                        .read(
+                                          selectedCalendarDayProvider.notifier,
+                                        )
+                                        .state =
+                                    date;
+                                if (date.month != visibleMonth.month) {
+                                  ref
+                                      .read(
+                                        visibleCalendarMonthProvider.notifier,
+                                      )
+                                      .state = DateTime(
+                                    date.year,
+                                    date.month,
+                                  );
+                                }
+                              },
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -247,10 +352,10 @@ class _CalendarDay extends StatelessWidget {
         : Colors.transparent;
 
     return InkWell(
-      borderRadius: BorderRadius.circular(18),
+      borderRadius: BorderRadius.circular(12),
       onTap: onTap,
       child: LifePilotGlassCard(
-        radius: 18,
+        radius: 12,
         padding: EdgeInsets.zero,
         cardGradient: cardGradient,
         borderGradient: borderGradient,
@@ -261,17 +366,18 @@ class _CalendarDay extends StatelessWidget {
             Text(
               '$day',
               style: TextStyle(
-                fontWeight: FontWeight.w700,
+                fontWeight: FontWeight.w600,
+                fontSize: 12,
                 color: selected
                     ? theme.colorScheme.primary
                     : theme.colorScheme.onSurface,
               ),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 2),
             AnimatedContainer(
               duration: const Duration(milliseconds: 180),
-              width: hasEvent ? 6 : 0,
-              height: 6,
+              width: hasEvent ? 4 : 0,
+              height: 4,
               decoration: BoxDecoration(
                 color: selected
                     ? theme.colorScheme.primary
@@ -320,18 +426,37 @@ class _EventTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
     final database = ref.watch(appDatabaseProvider);
+
+    // Champagne edge highlight gradient (primary/tertiary colors in theme)
+    final champagneBorder = LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [
+        theme.colorScheme.primary.withValues(alpha: 0.36),
+        theme.colorScheme.primary.withValues(alpha: 0.08),
+      ],
+    );
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: LifePilotGlassCard(
-        radius: 22,
+        radius: 20,
         padding: EdgeInsets.zero,
+        borderGradient: champagneBorder,
         child: ListTile(
           contentPadding: const EdgeInsets.symmetric(horizontal: 14),
           leading: const GlassIcon(icon: Icons.schedule),
-          title: Text(event.title),
+          title: Text(
+            event.title,
+            style: const TextStyle(fontWeight: FontWeight.w700),
+          ),
           subtitle: Text(
             '${timeLabel(event.startTime)} - ${timeLabel(event.endTime)}',
+            style: theme.textTheme.labelMedium?.copyWith(
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.48),
+            ),
           ),
           trailing: PopupMenuButton<String>(
             onSelected: (value) async {
@@ -378,6 +503,14 @@ class _LinkedTasks extends StatelessWidget {
                   child: LifePilotGlassCard(
                     radius: 20,
                     padding: EdgeInsets.zero,
+                    borderGradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        theme.colorScheme.secondary.withValues(alpha: 0.28),
+                        theme.colorScheme.secondary.withValues(alpha: 0.08),
+                      ],
+                    ),
                     child: ListTile(
                       contentPadding: const EdgeInsets.symmetric(
                         horizontal: 14,
@@ -400,7 +533,9 @@ class _LinkedTasks extends StatelessWidget {
                       subtitle: Text(
                         '${_toTitleCase(task.priority)} Priority',
                         style: theme.textTheme.labelSmall?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
+                          color: theme.colorScheme.onSurface.withValues(
+                            alpha: 0.48,
+                          ),
                         ),
                       ),
                     ),
