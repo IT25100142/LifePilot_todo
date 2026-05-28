@@ -6,6 +6,8 @@ import 'package:intl/intl.dart';
 
 import '../../app/router.dart';
 import '../../core/constants/app_constants.dart';
+import '../../core/models/life_pilot_currency.dart';
+import '../../core/services/exchange_rate_provider.dart';
 import '../../core/utils/date_helpers.dart';
 import '../../core/utils/expression_parser.dart';
 import '../../core/utils/formatters.dart';
@@ -69,6 +71,8 @@ class FinanceScreen extends ConsumerWidget {
             error: (error, _) => ErrorState(error: error),
             data: (value) => _SummaryCards(summary: value, currency: currency),
           ),
+          const SizedBox(height: 16),
+          const LifePilotFinanceAnalytics(),
           const SizedBox(height: 16),
           LayoutBuilder(
             builder: (context, constraints) {
@@ -1928,5 +1932,328 @@ class _AddAccountFormState extends ConsumerState<_AddAccountForm> {
     );
 
     if (mounted) Navigator.pop(context);
+  }
+}
+
+final categoryExpendituresProvider = Provider<AsyncValue<Map<String, double>>>((
+  ref,
+) {
+  final entriesAsync = ref.watch(financeEntriesProvider);
+  final selectedMonth = ref.watch(selectedFinanceMonthProvider);
+  final activeCurrencyCode = ref.watch(activeCurrencyCodeProvider);
+  final targetCurrency = currencyFromCode(activeCurrencyCode);
+  final exchangeState = ref.watch(exchangeRateProvider);
+
+  return entriesAsync.whenData((entries) {
+    final Map<String, double> expenditures = {};
+    for (final entry in entries) {
+      final inMonth =
+          entry.date.year == selectedMonth.year &&
+          entry.date.month == selectedMonth.month;
+      if (inMonth && entry.type == 'expense') {
+        final entryCurrency = currencyFromCode(
+          entry.currency.isEmpty
+              ? AppConstants.defaultCurrency
+              : entry.currency,
+        );
+        final convertedAmount = exchangeState.convert(
+          amount: entry.amount,
+          from: entryCurrency,
+          to: targetCurrency,
+        );
+        expenditures.update(
+          entry.category,
+          (val) => val + convertedAmount,
+          ifAbsent: () => convertedAmount,
+        );
+      }
+    }
+    return expenditures;
+  });
+});
+
+class LifePilotFinanceAnalytics extends ConsumerStatefulWidget {
+  const LifePilotFinanceAnalytics({super.key});
+
+  @override
+  ConsumerState<LifePilotFinanceAnalytics> createState() =>
+      _LifePilotFinanceAnalyticsState();
+}
+
+class _LifePilotFinanceAnalyticsState
+    extends ConsumerState<LifePilotFinanceAnalytics> {
+  int _touchedIndex = -1;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final activeCurrencyCode = ref.watch(activeCurrencyCodeProvider);
+    final expendituresAsync = ref.watch(categoryExpendituresProvider);
+
+    return expendituresAsync.when(
+      loading: () => const SizedBox(
+        height: 200,
+        child: Center(child: CircularProgressIndicator()),
+      ),
+      error: (err, _) =>
+          SizedBox(height: 200, child: Center(child: Text('Error: $err'))),
+      data: (expenditures) {
+        if (expenditures.isEmpty) {
+          return const SizedBox.shrink();
+        }
+
+        final totalExpenses = expenditures.values.fold<double>(
+          0,
+          (sum, val) => sum + val,
+        );
+        final categories = expenditures.keys.toList();
+
+        final sections = List.generate(categories.length, (i) {
+          final cat = categories[i];
+          final val = expenditures[cat]!;
+          final isTouched = i == _touchedIndex;
+          final radius = isTouched ? 66.0 : 60.0;
+          final color = _getCategoryColor(cat, theme, i);
+
+          return PieChartSectionData(
+            color: color,
+            value: val,
+            radius: radius,
+            showTitle: false,
+          );
+        });
+
+        final String? touchedCategory = _touchedIndex != -1
+            ? categories[_touchedIndex]
+            : null;
+        final double? touchedValue = touchedCategory != null
+            ? expenditures[touchedCategory]
+            : null;
+
+        return LifePilotGlassCard(
+          radius: 24,
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Category Breakdown',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 1.2,
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.86),
+                ),
+              ),
+              const SizedBox(height: 20),
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final isWide = constraints.maxWidth >= 500;
+                  final chartWidget = Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      SizedBox(
+                        height: 200,
+                        width: 200,
+                        child: PieChart(
+                          PieChartData(
+                            pieTouchData: PieTouchData(
+                              touchCallback:
+                                  (FlTouchEvent event, pieTouchResponse) {
+                                    setState(() {
+                                      if (!event.isInterestedForInteractions ||
+                                          pieTouchResponse == null ||
+                                          pieTouchResponse.touchedSection ==
+                                              null) {
+                                        _touchedIndex = -1;
+                                        return;
+                                      }
+                                      _touchedIndex = pieTouchResponse
+                                          .touchedSection!
+                                          .touchedSectionIndex;
+                                    });
+                                  },
+                            ),
+                            sectionsSpace: 4,
+                            centerSpaceRadius: 65,
+                            sections: sections,
+                          ),
+                          duration: const Duration(milliseconds: 350),
+                          curve: Curves.easeOutQuart,
+                        ),
+                      ),
+                      IgnorePointer(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              touchedCategory != null
+                                  ? touchedCategory.toUpperCase()
+                                  : 'TOTAL EXPENSES',
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 1.2,
+                                color: theme.colorScheme.onSurface.withValues(
+                                  alpha: 0.48,
+                                ),
+                                fontSize: 10,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              money(
+                                touchedValue ?? totalExpenses,
+                                activeCurrencyCode,
+                              ),
+                              style: theme.textTheme.titleLarge?.copyWith(
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: -0.75,
+                                fontSize: 18,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  );
+
+                  final legendWidget = Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      for (int i = 0; i < categories.length; i++) ...[
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 12,
+                              height: 12,
+                              decoration: BoxDecoration(
+                                color: _getCategoryColor(
+                                  categories[i],
+                                  theme,
+                                  i,
+                                ),
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              categories[i],
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                fontWeight: FontWeight.w600,
+                                color: theme.colorScheme.onSurface,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              '(${((expenditures[categories[i]]! / totalExpenses) * 100).toStringAsFixed(0)}%)',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.colorScheme.onSurface.withValues(
+                                  alpha: 0.45,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        if (i < categories.length - 1)
+                          const SizedBox(height: 8),
+                      ],
+                    ],
+                  );
+
+                  final tooltipWidget = touchedCategory != null
+                      ? Positioned(
+                          top: 10,
+                          right: 10,
+                          child: LifePilotGlassCard(
+                            radius: 14,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  width: 8,
+                                  height: 8,
+                                  decoration: BoxDecoration(
+                                    color: _getCategoryColor(
+                                      touchedCategory,
+                                      theme,
+                                      _touchedIndex,
+                                    ),
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  touchedCategory,
+                                  style: theme.textTheme.labelMedium?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  money(touchedValue ?? 0, activeCurrencyCode),
+                                  style: theme.textTheme.labelMedium?.copyWith(
+                                    fontWeight: FontWeight.w900,
+                                    color: theme.colorScheme.primary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        )
+                      : const SizedBox.shrink();
+
+                  if (isWide) {
+                    return Stack(
+                      children: [
+                        Row(
+                          children: [
+                            chartWidget,
+                            const SizedBox(width: 40),
+                            Expanded(child: legendWidget),
+                          ],
+                        ),
+                        tooltipWidget,
+                      ],
+                    );
+                  } else {
+                    return Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        Column(
+                          children: [
+                            chartWidget,
+                            const SizedBox(height: 24),
+                            legendWidget,
+                          ],
+                        ),
+                        tooltipWidget,
+                      ],
+                    );
+                  }
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Color _getCategoryColor(String category, ThemeData theme, int index) {
+    final colors = [
+      theme.colorScheme.primary,
+      theme.colorScheme.secondary,
+      const Color(0xFFC3A56A),
+      const Color(0xFFD98681),
+      const Color(0xFFBCA98B),
+      const Color(0xFF8A7D66),
+    ];
+    return colors[index % colors.length];
   }
 }
