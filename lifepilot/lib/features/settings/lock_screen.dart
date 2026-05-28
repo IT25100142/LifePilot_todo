@@ -40,10 +40,11 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> with WidgetsBindi
 
   @override
   Widget build(BuildContext context) {
-    final lockState = ref.watch(appLockProvider);
+    final lockStatus = ref.watch(appLockProvider);
     final theme = Theme.of(context);
 
-    if (!lockState.isLocked) {
+    if (lockStatus == AppLockStatus.unlocked ||
+        lockStatus == AppLockStatus.notSupported) {
       return widget.child;
     }
 
@@ -52,18 +53,20 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> with WidgetsBindi
         children: [
           // Keep base app rendered underneath the glass blur (gives high premium feel)
           widget.child,
-          // Full-screen glass overlay
+          // Full-screen glass overlay with high blur factor
           Positioned.fill(
             child: GlassPanel(
               radius: 0,
               padding: const EdgeInsets.all(24),
               opacity: theme.brightness == Brightness.dark ? 0.38 : 0.62,
+              blur: 40.0,
               child: Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     CircleAvatar(
-                      backgroundColor: const Color(0xFF286C63).withValues(alpha: 0.16),
+                      backgroundColor:
+                          const Color(0xFF286C63).withValues(alpha: 0.16),
                       radius: 54,
                       child: const Icon(
                         Icons.lock_person_outlined,
@@ -75,16 +78,16 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> with WidgetsBindi
                     Text(
                       'LifePilot Secured',
                       style: theme.textTheme.headlineSmall?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 0.2,
-                          ),
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.2,
+                      ),
                     ),
                     const SizedBox(height: 8),
                     Text(
                       'Unlock with device biometrics to continue.',
                       style: theme.textTheme.bodyMedium?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant,
-                          ),
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 48),
@@ -95,7 +98,10 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> with WidgetsBindi
                       style: FilledButton.styleFrom(
                         backgroundColor: const Color(0xFF286C63),
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 28,
+                          vertical: 16,
+                        ),
                       ),
                       icon: const Icon(Icons.fingerprint_rounded),
                       label: const Text('Unlock Application'),
@@ -110,3 +116,4 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> with WidgetsBindi
     );
   }
 }
+

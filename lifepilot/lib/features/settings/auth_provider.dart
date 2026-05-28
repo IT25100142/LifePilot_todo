@@ -3,35 +3,37 @@ import 'package:local_auth/local_auth.dart';
 
 final biometricsEnabledProvider = StateProvider<bool>((ref) => true);
 
-class AppLockState {
-  AppLockState({required this.isLocked});
-  final bool isLocked;
-}
+enum AppLockStatus { unlocked, locked, notSupported }
 
-class AppLockNotifier extends Notifier<AppLockState> {
+class AppLockNotifier extends Notifier<AppLockStatus> {
   final _auth = LocalAuthentication();
 
   @override
-  AppLockState build() {
+  AppLockStatus build() {
     final enabled = ref.watch(biometricsEnabledProvider);
-    return AppLockState(isLocked: enabled);
+    if (!enabled) {
+      return AppLockStatus.unlocked;
+    }
+    return AppLockStatus.locked;
   }
 
   void lock() {
     final enabled = ref.read(biometricsEnabledProvider);
-    if (enabled) {
-      state = AppLockState(isLocked: true);
+    if (enabled && state != AppLockStatus.notSupported) {
+      state = AppLockStatus.locked;
     }
   }
 
   void unlock() {
-    state = AppLockState(isLocked: false);
+    if (state != AppLockStatus.notSupported) {
+      state = AppLockStatus.unlocked;
+    }
   }
 
   Future<void> authenticate() async {
     final enabled = ref.read(biometricsEnabledProvider);
     if (!enabled) {
-      unlock();
+      state = AppLockStatus.unlocked;
       return;
     }
 
@@ -40,7 +42,7 @@ class AppLockNotifier extends Notifier<AppLockState> {
       final isDeviceSupported = await _auth.isDeviceSupported();
 
       if (!isAvailable && !isDeviceSupported) {
-        unlock();
+        state = AppLockStatus.notSupported;
         return;
       }
 
@@ -53,12 +55,14 @@ class AppLockNotifier extends Notifier<AppLockState> {
       );
 
       if (authenticated) {
-        unlock();
+        state = AppLockStatus.unlocked;
       }
     } catch (_) {
-      // Allow fallback on error/cancellation (unlocked or retain lock depending on retry)
+      // Fallback/remain locked on error/cancel
     }
   }
 }
 
-final appLockProvider = NotifierProvider<AppLockNotifier, AppLockState>(AppLockNotifier.new);
+final appLockProvider =
+    NotifierProvider<AppLockNotifier, AppLockStatus>(AppLockNotifier.new);
+

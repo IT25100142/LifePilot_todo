@@ -61,6 +61,8 @@ class FinanceScreen extends ConsumerWidget {
         children: [
           _FinanceControls(),
           const SizedBox(height: 16),
+          _AccountsList(currency: currency),
+          const SizedBox(height: 16),
           summary.when(
             loading: () => const LoadingState(),
             error: (error, _) => ErrorState(error: error),
@@ -385,6 +387,8 @@ class _TransactionHistory extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final database = ref.watch(appDatabaseProvider);
+    final accountsAsync = ref.watch(accountsStreamProvider);
+
     return SectionCard(
       title: 'Transaction history',
       child: entries.when(
@@ -394,47 +398,61 @@ class _TransactionHistory extends ConsumerWidget {
           if (items.isEmpty) {
             return const Text('No transactions match this filter.');
           }
-          return Column(
-            children: [
-              for (final entry in items)
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: GlassIcon(
-                    icon: entry.type == 'income'
-                        ? Icons.arrow_downward_rounded
-                        : Icons.arrow_upward_rounded,
-                    color: entry.type == 'income'
-                        ? Theme.of(context).colorScheme.primary
-                        : Theme.of(context).colorScheme.error,
-                  ),
-                  title: Text(entry.title),
-                  subtitle: Text(
-                    '${entry.category} • ${shortDate(entry.date)}',
-                  ),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        money(entry.amount, currency),
-                        style: const TextStyle(fontWeight: FontWeight.w700),
+          return accountsAsync.when(
+            loading: () => const LoadingState(),
+            error: (error, _) => ErrorState(error: error),
+            data: (accountsList) {
+              final accountMap = {for (final a in accountsList) a.id: a.name};
+
+              return Column(
+                children: [
+                  for (final entry in items)
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: GlassIcon(
+                        icon: entry.type == 'income'
+                            ? Icons.arrow_downward_rounded
+                            : entry.type == 'transfer'
+                                ? Icons.swap_horiz
+                                : Icons.arrow_upward_rounded,
+                        color: entry.type == 'income'
+                            ? Theme.of(context).colorScheme.primary
+                            : entry.type == 'transfer'
+                                ? Theme.of(context).colorScheme.secondary
+                                : Theme.of(context).colorScheme.error,
                       ),
-                      PopupMenuButton<String>(
-                        onSelected: (value) async {
-                          if (value == 'edit') {
-                            showTransactionForm(context, ref, entry: entry);
-                          } else if (value == 'delete') {
-                            await database.deleteFinanceEntry(entry.id);
-                          }
-                        },
-                        itemBuilder: (context) => const [
-                          PopupMenuItem(value: 'edit', child: Text('Edit')),
-                          PopupMenuItem(value: 'delete', child: Text('Delete')),
+                      title: Text(entry.title),
+                      subtitle: Text(
+                        entry.type == 'transfer'
+                            ? 'Transfer: ${accountMap[entry.accountId] ?? 'Unknown'} ➔ ${accountMap[entry.transferTargetAccountId] ?? 'Unknown'} • ${shortDate(entry.date)}'
+                            : '${entry.category} • ${accountMap[entry.accountId] ?? 'Primary'} • ${shortDate(entry.date)}',
+                      ),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            money(entry.amount, currency),
+                            style: const TextStyle(fontWeight: FontWeight.w700),
+                          ),
+                          PopupMenuButton<String>(
+                            onSelected: (value) async {
+                              if (value == 'edit') {
+                                showTransactionForm(context, ref, entry: entry);
+                              } else if (value == 'delete') {
+                                await database.deleteFinanceEntryWithBalance(entry.id);
+                              }
+                            },
+                            itemBuilder: (context) => const [
+                              PopupMenuItem(value: 'edit', child: Text('Edit')),
+                              PopupMenuItem(value: 'delete', child: Text('Delete')),
+                            ],
+                          ),
                         ],
                       ),
-                    ],
-                  ),
-                ),
-            ],
+                    ),
+                ],
+              );
+            },
           );
         },
       ),
@@ -477,6 +495,8 @@ class _TransactionFormState extends ConsumerState<_TransactionForm> {
   late String _category;
   late String _type;
   late DateTime _date;
+  int? _accountId;
+  int? _transferTargetAccountId;
 
   @override
   void initState() {
@@ -488,6 +508,8 @@ class _TransactionFormState extends ConsumerState<_TransactionForm> {
     _category = entry?.category ?? 'Food';
     _type = entry?.type ?? 'expense';
     _date = entry?.date ?? DateTime.now();
+    _accountId = entry?.accountId;
+    _transferTargetAccountId = entry?.transferTargetAccountId;
   }
 
   @override
@@ -500,95 +522,163 @@ class _TransactionFormState extends ConsumerState<_TransactionForm> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.only(
-        left: 16,
-        right: 16,
-        top: 16,
-        bottom: MediaQuery.viewInsetsOf(context).bottom + 16,
+    final accountsAsync = ref.watch(accountsStreamProvider);
+
+    return accountsAsync.when(
+      loading: () => const SizedBox(
+        height: 200,
+        child: Center(child: CircularProgressIndicator()),
       ),
-      child: Form(
-        key: _formKey,
-        child: ListView(
-          shrinkWrap: true,
-          children: [
-            Text(
-              widget.entry == null ? 'Add transaction' : 'Edit transaction',
-              style: Theme.of(context).textTheme.headlineSmall,
-            ),
-            const SizedBox(height: 16),
-            SegmentedButton<String>(
-              segments: const [
-                ButtonSegment(
-                  value: 'expense',
-                  label: Text('Expense'),
-                  icon: Icon(Icons.arrow_upward),
+      error: (err, _) => SizedBox(
+        height: 200,
+        child: Center(child: Text('Error loading accounts: $err')),
+      ),
+      data: (accounts) {
+        if (accounts.isEmpty) {
+          return const SizedBox(
+            height: 200,
+            child: Center(child: Text('Please create an account first.')),
+          );
+        }
+
+        _accountId ??= widget.entry?.accountId ?? accounts.first.id;
+        if (_type == 'transfer') {
+          _transferTargetAccountId ??= widget.entry?.transferTargetAccountId ??
+              (accounts.length > 1 ? accounts[1].id : accounts.first.id);
+        }
+
+        return Padding(
+          padding: EdgeInsets.only(
+            left: 16,
+            right: 16,
+            top: 16,
+            bottom: MediaQuery.viewInsetsOf(context).bottom + 16,
+          ),
+          child: Form(
+            key: _formKey,
+            child: ListView(
+              shrinkWrap: true,
+              children: [
+                Text(
+                  widget.entry == null ? 'Add transaction' : 'Edit transaction',
+                  style: Theme.of(context).textTheme.headlineSmall,
                 ),
-                ButtonSegment(
-                  value: 'income',
-                  label: Text('Income'),
-                  icon: Icon(Icons.arrow_downward),
+                const SizedBox(height: 16),
+                SegmentedButton<String>(
+                  segments: const [
+                    ButtonSegment(
+                      value: 'expense',
+                      label: Text('Expense'),
+                      icon: Icon(Icons.arrow_upward),
+                    ),
+                    ButtonSegment(
+                      value: 'income',
+                      label: Text('Income'),
+                      icon: Icon(Icons.arrow_downward),
+                    ),
+                    ButtonSegment(
+                      value: 'transfer',
+                      label: Text('Transfer'),
+                      icon: Icon(Icons.swap_horiz),
+                    ),
+                  ],
+                  selected: {_type},
+                  onSelectionChanged: (value) {
+                    setState(() {
+                      _type = value.first;
+                    });
+                  },
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _title,
+                  decoration: const InputDecoration(labelText: 'Title'),
+                  validator: (value) => value == null || value.trim().isEmpty
+                      ? 'Title is required'
+                      : null,
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _amount,
+                  decoration: const InputDecoration(labelText: 'Amount'),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  validator: (value) {
+                    final amount = double.tryParse(value ?? '');
+                    if (amount == null || amount <= 0) {
+                      return 'Enter a valid amount';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<int>(
+                  initialValue: _accountId,
+                  decoration: InputDecoration(
+                    labelText: _type == 'transfer' ? 'From Account' : 'Account',
+                  ),
+                  items: [
+                    for (final acc in accounts)
+                      DropdownMenuItem(value: acc.id, child: Text(acc.name)),
+                  ],
+                  onChanged: (value) => setState(() => _accountId = value),
+                ),
+                if (_type == 'transfer') ...[
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<int>(
+                    initialValue: _transferTargetAccountId,
+                    decoration: const InputDecoration(labelText: 'To Account'),
+                    items: [
+                      for (final acc in accounts)
+                        DropdownMenuItem(value: acc.id, child: Text(acc.name)),
+                    ],
+                    onChanged: (value) =>
+                        setState(() => _transferTargetAccountId = value),
+                    validator: (val) {
+                      if (val == _accountId) {
+                        return 'Cannot transfer to the same account';
+                      }
+                      return null;
+                    },
+                  ),
+                ] else ...[
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    initialValue: _category,
+                    decoration: const InputDecoration(labelText: 'Category'),
+                    items: [
+                      for (final category in AppConstants.financeCategories)
+                        DropdownMenuItem(
+                            value: category, child: Text(category)),
+                    ],
+                    onChanged: (value) =>
+                        setState(() => _category = value ?? 'Other'),
+                  ),
+                ],
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _note,
+                  decoration: const InputDecoration(labelText: 'Note'),
+                  maxLines: 3,
+                ),
+                const SizedBox(height: 12),
+                InputChip(
+                  avatar: const Icon(Icons.today, size: 18),
+                  label: Text('${shortDate(_date)} ${_date.year}'),
+                  onPressed: _pickDate,
+                ),
+                const SizedBox(height: 18),
+                FilledButton.icon(
+                  onPressed: _save,
+                  icon: const Icon(Icons.save_outlined),
+                  label: const Text('Save transaction'),
                 ),
               ],
-              selected: {_type},
-              onSelectionChanged: (value) =>
-                  setState(() => _type = value.first),
             ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _title,
-              decoration: const InputDecoration(labelText: 'Title'),
-              validator: (value) => value == null || value.trim().isEmpty
-                  ? 'Title is required'
-                  : null,
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _amount,
-              decoration: const InputDecoration(labelText: 'Amount'),
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
-              ),
-              validator: (value) {
-                final amount = double.tryParse(value ?? '');
-                if (amount == null || amount <= 0) {
-                  return 'Enter a valid amount';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 12),
-            DropdownButtonFormField<String>(
-              initialValue: _category,
-              decoration: const InputDecoration(labelText: 'Category'),
-              items: [
-                for (final category in AppConstants.financeCategories)
-                  DropdownMenuItem(value: category, child: Text(category)),
-              ],
-              onChanged: (value) =>
-                  setState(() => _category = value ?? 'Other'),
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _note,
-              decoration: const InputDecoration(labelText: 'Note'),
-              maxLines: 3,
-            ),
-            const SizedBox(height: 12),
-            InputChip(
-              avatar: const Icon(Icons.today, size: 18),
-              label: Text('${shortDate(_date)} ${_date.year}'),
-              onPressed: _pickDate,
-            ),
-            const SizedBox(height: 18),
-            FilledButton.icon(
-              onPressed: _save,
-              icon: const Icon(Icons.save_outlined),
-              label: const Text('Save transaction'),
-            ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
@@ -613,12 +703,15 @@ class _TransactionFormState extends ConsumerState<_TransactionForm> {
         id: existing == null ? const Value.absent() : Value(existing.id),
         title: _title.text.trim(),
         amount: double.parse(_amount.text),
-        category: Value(_category),
+        category: Value(_type == 'transfer' ? 'Transfer' : _category),
         date: _date,
         note: Value(_note.text.trim()),
         type: Value(_type),
         createdAt: Value(existing?.createdAt ?? now),
         updatedAt: Value(now),
+        accountId: Value(_accountId),
+        transferTargetAccountId:
+            Value(_type == 'transfer' ? _transferTargetAccountId : null),
       ),
     );
     if (mounted) Navigator.pop(context);
@@ -1119,3 +1212,247 @@ class _FinancialTrendChart extends ConsumerWidget {
     );
   }
 }
+
+class _AccountsList extends ConsumerWidget {
+  const _AccountsList({required this.currency});
+
+  final String currency;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final accountsAsync = ref.watch(accountsStreamProvider);
+    final theme = Theme.of(context);
+
+    return accountsAsync.when(
+      loading: () => const SizedBox(),
+      error: (_, __) => const SizedBox(),
+      data: (accounts) {
+        if (accounts.isEmpty) return const SizedBox();
+        return SectionCard(
+          title: 'Accounts & Wallets',
+          child: SizedBox(
+            height: 100,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              itemCount: accounts.length + 1,
+              itemBuilder: (context, index) {
+                if (index == accounts.length) {
+                  // Add Account Button
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 10),
+                    child: SizedBox(
+                      width: 140,
+                      child: OutlinedButton(
+                        onPressed: () => _showAddAccountForm(context, ref),
+                        style: OutlinedButton.styleFrom(
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                        ),
+                        child: const Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.add_card_outlined),
+                            SizedBox(height: 4),
+                            Text('Add Account', style: TextStyle(fontSize: 12)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                }
+
+                final acc = accounts[index];
+                return Padding(
+                  padding: const EdgeInsets.only(right: 10),
+                  child: SizedBox(
+                    width: 150,
+                    child: GlassPanel(
+                      radius: 16,
+                      padding: const EdgeInsets.all(12),
+                      opacity:
+                          theme.brightness == Brightness.dark ? 0.22 : 0.62,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Row(
+                            children: [
+                              CircleAvatar(
+                                backgroundColor: Color(acc.colorValue)
+                                    .withValues(alpha: 0.16),
+                                radius: 8,
+                                child: Icon(Icons.circle,
+                                    color: Color(acc.colorValue), size: 6),
+                              ),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  acc.name,
+                                  style: theme.textTheme.labelMedium?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              money(acc.currentBalance, currency),
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showAddAccountForm(BuildContext context, WidgetRef ref) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => GlassPanel(
+        radius: 32,
+        padding: EdgeInsets.zero,
+        child: const _AddAccountForm(),
+      ),
+    );
+  }
+}
+
+class _AddAccountForm extends ConsumerStatefulWidget {
+  const _AddAccountForm();
+
+  @override
+  ConsumerState<_AddAccountForm> createState() => _AddAccountFormState();
+}
+
+class _AddAccountFormState extends ConsumerState<_AddAccountForm> {
+  final _formKey = GlobalKey<FormState>();
+  final _nameController = TextEditingController();
+  final _balanceController = TextEditingController();
+  int _selectedColor = 0xFF286C63;
+
+  final List<int> _colors = [
+    0xFF286C63,
+    0xFF4B66D3,
+    0xFFC77D2B,
+    0xFF8A5CF6,
+    0xFFE0516F,
+    0xFF2E8B57,
+  ];
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _balanceController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(
+        left: 16,
+        right: 16,
+        top: 16,
+        bottom: MediaQuery.viewInsetsOf(context).bottom + 16,
+      ),
+      child: Form(
+        key: _formKey,
+        child: ListView(
+          shrinkWrap: true,
+          children: [
+            Text(
+              'Add Account',
+              style: Theme.of(context).textTheme.headlineSmall,
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: _nameController,
+              decoration: const InputDecoration(labelText: 'Account Name'),
+              validator: (value) => value == null || value.trim().isEmpty
+                  ? 'Name is required'
+                  : null,
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _balanceController,
+              decoration: const InputDecoration(labelText: 'Initial Balance'),
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
+              validator: (value) {
+                if (value == null || value.trim().isEmpty) return null;
+                if (double.tryParse(value) == null) {
+                  return 'Enter a valid amount';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 16),
+            const Text('Accent Color',
+                style: TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                for (final colorVal in _colors)
+                  GestureDetector(
+                    onTap: () => setState(() => _selectedColor = colorVal),
+                    child: CircleAvatar(
+                      backgroundColor: Color(colorVal),
+                      radius: 18,
+                      child: _selectedColor == colorVal
+                          ? const Icon(Icons.check,
+                              color: Colors.white, size: 18)
+                          : null,
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            FilledButton.icon(
+              onPressed: _save,
+              icon: const Icon(Icons.check),
+              label: const Text('Create Account'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _save() async {
+    if (!_formKey.currentState!.validate()) return;
+    final db = ref.read(appDatabaseProvider);
+    final initial = double.tryParse(_balanceController.text) ?? 0.0;
+
+    await db.saveAccount(
+      AccountsCompanion.insert(
+        name: _nameController.text.trim(),
+        initialBalance: Value(initial),
+        currentBalance: Value(initial),
+        colorValue: Value(_selectedColor),
+      ),
+    );
+
+    if (mounted) Navigator.pop(context);
+  }
+}
+
