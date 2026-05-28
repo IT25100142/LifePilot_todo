@@ -106,6 +106,27 @@ class AppSettingsTable extends Table {
   BoolColumn get demoSeeded => boolean().withDefault(const Constant(false))();
 }
 
+class Habits extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get title => text().withLength(min: 1, max: 140)();
+  TextColumn get description => text().withDefault(const Constant(''))();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+  TextColumn get categoryTag => text().withDefault(const Constant(''))();
+}
+
+class HabitLogs extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get habitId =>
+      integer().references(Habits, #id, onDelete: KeyAction.cascade)();
+  DateTimeColumn get date => dateTime()();
+  BoolColumn get isCompleted => boolean().withDefault(const Constant(false))();
+
+  @override
+  List<Set<Column>> get uniqueKeys => [
+    {habitId, date},
+  ];
+}
+
 @DriftDatabase(
   tables: [
     Tasks,
@@ -115,6 +136,8 @@ class AppSettingsTable extends Table {
     Categories,
     AppSettingsTable,
     Accounts,
+    Habits,
+    HabitLogs,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -146,6 +169,7 @@ class AppDatabase extends _$AppDatabase {
         native: DriftNativeOptions(
           setup: (rawDb) {
             rawDb.execute("PRAGMA key = '$encryptionKey';");
+            rawDb.execute("PRAGMA foreign_keys = ON;");
             try {
               // Verify encryption key succeeds on decrypting SQLite pages
               rawDb.select('SELECT name FROM sqlite_schema LIMIT 1;');
@@ -173,7 +197,7 @@ class AppDatabase extends _$AppDatabase {
   }
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -212,6 +236,10 @@ class AppDatabase extends _$AppDatabase {
       }
       if (from < 6) {
         await m.createTable(subtasks);
+      }
+      if (from < 7) {
+        await m.createTable(habits);
+        await m.createTable(habitLogs);
       }
     },
   );
@@ -288,6 +316,55 @@ class AppDatabase extends _$AppDatabase {
     return update(
       subtasks,
     ).replace(subtask.copyWith(isCompleted: !subtask.isCompleted));
+  }
+
+  Stream<List<Habit>> watchHabits() {
+    return (select(
+      habits,
+    )..orderBy([(h) => OrderingTerm.desc(h.createdAt)])).watch();
+  }
+
+  Stream<List<HabitLog>> watchAllHabitLogs() {
+    return select(habitLogs).watch();
+  }
+
+  Future<int> saveHabit(HabitsCompanion entry) {
+    return into(habits).insertOnConflictUpdate(entry);
+  }
+
+  Future<void> deleteHabit(int id) async {
+    await (delete(habits)..where((h) => h.id.equals(id))).go();
+  }
+
+  Future<void> toggleHabitLog(
+    int habitId,
+    DateTime date,
+    bool isCompleted,
+  ) async {
+    final normalizedDate = DateTime(date.year, date.month, date.day);
+    final existing =
+        await (select(habitLogs)..where(
+              (l) => l.habitId.equals(habitId) & l.date.equals(normalizedDate),
+            ))
+            .getSingleOrNull();
+
+    if (existing != null) {
+      if (isCompleted) {
+        await update(habitLogs).replace(existing.copyWith(isCompleted: true));
+      } else {
+        await (delete(habitLogs)..where((l) => l.id.equals(existing.id))).go();
+      }
+    } else {
+      if (isCompleted) {
+        await into(habitLogs).insert(
+          HabitLogsCompanion.insert(
+            habitId: habitId,
+            date: normalizedDate,
+            isCompleted: const Value(true),
+          ),
+        );
+      }
+    }
   }
 
   Stream<List<CalendarEvent>> watchEvents() {
@@ -526,6 +603,8 @@ class AppDatabase extends _$AppDatabase {
   }
 
   Future<void> _clearAllDataInTransaction() async {
+    await delete(habitLogs).go();
+    await delete(habits).go();
     await delete(subtasks).go();
     await delete(tasks).go();
     await delete(calendarEvents).go();

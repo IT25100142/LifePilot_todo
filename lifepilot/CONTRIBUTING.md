@@ -81,3 +81,31 @@ Before committing or pushing any code, run the local verification script to chec
 ./run_linters.sh
 ```
 This script will fail immediately if any step fails. Ensure it completes with `All checks passed successfully!` before submitting a pull request.
+
+---
+
+## 🔐 Git identity requirement
+
+- This project requires that commits are made using the GitHub account with the email: `it25100142@my.sliit.lk`.
+- The repository includes a pre-commit hook in `.githooks/pre-commit` that will refuse commits unless `git user.email` matches that address.
+- To enable the hooks for your local checkout, run (PowerShell):
+
+  ```powershell
+  .\scripts\setup-hooks.ps1
+  ```
+
+  To also set your local repository git identity with the required email and your name, run:
+
+  ```powershell
+  .\scripts\setup-hooks.ps1 -SetUser -UserName "Your Name"
+  ```
+
+If you prefer not to use the hooks, make sure your commits still use the required email:
+
+```powershell
+git config user.email "it25100142@my.sliit.lk"
+git config user.name "Your Name"
+```
+
+If you need an allowed exception (e.g., CI or a different machine), contact the maintainers to arrange it.
+

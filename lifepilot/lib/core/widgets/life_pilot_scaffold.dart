@@ -38,6 +38,12 @@ class _LifePilotScaffoldState extends State<LifePilotScaffold> {
     ),
     _LifePilotDestination('Todo', Icons.checklist_outlined, Icons.checklist),
     _LifePilotDestination(
+      'Habits',
+      Icons.repeat_rounded,
+      Icons.repeat_on_rounded,
+    ),
+    _LifePilotDestination('Focus', Icons.timer_outlined, Icons.timer),
+    _LifePilotDestination(
       'Calendar',
       Icons.calendar_month_outlined,
       Icons.calendar_month,
