@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants/app_constants.dart';
 import '../../core/services/export_service.dart';
+import '../../core/utils/crypto_helpers.dart';
 import '../../core/widgets/glass.dart';
 import '../../core/widgets/section_card.dart';
 import '../../core/widgets/state_views.dart';
@@ -167,15 +168,42 @@ class _DataSection extends ConsumerWidget {
         runSpacing: 10,
         children: [
           FilledButton.tonalIcon(
-            onPressed: () =>
-                _guard(context, () => service.exportJson(currency)),
+            onPressed: () => _guard(context, () async {
+              final password = await _promptBackupPassword(context);
+              if (password == null) return;
+              await service.exportEncryptedBackup(
+                currency: currency,
+                password: password,
+              );
+            }),
             icon: const Icon(Icons.data_object),
-            label: const Text('Export JSON'),
+            label: const Text('Export Encrypted Backup'),
           ),
           FilledButton.tonalIcon(
             onPressed: () => _guard(context, service.exportCsv),
             icon: const Icon(Icons.table_chart_outlined),
             label: const Text('Export CSV'),
+          ),
+          FilledButton.tonalIcon(
+            onPressed: () => _guard(context, () async {
+              final password = await _promptImportPassword(context);
+              if (password == null) return;
+              final imported = await service.importEncryptedBackup(
+                password: password,
+              );
+              if (context.mounted && imported) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Import complete')),
+                );
+              }
+            }),
+            icon: const Icon(Icons.upload_file),
+            label: const Text('Import Encrypted Backup'),
+          ),
+          FilledButton.tonalIcon(
+            onPressed: () => _guard(context, () => service.exportJson(currency)),
+            icon: const Icon(Icons.insert_drive_file_outlined),
+            label: const Text('Export JSON (legacy)'),
           ),
           FilledButton.tonalIcon(
             onPressed: () => _guard(context, () async {
@@ -186,8 +214,8 @@ class _DataSection extends ConsumerWidget {
                 );
               }
             }),
-            icon: const Icon(Icons.upload_file),
-            label: const Text('Import JSON'),
+            icon: const Icon(Icons.file_open_outlined),
+            label: const Text('Import JSON (legacy)'),
           ),
           OutlinedButton.icon(
             onPressed: () => _confirmClear(context, database.clearAllData),
@@ -209,6 +237,12 @@ class _DataSection extends ConsumerWidget {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(const SnackBar(content: Text('Done')));
+      }
+    } on BackupCryptoException catch (error) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.message)));
       }
     } catch (error) {
       if (context.mounted) {
@@ -246,6 +280,164 @@ class _DataSection extends ConsumerWidget {
     if (confirmed == true) {
       await _guard(context, clear);
     }
+  }
+
+  Future<String?> _promptBackupPassword(BuildContext context) async {
+    final formKey = GlobalKey<FormState>();
+    final passwordController = TextEditingController();
+    final confirmController = TextEditingController();
+    bool obscurePassword = true;
+    bool obscureConfirm = true;
+
+    final result = await showDialog<String>(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text('Create backup password'),
+              content: Form(
+                key: formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextFormField(
+                      controller: passwordController,
+                      obscureText: obscurePassword,
+                      textInputAction: TextInputAction.next,
+                      decoration: InputDecoration(
+                        labelText: 'Password',
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            obscurePassword
+                                ? Icons.visibility_outlined
+                                : Icons.visibility_off_outlined,
+                          ),
+                          onPressed: () {
+                            setState(() => obscurePassword = !obscurePassword);
+                          },
+                        ),
+                      ),
+                      validator: (value) {
+                        final text = value?.trim() ?? '';
+                        if (text.length < 8) {
+                          return 'Password must be at least 8 characters.';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: confirmController,
+                      obscureText: obscureConfirm,
+                      decoration: InputDecoration(
+                        labelText: 'Confirm password',
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            obscureConfirm
+                                ? Icons.visibility_outlined
+                                : Icons.visibility_off_outlined,
+                          ),
+                          onPressed: () {
+                            setState(() => obscureConfirm = !obscureConfirm);
+                          },
+                        ),
+                      ),
+                      validator: (value) {
+                        if (value != passwordController.text) {
+                          return 'Passwords do not match.';
+                        }
+                        return null;
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel'),
+                ),
+                FilledButton(
+                  onPressed: () {
+                    if (formKey.currentState?.validate() ?? false) {
+                      Navigator.pop(context, passwordController.text);
+                    }
+                  },
+                  child: const Text('Continue'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    passwordController.dispose();
+    confirmController.dispose();
+    return result;
+  }
+
+  Future<String?> _promptImportPassword(BuildContext context) async {
+    final formKey = GlobalKey<FormState>();
+    final controller = TextEditingController();
+    bool obscure = true;
+
+    final result = await showDialog<String>(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text('Unlock encrypted backup'),
+              content: Form(
+                key: formKey,
+                child: TextFormField(
+                  controller: controller,
+                  obscureText: obscure,
+                  decoration: InputDecoration(
+                    labelText: 'Backup password',
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        obscure
+                            ? Icons.visibility_outlined
+                            : Icons.visibility_off_outlined,
+                      ),
+                      onPressed: () {
+                        setState(() => obscure = !obscure);
+                      },
+                    ),
+                  ),
+                  validator: (value) {
+                    if ((value?.isEmpty ?? true)) {
+                      return 'Password is required.';
+                    }
+                    return null;
+                  },
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel'),
+                ),
+                FilledButton(
+                  onPressed: () {
+                    if (formKey.currentState?.validate() ?? false) {
+                      Navigator.pop(context, controller.text);
+                    }
+                  },
+                  child: const Text('Decrypt'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    controller.dispose();
+    return result;
   }
 }
 

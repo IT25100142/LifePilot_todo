@@ -5,6 +5,7 @@ import 'package:csv/csv.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:file_saver/file_saver.dart';
 
+import '../utils/crypto_helpers.dart';
 import '../../data/database/app_database.dart';
 
 class ExportService {
@@ -22,6 +23,21 @@ class ExportService {
       bytes: bytes,
       fileExtension: 'json',
       mimeType: MimeType.json,
+    );
+  }
+
+  Future<void> exportEncryptedBackup({
+    required String currency,
+    required String password,
+  }) async {
+    final payload = await _payload(currency);
+    final json = const JsonEncoder.withIndent('  ').convert(payload);
+    final bytes = await encryptBackupJson(json: json, password: password);
+    await FileSaver.instance.saveFile(
+      name: 'lifepilot-backup',
+      bytes: bytes,
+      fileExtension: 'lpbackup',
+      mimeType: MimeType.other,
     );
   }
 
@@ -96,6 +112,25 @@ class ExportService {
     if (bytes == null) return false;
     final payload = jsonDecode(utf8.decode(bytes)) as Map<String, dynamic>;
     await database.importJson(payload);
+    return true;
+  }
+
+  Future<bool> importEncryptedBackup({required String password}) async {
+    final result = await FilePicker.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['lpbackup'],
+      withData: true,
+    );
+    final file = result?.files.single;
+    final bytes = file?.bytes;
+    if (bytes == null) return false;
+
+    final decryptedJson = await decryptBackupJson(bytes: bytes, password: password);
+    final decoded = jsonDecode(decryptedJson);
+    if (decoded is! Map<String, dynamic>) {
+      throw const BackupCryptoException('Invalid backup file format.');
+    }
+    await database.importJson(decoded);
     return true;
   }
 
