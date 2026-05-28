@@ -198,4 +198,90 @@ void main() {
     expect(matchTransaction(tx, 'Food'), isTrue);
     expect(matchTransaction(tx, 'rent'), isFalse);
   });
+
+  test('calculateFinancialTrends groups chronologically and accumulates', () {
+    final now = DateTime.now();
+    final jan = DateTime(2026, 1, 15);
+    final feb = DateTime(2026, 2, 10);
+    final mar = DateTime(2026, 3, 5);
+
+    final entries = [
+      FinanceEntry(
+        id: 1,
+        title: 'Salary Jan',
+        amount: 2000,
+        category: 'Salary',
+        date: jan,
+        note: '',
+        type: 'income',
+        createdAt: now,
+        updatedAt: now,
+      ),
+      FinanceEntry(
+        id: 2,
+        title: 'Rent Feb',
+        amount: 800,
+        category: 'Rent',
+        date: feb,
+        note: '',
+        type: 'expense',
+        createdAt: now,
+        updatedAt: now,
+      ),
+      FinanceEntry(
+        id: 3,
+        title: 'Freelance Feb',
+        amount: 500,
+        category: 'Freelance',
+        date: feb,
+        note: '',
+        type: 'income',
+        createdAt: now,
+        updatedAt: now,
+      ),
+      FinanceEntry(
+        id: 4,
+        title: 'Groceries Jan',
+        amount: 300,
+        category: 'Food',
+        date: jan,
+        note: '',
+        type: 'expense',
+        createdAt: now,
+        updatedAt: now,
+      ),
+      FinanceEntry(
+        id: 5,
+        title: 'Dinner Mar',
+        amount: 100,
+        category: 'Food',
+        date: mar,
+        note: '',
+        type: 'expense',
+        createdAt: now,
+        updatedAt: now,
+      ),
+    ];
+
+    final result = calculateFinancialTrends(entries);
+
+    expect(result.length, 3);
+
+    // Chronological order: Jan, Feb, Mar
+    expect(result[0].month, DateTime(2026, 1));
+    expect(result[1].month, DateTime(2026, 2));
+    expect(result[2].month, DateTime(2026, 3));
+
+    // January: Income: 2000, Expense: 300
+    expect(result[0].income, 2000);
+    expect(result[0].expense, 300);
+
+    // February: Running Income: 2000 + 500 = 2500, Running Expense: 300 + 800 = 1100
+    expect(result[1].income, 2500);
+    expect(result[1].expense, 1100);
+
+    // March: Running Income: 2500 + 0 = 2500, Running Expense: 1100 + 100 = 1200
+    expect(result[2].income, 2500);
+    expect(result[2].expense, 1200);
+  });
 }

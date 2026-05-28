@@ -5,6 +5,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 import '../../core/constants/app_constants.dart';
+import '../../core/services/encryption_service.dart';
 
 part 'app_database.g.dart';
 
@@ -84,13 +85,11 @@ class AppSettingsTable extends Table {
   tables: [Tasks, CalendarEvents, FinanceEntries, Categories, AppSettingsTable],
 )
 class AppDatabase extends _$AppDatabase {
-  AppDatabase(super.e);
+  AppDatabase() : super(_openConnection());
 
-  AppDatabase.defaults(String encryptionKey)
-      : super(_openConnection(encryptionKey));
-
-  static QueryExecutor _openConnection(String encryptionKey) {
+  static QueryExecutor _openConnection() {
     return LazyDatabase(() async {
+      final encryptionKey = await EncryptionService.getOrGenerateKey();
       final dbFolder = await getApplicationDocumentsDirectory();
       final file = File(p.join(dbFolder.path, 'lifepilot.sqlite'));
 
@@ -119,6 +118,12 @@ class AppDatabase extends _$AppDatabase {
         ),
       );
     });
+  }
+
+  /// Rotates the database encryption key.
+  Future<void> rotateEncryptionKey(String newKey) async {
+    await customStatement("PRAGMA rekey = '$newKey';");
+    await EncryptionService.rotateKey(newKey);
   }
 
   @override

@@ -2,6 +2,7 @@ import 'package:drift/drift.dart' show Value;
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 
 import '../../app/router.dart';
 import '../../core/constants/app_constants.dart';
@@ -92,6 +93,8 @@ class FinanceScreen extends ConsumerWidget {
               );
             },
           ),
+          const SizedBox(height: 16),
+          const _FinancialTrendChart(),
           const SizedBox(height: 16),
           _CategoryBudgetStatusSection(currency: currency),
           const SizedBox(height: 16),
@@ -909,6 +912,208 @@ class _BudgetSettingsFormState extends ConsumerState<_BudgetSettingsForm> {
               label: const Text('Save budgets'),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _FinancialTrendChart extends ConsumerWidget {
+  const _FinancialTrendChart();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final trendAsync = ref.watch(financialTrendProvider);
+    final theme = Theme.of(context);
+    final currency =
+        ref.watch(settingsControllerProvider).valueOrNull?.currency ?? 'LKR';
+
+    return SectionCard(
+      title: 'Financial Trend',
+      subtitle: 'Running monthly income vs expenses',
+      child: SizedBox(
+        height: 250,
+        child: trendAsync.when(
+          loading: () => const LoadingState(),
+          error: (error, _) => ErrorState(error: error),
+          data: (points) {
+            if (points.isEmpty) {
+              return const Center(
+                child: Text('No transaction history for trend analysis.'),
+              );
+            }
+
+            final List<FlSpot> incomeSpots = [];
+            final List<FlSpot> expenseSpots = [];
+
+            for (int i = 0; i < points.length; i++) {
+              incomeSpots.add(FlSpot(i.toDouble(), points[i].income));
+              expenseSpots.add(FlSpot(i.toDouble(), points[i].expense));
+            }
+
+            final maxVal = points.fold<double>(0.0, (prev, p) {
+              final val = p.income > p.expense ? p.income : p.expense;
+              return val > prev ? val : prev;
+            });
+
+            final double maxY = maxVal > 0 ? maxVal * 1.25 : 100.0;
+
+            return Padding(
+              padding: const EdgeInsets.only(right: 16, top: 12, bottom: 8),
+              child: LineChart(
+                LineChartData(
+                  gridData: FlGridData(
+                    show: true,
+                    drawVerticalLine: false,
+                    getDrawingHorizontalLine: (value) {
+                      return FlLine(
+                        color: theme.colorScheme.outlineVariant
+                            .withValues(alpha: 0.15),
+                        strokeWidth: 1,
+                      );
+                    },
+                  ),
+                  titlesData: FlTitlesData(
+                    show: true,
+                    rightTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false),
+                    ),
+                    topTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false),
+                    ),
+                    bottomTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        reservedSize: 32,
+                        interval: 1,
+                        getTitlesWidget: (value, meta) {
+                          final idx = value.toInt();
+                          if (idx < 0 || idx >= points.length) {
+                            return const SizedBox();
+                          }
+                          final date = points[idx].month;
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 8.0),
+                            child: Text(
+                              DateFormat('MMM yy').format(date),
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    leftTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        reservedSize: 46,
+                        getTitlesWidget: (value, meta) {
+                          return Text(
+                            compactNumber(value),
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                            textAlign: TextAlign.right,
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                  borderData: FlBorderData(
+                    show: false,
+                  ),
+                  minX: 0,
+                  maxX: (points.length - 1).toDouble(),
+                  minY: 0,
+                  maxY: maxY,
+                  lineBarsData: [
+                    LineChartBarData(
+                      spots: incomeSpots,
+                      isCurved: true,
+                      color: const Color(0xFF286C63),
+                      barWidth: 4,
+                      isStrokeCapRound: true,
+                      dotData: FlDotData(
+                        show: true,
+                        getDotPainter: (spot, percent, barData, index) =>
+                            FlDotCirclePainter(
+                          radius: 4,
+                          color: const Color(0xFF286C63),
+                          strokeWidth: 2,
+                          strokeColor: theme.colorScheme.surface,
+                        ),
+                      ),
+                      belowBarData: BarAreaData(
+                        show: true,
+                        color: const Color(0xFF286C63).withValues(alpha: 0.15),
+                      ),
+                    ),
+                    LineChartBarData(
+                      spots: expenseSpots,
+                      isCurved: true,
+                      color: theme.colorScheme.error,
+                      barWidth: 4,
+                      isStrokeCapRound: true,
+                      dotData: FlDotData(
+                        show: true,
+                        getDotPainter: (spot, percent, barData, index) =>
+                            FlDotCirclePainter(
+                          radius: 4,
+                          color: theme.colorScheme.error,
+                          strokeWidth: 2,
+                          strokeColor: theme.colorScheme.surface,
+                        ),
+                      ),
+                      belowBarData: BarAreaData(
+                        show: true,
+                        color: theme.colorScheme.error.withValues(alpha: 0.12),
+                      ),
+                    ),
+                  ],
+                  lineTouchData: LineTouchData(
+                    touchTooltipData: LineTouchTooltipData(
+                      getTooltipColor: (touchedSpot) => theme
+                          .colorScheme.surfaceContainerHighest
+                          .withValues(alpha: 0.95),
+                      tooltipBorderRadius: BorderRadius.circular(12),
+                      getTooltipItems: (touchedSpots) {
+                        if (touchedSpots.isEmpty) return [];
+                        final firstSpot = touchedSpots.first;
+                        final idx = firstSpot.x.toInt();
+                        if (idx < 0 || idx >= points.length) {
+                          return touchedSpots.map((_) => null).toList();
+                        }
+                        final p = points[idx];
+                        final netBalance = p.income - p.expense;
+                        final balanceStr = netBalance >= 0
+                            ? '+${money(netBalance, currency)}'
+                            : money(netBalance, currency);
+
+                        return touchedSpots.map((spot) {
+                          if (spot == firstSpot) {
+                            return LineTooltipItem(
+                              '${DateFormat('MMM yyyy').format(p.month)}\n'
+                              'Income: ${money(p.income, currency)}\n'
+                              'Expenses: ${money(p.expense, currency)}\n'
+                              'Net Balance: $balanceStr',
+                              theme.textTheme.labelMedium?.copyWith(
+                                    color: theme.colorScheme.onSurface,
+                                    fontWeight: FontWeight.bold,
+                                  ) ??
+                                  const TextStyle(),
+                            );
+                          }
+                          return null;
+                        }).toList();
+                      },
+                    ),
+                    handleBuiltInTouches: true,
+                  ),
+                ),
+              ),
+            );
+          },
         ),
       ),
     );
