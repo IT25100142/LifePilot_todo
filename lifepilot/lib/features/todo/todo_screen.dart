@@ -7,6 +7,7 @@ import '../../core/services/notification_provider.dart';
 import '../../core/services/notification_service.dart';
 import '../../core/utils/date_helpers.dart';
 import '../../core/widgets/glass.dart';
+import '../../core/widgets/glass_panel.dart';
 import '../../core/widgets/section_card.dart';
 import '../../core/widgets/state_views.dart';
 import '../../data/database/app_database.dart';
@@ -149,10 +150,38 @@ class _TaskTile extends ConsumerWidget {
         task.dueDate!.isBefore(DateTime.now()) &&
         !task.isCompleted;
 
-    return GlassPanel(
+    Gradient? borderGradient;
+    Color? shadowColor;
+
+    if (task.priority == 'high') {
+      final crimsonColor = const Color(0xFFFF2E55);
+      borderGradient = LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          crimsonColor.withValues(alpha: 0.65),
+          crimsonColor.withValues(alpha: 0.16),
+        ],
+      );
+      shadowColor = crimsonColor.withValues(alpha: 0.08);
+    } else if (task.priority == 'medium') {
+      final amberColor = Colors.amber;
+      borderGradient = LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          amberColor.withValues(alpha: 0.55),
+          amberColor.withValues(alpha: 0.12),
+        ],
+      );
+      shadowColor = amberColor.withValues(alpha: 0.04);
+    }
+
+    return LifePilotGlassCard(
       radius: 24,
       padding: EdgeInsets.zero,
-      opacity: Theme.of(context).brightness == Brightness.dark ? 0.14 : 0.48,
+      borderGradient: borderGradient,
+      shadowColor: shadowColor,
       child: ListTile(
         minVerticalPadding: 14,
         leading: Checkbox(
@@ -166,6 +195,7 @@ class _TaskTile extends ConsumerWidget {
           style: TextStyle(
             decoration: task.isCompleted ? TextDecoration.lineThrough : null,
             fontWeight: FontWeight.w700,
+            letterSpacing: -0.5,
           ),
         ),
         subtitle: Padding(
@@ -174,14 +204,6 @@ class _TaskTile extends ConsumerWidget {
             spacing: 8,
             runSpacing: 6,
             children: [
-              _Chip(
-                label: task.priority,
-                color: switch (task.priority) {
-                  'high' => theme.colorScheme.error,
-                  'medium' => theme.colorScheme.tertiary,
-                  _ => theme.colorScheme.primary,
-                },
-              ),
               _Chip(
                 label: shortDate(task.dueDate),
                 color: overdue

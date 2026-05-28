@@ -9,6 +9,7 @@ import '../../core/constants/app_constants.dart';
 import '../../core/utils/date_helpers.dart';
 import '../../core/utils/formatters.dart';
 import '../../core/widgets/glass.dart';
+import '../../core/widgets/glass_panel.dart';
 import '../../core/widgets/section_card.dart';
 import '../../core/widgets/state_views.dart';
 import '../../data/database/app_database.dart';
@@ -227,14 +228,20 @@ class _FinanceMetric extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return SectionCard(
+    return LifePilotGlassCard(
       padding: const EdgeInsets.all(14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           GlassIcon(icon: icon, color: theme.colorScheme.primary),
           const SizedBox(height: 10),
-          Text(label, style: theme.textTheme.labelMedium),
+          Text(
+            label,
+            style: theme.textTheme.labelMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.8),
+              fontWeight: FontWeight.w700,
+            ),
+          ),
           const SizedBox(height: 4),
           FittedBox(
             fit: BoxFit.scaleDown,
@@ -242,7 +249,8 @@ class _FinanceMetric extends StatelessWidget {
             child: Text(
               value,
               style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w800,
+                fontWeight: FontWeight.w900,
+                letterSpacing: -1.0,
               ),
             ),
           ),
@@ -259,68 +267,130 @@ class _IncomeExpenseChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SectionCard(
-      title: 'Income vs expense',
-      child: SizedBox(
-        height: 220,
-        child: summary.when(
-          loading: () => const LoadingState(),
-          error: (error, _) => ErrorState(error: error),
-          data: (value) {
-            final maxY = [
-              value.income,
-              value.expenses,
-              1,
-            ].reduce((a, b) => a > b ? a : b);
-            return BarChart(
-              BarChartData(
-                maxY: maxY * 1.2,
-                titlesData: FlTitlesData(
-                  leftTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                  topTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                  rightTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                  bottomTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      getTitlesWidget: (value, meta) =>
-                          Text(value == 0 ? 'Income' : 'Expense'),
+    final theme = Theme.of(context);
+    return LifePilotGlassCard(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Income vs expense',
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.5,
+            ),
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            height: 220,
+            child: summary.when(
+              loading: () => const LoadingState(),
+              error: (error, _) => ErrorState(error: error),
+              data: (value) {
+                final maxY = [
+                  value.income,
+                  value.expenses,
+                  1,
+                ].reduce((a, b) => a > b ? a : b);
+                return BarChart(
+                  BarChartData(
+                    maxY: maxY * 1.2,
+                    titlesData: FlTitlesData(
+                      leftTitles: const AxisTitles(
+                        sideTitles: SideTitles(showTitles: false),
+                      ),
+                      topTitles: const AxisTitles(
+                        sideTitles: SideTitles(showTitles: false),
+                      ),
+                      rightTitles: const AxisTitles(
+                        sideTitles: SideTitles(showTitles: false),
+                      ),
+                      bottomTitles: AxisTitles(
+                        sideTitles: SideTitles(
+                          showTitles: true,
+                          getTitlesWidget: (val, meta) => Padding(
+                            padding: const EdgeInsets.only(top: 8.0),
+                            child: Text(
+                              val == 0 ? 'Income' : 'Expense',
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-                gridData: const FlGridData(show: false),
-                borderData: FlBorderData(show: false),
-                barGroups: [
-                  BarChartGroupData(
-                    x: 0,
-                    barRods: [
-                      BarChartRodData(
-                        toY: value.income,
-                        width: 28,
-                        borderRadius: BorderRadius.circular(4),
+                    gridData: const FlGridData(show: false),
+                    borderData: FlBorderData(show: false),
+                    barGroups: [
+                      BarChartGroupData(
+                        x: 0,
+                        barRods: [
+                          BarChartRodData(
+                            toY: value.income,
+                            width: 24,
+                            borderRadius: const BorderRadius.vertical(
+                              top: Radius.circular(8),
+                            ),
+                            gradient: LinearGradient(
+                              colors: [
+                                theme.colorScheme.primary.withValues(
+                                  alpha: 0.4,
+                                ),
+                                theme.colorScheme.primary,
+                              ],
+                              begin: Alignment.bottomCenter,
+                              end: Alignment.topCenter,
+                            ),
+                            backDrawRodData: BackgroundBarChartRodData(
+                              show: true,
+                              toY: maxY * 1.2,
+                              color: Colors.white.withValues(
+                                alpha: theme.brightness == Brightness.dark
+                                    ? 0.05
+                                    : 0.08,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      BarChartGroupData(
+                        x: 1,
+                        barRods: [
+                          BarChartRodData(
+                            toY: value.expenses,
+                            width: 24,
+                            borderRadius: const BorderRadius.vertical(
+                              top: Radius.circular(8),
+                            ),
+                            gradient: LinearGradient(
+                              colors: [
+                                theme.colorScheme.error.withValues(alpha: 0.4),
+                                theme.colorScheme.error,
+                              ],
+                              begin: Alignment.bottomCenter,
+                              end: Alignment.topCenter,
+                            ),
+                            backDrawRodData: BackgroundBarChartRodData(
+                              show: true,
+                              toY: maxY * 1.2,
+                              color: Colors.white.withValues(
+                                alpha: theme.brightness == Brightness.dark
+                                    ? 0.05
+                                    : 0.08,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                  BarChartGroupData(
-                    x: 1,
-                    barRods: [
-                      BarChartRodData(
-                        toY: value.expenses,
-                        width: 28,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            );
-          },
-        ),
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -334,45 +404,61 @@ class _CategoryChart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return SectionCard(
-      title: 'Category spending',
-      child: SizedBox(
-        height: 220,
-        child: summary.when(
-          loading: () => const LoadingState(),
-          error: (error, _) => ErrorState(error: error),
-          data: (value) {
-            if (value.byCategory.isEmpty) {
-              return const Center(child: Text('No expenses for this filter.'));
-            }
-            final colors = [
-              theme.colorScheme.primary,
-              theme.colorScheme.tertiary,
-              theme.colorScheme.secondary,
-              theme.colorScheme.error,
-              theme.colorScheme.outline,
-            ];
-            var index = 0;
-            return PieChart(
-              PieChartData(
-                sectionsSpace: 2,
-                sections: [
-                  for (final entry in value.byCategory.entries)
-                    PieChartSectionData(
-                      value: entry.value,
-                      title: entry.key,
-                      radius: 72,
-                      color: colors[index++ % colors.length],
-                      titleStyle: theme.textTheme.labelSmall?.copyWith(
-                        color: theme.colorScheme.onPrimary,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                ],
-              ),
-            );
-          },
-        ),
+    return LifePilotGlassCard(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Category spending',
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.5,
+            ),
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            height: 220,
+            child: summary.when(
+              loading: () => const LoadingState(),
+              error: (error, _) => ErrorState(error: error),
+              data: (value) {
+                if (value.byCategory.isEmpty) {
+                  return const Center(
+                    child: Text('No expenses for this filter.'),
+                  );
+                }
+                final colors = [
+                  theme.colorScheme.primary,
+                  theme.colorScheme.tertiary,
+                  theme.colorScheme.secondary,
+                  theme.colorScheme.error,
+                  theme.colorScheme.outline,
+                ];
+                var index = 0;
+                return PieChart(
+                  PieChartData(
+                    sectionsSpace: 3,
+                    centerSpaceRadius: 40,
+                    sections: [
+                      for (final entry in value.byCategory.entries)
+                        PieChartSectionData(
+                          value: entry.value,
+                          title: entry.key,
+                          radius: 50,
+                          color: colors[index++ % colors.length],
+                          titleStyle: theme.textTheme.labelSmall?.copyWith(
+                            color: theme.colorScheme.onPrimary,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -746,106 +832,253 @@ class _CategoryBudgetStatusSection extends ConsumerWidget {
           return const SizedBox();
         }
 
-        return SectionCard(
-          title: 'Category budgets',
-          subtitle: 'Monthly spending status',
-          child: Column(
-            children: [
-              for (final item in activeBudgets)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 14),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Row(
-                            children: [
-                              CircleAvatar(
-                                backgroundColor: Color(
-                                  item.category.colorValue,
-                                ).withValues(alpha: 0.2),
-                                radius: 12,
-                                child: Icon(
-                                  Icons.circle,
-                                  color: Color(item.category.colorValue),
-                                  size: 10,
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                item.category.name,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
-                          Text(
-                            '${money(item.spent, currency)} / ${money(item.budget, currency)}',
-                            style: TextStyle(
-                              color: item.isOverLimit
-                                  ? theme.colorScheme.error
-                                  : item.isNearLimit
-                                  ? Colors.amber[800]
-                                  : theme.colorScheme.onSurfaceVariant,
-                              fontWeight: item.isNearLimit || item.isOverLimit
-                                  ? FontWeight.bold
-                                  : null,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 6),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(4),
-                        child: LinearProgressIndicator(
-                          value: item.ratio.clamp(0.0, 1.0),
-                          minHeight: 8,
-                          backgroundColor: theme
-                              .colorScheme
-                              .surfaceContainerHighest
-                              .withValues(alpha: 0.38),
-                          color: item.isOverLimit
-                              ? theme.colorScheme.error
-                              : item.isNearLimit
-                              ? Colors.amber
-                              : Color(item.category.colorValue),
-                        ),
-                      ),
-                      if (item.isOverLimit)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 4),
-                          child: Text(
-                            'Exceeded budget limit by ${money(item.spent - item.budget, currency)}!',
-                            style: TextStyle(
-                              color: theme.colorScheme.error,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        )
-                      else if (item.isNearLimit)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 4),
-                          child: Text(
-                            'Nearing limit! ${(item.ratio * 100).toStringAsFixed(0)}% budget depleted.',
-                            style: TextStyle(
-                              color: Colors.amber[800],
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Text(
+                'Category budgets',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.5,
                 ),
-            ],
-          ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            for (final item in activeBudgets)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: _CategoryBudgetCard(item: item, currency: currency),
+              ),
+          ],
         );
       },
     );
+  }
+}
+
+class _CategoryBudgetCard extends StatefulWidget {
+  const _CategoryBudgetCard({required this.item, required this.currency});
+
+  final CategoryBudgetStatus item;
+  final String currency;
+
+  @override
+  State<_CategoryBudgetCard> createState() => _CategoryBudgetCardState();
+}
+
+class _CategoryBudgetCardState extends State<_CategoryBudgetCard>
+    with SingleTickerProviderStateMixin {
+  AnimationController? _pulseController;
+
+  @override
+  void initState() {
+    super.initState();
+    _initAnimationIfNeeded();
+  }
+
+  void _initAnimationIfNeeded() {
+    if (widget.item.isOverLimit) {
+      _pulseController ??= AnimationController(
+        vsync: this,
+        duration: const Duration(seconds: 2),
+      )..repeat(reverse: true);
+    } else {
+      _pulseController?.dispose();
+      _pulseController = null;
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant _CategoryBudgetCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _initAnimationIfNeeded();
+  }
+
+  @override
+  void dispose() {
+    _pulseController?.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    Widget buildCardContent(double pulseVal) {
+      LinearGradient? cardGrad;
+      LinearGradient? borderGrad;
+      Color? shadowCol;
+
+      if (widget.item.isOverLimit) {
+        final alphaFactor = 0.36 + (pulseVal * 0.44); // 0.36 to 0.80
+        final shadowAlpha = 0.08 + (pulseVal * 0.16); // 0.08 to 0.24
+        final crimsonColor = const Color(0xFFFF2E55);
+
+        cardGrad = LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            crimsonColor.withValues(alpha: 0.14),
+            crimsonColor.withValues(alpha: 0.03),
+          ],
+        );
+        borderGrad = LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            crimsonColor.withValues(alpha: alphaFactor),
+            crimsonColor.withValues(alpha: alphaFactor * 0.25),
+          ],
+        );
+        shadowCol = crimsonColor.withValues(alpha: shadowAlpha);
+      } else if (widget.item.isNearLimit) {
+        final amberColor = Colors.amber;
+
+        cardGrad = LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            amberColor.withValues(alpha: 0.08),
+            amberColor.withValues(alpha: 0.02),
+          ],
+        );
+        borderGrad = LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            amberColor.withValues(alpha: 0.46),
+            amberColor.withValues(alpha: 0.12),
+          ],
+        );
+        shadowCol = amberColor.withValues(alpha: 0.10);
+      }
+
+      return LifePilotGlassCard(
+        radius: 20,
+        padding: const EdgeInsets.all(16),
+        cardGradient: cardGrad,
+        borderGradient: borderGrad,
+        shadowColor: shadowCol,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    CircleAvatar(
+                      backgroundColor: Color(
+                        widget.item.category.colorValue,
+                      ).withValues(alpha: 0.2),
+                      radius: 12,
+                      child: Icon(
+                        Icons.circle,
+                        color: Color(widget.item.category.colorValue),
+                        size: 10,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      widget.item.category.name,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+                Text(
+                  '${money(widget.item.spent, widget.currency)} / ${money(widget.item.budget, widget.currency)}',
+                  style: TextStyle(
+                    color: widget.item.isOverLimit
+                        ? theme.colorScheme.error
+                        : widget.item.isNearLimit
+                        ? Colors.amber[800]
+                        : theme.colorScheme.onSurfaceVariant,
+                    fontWeight:
+                        widget.item.isNearLimit || widget.item.isOverLimit
+                        ? FontWeight.bold
+                        : null,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: LinearProgressIndicator(
+                value: widget.item.ratio.clamp(0.0, 1.0),
+                minHeight: 8,
+                backgroundColor: theme.colorScheme.surfaceContainerHighest
+                    .withValues(alpha: 0.38),
+                color: widget.item.isOverLimit
+                    ? theme.colorScheme.error
+                    : widget.item.isNearLimit
+                    ? Colors.amber
+                    : Color(widget.item.category.colorValue),
+              ),
+            ),
+            if (widget.item.isOverLimit)
+              Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.warning_amber_rounded,
+                      size: 14,
+                      color: theme.colorScheme.error,
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        'Exceeded budget limit by ${money(widget.item.spent - widget.item.budget, widget.currency)}!',
+                        style: TextStyle(
+                          color: theme.colorScheme.error,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            else if (widget.item.isNearLimit)
+              Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.info_outline_rounded,
+                      size: 14,
+                      color: Colors.amber,
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        'Nearing limit! ${(widget.item.ratio * 100).toStringAsFixed(0)}% budget depleted.',
+                        style: TextStyle(
+                          color: Colors.amber[800],
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ),
+      );
+    }
+
+    if (_pulseController != null) {
+      return AnimatedBuilder(
+        animation: _pulseController!,
+        builder: (context, child) => buildCardContent(_pulseController!.value),
+      );
+    } else {
+      return buildCardContent(0.0);
+    }
   }
 }
 
@@ -1050,194 +1283,235 @@ class _FinancialTrendChart extends ConsumerWidget {
     final theme = Theme.of(context);
     final currency =
         ref.watch(settingsControllerProvider).valueOrNull?.currency ?? 'LKR';
+    final dark = theme.brightness == Brightness.dark;
 
-    return SectionCard(
-      title: 'Financial Trend',
-      subtitle: 'Running monthly income vs expenses',
-      child: SizedBox(
-        height: 250,
-        child: trendAsync.when(
-          loading: () => const LoadingState(),
-          error: (error, _) => ErrorState(error: error),
-          data: (points) {
-            if (points.isEmpty) {
-              return const Center(
-                child: Text('No transaction history for trend analysis.'),
-              );
-            }
+    return LifePilotGlassCard(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Financial Trend',
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.5,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Running monthly income vs expenses',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            height: 250,
+            child: trendAsync.when(
+              loading: () => const LoadingState(),
+              error: (error, _) => ErrorState(error: error),
+              data: (points) {
+                if (points.isEmpty) {
+                  return const Center(
+                    child: Text('No transaction history for trend analysis.'),
+                  );
+                }
 
-            final List<FlSpot> incomeSpots = [];
-            final List<FlSpot> expenseSpots = [];
+                final List<FlSpot> incomeSpots = [];
+                final List<FlSpot> expenseSpots = [];
 
-            for (int i = 0; i < points.length; i++) {
-              incomeSpots.add(FlSpot(i.toDouble(), points[i].income));
-              expenseSpots.add(FlSpot(i.toDouble(), points[i].expense));
-            }
+                for (int i = 0; i < points.length; i++) {
+                  incomeSpots.add(FlSpot(i.toDouble(), points[i].income));
+                  expenseSpots.add(FlSpot(i.toDouble(), points[i].expense));
+                }
 
-            final maxVal = points.fold<double>(0.0, (prev, p) {
-              final val = p.income > p.expense ? p.income : p.expense;
-              return val > prev ? val : prev;
-            });
+                final maxVal = points.fold<double>(0.0, (prev, p) {
+                  final val = p.income > p.expense ? p.income : p.expense;
+                  return val > prev ? val : prev;
+                });
 
-            final double maxY = maxVal > 0 ? maxVal * 1.25 : 100.0;
+                final double maxY = maxVal > 0 ? maxVal * 1.25 : 100.0;
 
-            return Padding(
-              padding: const EdgeInsets.only(right: 16, top: 12, bottom: 8),
-              child: LineChart(
-                LineChartData(
-                  gridData: FlGridData(
-                    show: true,
-                    drawVerticalLine: false,
-                    getDrawingHorizontalLine: (value) {
-                      return FlLine(
-                        color: theme.colorScheme.outlineVariant.withValues(
-                          alpha: 0.15,
+                final incomeColor = theme.colorScheme.primary;
+                final expenseColor = theme.colorScheme.error;
+
+                return Padding(
+                  padding: const EdgeInsets.only(right: 16, top: 12, bottom: 8),
+                  child: LineChart(
+                    LineChartData(
+                      gridData: FlGridData(
+                        show: true,
+                        drawVerticalLine: false,
+                        getDrawingHorizontalLine: (value) {
+                          return FlLine(
+                            color: Colors.white.withValues(
+                              alpha: dark ? 0.08 : 0.12,
+                            ),
+                            strokeWidth: 1,
+                          );
+                        },
+                      ),
+                      titlesData: FlTitlesData(
+                        show: true,
+                        rightTitles: const AxisTitles(
+                          sideTitles: SideTitles(showTitles: false),
                         ),
-                        strokeWidth: 1,
-                      );
-                    },
-                  ),
-                  titlesData: FlTitlesData(
-                    show: true,
-                    rightTitles: const AxisTitles(
-                      sideTitles: SideTitles(showTitles: false),
-                    ),
-                    topTitles: const AxisTitles(
-                      sideTitles: SideTitles(showTitles: false),
-                    ),
-                    bottomTitles: AxisTitles(
-                      sideTitles: SideTitles(
-                        showTitles: true,
-                        reservedSize: 32,
-                        interval: 1,
-                        getTitlesWidget: (value, meta) {
-                          final idx = value.toInt();
-                          if (idx < 0 || idx >= points.length) {
-                            return const SizedBox();
-                          }
-                          final date = points[idx].month;
-                          return Padding(
-                            padding: const EdgeInsets.only(top: 8.0),
-                            child: Text(
-                              DateFormat('MMM yy').format(date),
-                              style: theme.textTheme.labelSmall?.copyWith(
-                                color: theme.colorScheme.onSurfaceVariant,
-                              ),
+                        topTitles: const AxisTitles(
+                          sideTitles: SideTitles(showTitles: false),
+                        ),
+                        bottomTitles: AxisTitles(
+                          sideTitles: SideTitles(
+                            showTitles: true,
+                            reservedSize: 32,
+                            interval: 1,
+                            getTitlesWidget: (value, meta) {
+                              final idx = value.toInt();
+                              if (idx < 0 || idx >= points.length) {
+                                return const SizedBox();
+                              }
+                              final date = points[idx].month;
+                              return Padding(
+                                padding: const EdgeInsets.only(top: 8.0),
+                                child: Text(
+                                  DateFormat('MMM yy').format(date),
+                                  style: theme.textTheme.labelSmall?.copyWith(
+                                    color: theme.colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                        leftTitles: AxisTitles(
+                          sideTitles: SideTitles(
+                            showTitles: true,
+                            reservedSize: 46,
+                            getTitlesWidget: (value, meta) {
+                              return Text(
+                                compactNumber(value),
+                                style: theme.textTheme.labelSmall?.copyWith(
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                ),
+                                textAlign: TextAlign.right,
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                      borderData: FlBorderData(show: false),
+                      minX: 0,
+                      maxX: (points.length - 1).toDouble(),
+                      minY: 0,
+                      maxY: maxY,
+                      lineBarsData: [
+                        LineChartBarData(
+                          spots: incomeSpots,
+                          isCurved: true,
+                          gradient: LinearGradient(
+                            colors: [incomeColor, const Color(0xFF00F2FE)],
+                          ),
+                          barWidth: 4,
+                          isStrokeCapRound: true,
+                          dotData: FlDotData(
+                            show: true,
+                            getDotPainter: (spot, percent, barData, index) =>
+                                FlDotCirclePainter(
+                                  radius: 4,
+                                  color: incomeColor,
+                                  strokeWidth: 2,
+                                  strokeColor: theme.colorScheme.surface,
+                                ),
+                          ),
+                          belowBarData: BarAreaData(
+                            show: true,
+                            gradient: LinearGradient(
+                              colors: [
+                                incomeColor.withValues(alpha: 0.24),
+                                incomeColor.withValues(alpha: 0.0),
+                              ],
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
                             ),
-                          );
-                        },
-                      ),
-                    ),
-                    leftTitles: AxisTitles(
-                      sideTitles: SideTitles(
-                        showTitles: true,
-                        reservedSize: 46,
-                        getTitlesWidget: (value, meta) {
-                          return Text(
-                            compactNumber(value),
-                            style: theme.textTheme.labelSmall?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                        LineChartBarData(
+                          spots: expenseSpots,
+                          isCurved: true,
+                          gradient: LinearGradient(
+                            colors: [expenseColor, const Color(0xFFFF4B2B)],
+                          ),
+                          barWidth: 4,
+                          isStrokeCapRound: true,
+                          dotData: FlDotData(
+                            show: true,
+                            getDotPainter: (spot, percent, barData, index) =>
+                                FlDotCirclePainter(
+                                  radius: 4,
+                                  color: expenseColor,
+                                  strokeWidth: 2,
+                                  strokeColor: theme.colorScheme.surface,
+                                ),
+                          ),
+                          belowBarData: BarAreaData(
+                            show: true,
+                            gradient: LinearGradient(
+                              colors: [
+                                expenseColor.withValues(alpha: 0.20),
+                                expenseColor.withValues(alpha: 0.0),
+                              ],
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
                             ),
-                            textAlign: TextAlign.right,
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-                  borderData: FlBorderData(show: false),
-                  minX: 0,
-                  maxX: (points.length - 1).toDouble(),
-                  minY: 0,
-                  maxY: maxY,
-                  lineBarsData: [
-                    LineChartBarData(
-                      spots: incomeSpots,
-                      isCurved: true,
-                      color: const Color(0xFF286C63),
-                      barWidth: 4,
-                      isStrokeCapRound: true,
-                      dotData: FlDotData(
-                        show: true,
-                        getDotPainter: (spot, percent, barData, index) =>
-                            FlDotCirclePainter(
-                              radius: 4,
-                              color: const Color(0xFF286C63),
-                              strokeWidth: 2,
-                              strokeColor: theme.colorScheme.surface,
-                            ),
-                      ),
-                      belowBarData: BarAreaData(
-                        show: true,
-                        color: const Color(0xFF286C63).withValues(alpha: 0.15),
-                      ),
-                    ),
-                    LineChartBarData(
-                      spots: expenseSpots,
-                      isCurved: true,
-                      color: theme.colorScheme.error,
-                      barWidth: 4,
-                      isStrokeCapRound: true,
-                      dotData: FlDotData(
-                        show: true,
-                        getDotPainter: (spot, percent, barData, index) =>
-                            FlDotCirclePainter(
-                              radius: 4,
-                              color: theme.colorScheme.error,
-                              strokeWidth: 2,
-                              strokeColor: theme.colorScheme.surface,
-                            ),
-                      ),
-                      belowBarData: BarAreaData(
-                        show: true,
-                        color: theme.colorScheme.error.withValues(alpha: 0.12),
-                      ),
-                    ),
-                  ],
-                  lineTouchData: LineTouchData(
-                    touchTooltipData: LineTouchTooltipData(
-                      getTooltipColor: (touchedSpot) => theme
-                          .colorScheme
-                          .surfaceContainerHighest
-                          .withValues(alpha: 0.95),
-                      tooltipBorderRadius: BorderRadius.circular(12),
-                      getTooltipItems: (touchedSpots) {
-                        if (touchedSpots.isEmpty) return [];
-                        final firstSpot = touchedSpots.first;
-                        final idx = firstSpot.x.toInt();
-                        if (idx < 0 || idx >= points.length) {
-                          return touchedSpots.map((_) => null).toList();
-                        }
-                        final p = points[idx];
-                        final netBalance = p.income - p.expense;
-                        final balanceStr = netBalance >= 0
-                            ? '+${money(netBalance, currency)}'
-                            : money(netBalance, currency);
+                          ),
+                        ),
+                      ],
+                      lineTouchData: LineTouchData(
+                        touchTooltipData: LineTouchTooltipData(
+                          getTooltipColor: (touchedSpot) => theme
+                              .colorScheme
+                              .surfaceContainerHighest
+                              .withValues(alpha: 0.90),
+                          tooltipBorderRadius: BorderRadius.circular(12),
+                          getTooltipItems: (touchedSpots) {
+                            if (touchedSpots.isEmpty) return [];
+                            final firstSpot = touchedSpots.first;
+                            final idx = firstSpot.x.toInt();
+                            if (idx < 0 || idx >= points.length) {
+                              return touchedSpots.map((_) => null).toList();
+                            }
+                            final p = points[idx];
+                            final netBalance = p.income - p.expense;
+                            final balanceStr = netBalance >= 0
+                                ? '+${money(netBalance, currency)}'
+                                : money(netBalance, currency);
 
-                        return touchedSpots.map((spot) {
-                          if (spot == firstSpot) {
-                            return LineTooltipItem(
-                              '${DateFormat('MMM yyyy').format(p.month)}\n'
-                              'Income: ${money(p.income, currency)}\n'
-                              'Expenses: ${money(p.expense, currency)}\n'
-                              'Net Balance: $balanceStr',
-                              theme.textTheme.labelMedium?.copyWith(
-                                    color: theme.colorScheme.onSurface,
-                                    fontWeight: FontWeight.bold,
-                                  ) ??
-                                  const TextStyle(),
-                            );
-                          }
-                          return null;
-                        }).toList();
-                      },
+                            return touchedSpots.map((spot) {
+                              if (spot == firstSpot) {
+                                return LineTooltipItem(
+                                  '${DateFormat('MMM yyyy').format(p.month)}\n'
+                                  'Income: ${money(p.income, currency)}\n'
+                                  'Expenses: ${money(p.expense, currency)}\n'
+                                  'Net Balance: $balanceStr',
+                                  theme.textTheme.labelMedium?.copyWith(
+                                        color: theme.colorScheme.onSurface,
+                                        fontWeight: FontWeight.bold,
+                                      ) ??
+                                      const TextStyle(),
+                                );
+                              }
+                              return null;
+                            }).toList();
+                          },
+                        ),
+                        handleBuiltInTouches: true,
+                      ),
                     ),
-                    handleBuiltInTouches: true,
                   ),
-                ),
-              ),
-            );
-          },
-        ),
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1297,12 +1571,9 @@ class _AccountsList extends ConsumerWidget {
                   padding: const EdgeInsets.only(right: 10),
                   child: SizedBox(
                     width: 150,
-                    child: GlassPanel(
+                    child: LifePilotGlassCard(
                       radius: 16,
                       padding: const EdgeInsets.all(12),
-                      opacity: theme.brightness == Brightness.dark
-                          ? 0.22
-                          : 0.62,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -1339,7 +1610,8 @@ class _AccountsList extends ConsumerWidget {
                             child: Text(
                               money(acc.currentBalance, currency),
                               style: theme.textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.bold,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: -1.0,
                               ),
                             ),
                           ),

@@ -7,6 +7,7 @@ import '../../core/services/notification_provider.dart';
 import '../../core/services/notification_service.dart';
 import '../../core/utils/date_helpers.dart';
 import '../../core/widgets/glass.dart';
+import '../../core/widgets/glass_panel.dart';
 import '../../core/widgets/section_card.dart';
 import '../../core/widgets/state_views.dart';
 import '../../data/database/app_database.dart';
@@ -191,36 +192,90 @@ class _CalendarDay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final dark = theme.brightness == Brightness.dark;
+
+    final selectedBackgroundColor = theme.colorScheme.primary.withValues(
+      alpha: 0.38,
+    );
+    final selectedBorderColor = theme.colorScheme.primary.withValues(
+      alpha: 0.72,
+    );
+
+    final cardGradient = selected
+        ? LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              selectedBackgroundColor,
+              theme.colorScheme.primary.withValues(alpha: 0.12),
+            ],
+          )
+        : LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: dark
+                ? [
+                    Colors.white.withValues(alpha: 0.05),
+                    Colors.white.withValues(alpha: 0.01),
+                  ]
+                : [
+                    Colors.white.withValues(alpha: 0.12),
+                    Colors.white.withValues(alpha: 0.04),
+                  ],
+          );
+
+    final borderGradient = selected
+        ? LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              selectedBorderColor,
+              theme.colorScheme.primary.withValues(alpha: 0.28),
+            ],
+          )
+        : LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Colors.white.withValues(alpha: 0.15),
+              Colors.white.withValues(alpha: 0.04),
+            ],
+          );
+
+    final shadowColor = selected
+        ? theme.colorScheme.primary.withValues(alpha: 0.15)
+        : Colors.transparent;
+
     return InkWell(
       borderRadius: BorderRadius.circular(18),
       onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 260),
-        curve: Curves.easeOutCubic,
-        decoration: BoxDecoration(
-          color: selected
-              ? theme.colorScheme.primaryContainer.withValues(alpha: 0.72)
-              : theme.colorScheme.surface.withValues(
-                  alpha: theme.brightness == Brightness.dark ? 0.12 : 0.42,
-                ),
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(
-            color: selected
-                ? theme.colorScheme.primary
-                : Colors.white.withValues(alpha: 0.35),
-          ),
-        ),
+      child: LifePilotGlassCard(
+        radius: 18,
+        padding: EdgeInsets.zero,
+        cardGradient: cardGradient,
+        borderGradient: borderGradient,
+        shadowColor: shadowColor,
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text('$day', style: const TextStyle(fontWeight: FontWeight.w700)),
+            Text(
+              '$day',
+              style: TextStyle(
+                fontWeight: FontWeight.w700,
+                color: selected
+                    ? theme.colorScheme.primary
+                    : theme.colorScheme.onSurface,
+              ),
+            ),
             const SizedBox(height: 4),
             AnimatedContainer(
               duration: const Duration(milliseconds: 180),
               width: hasEvent ? 6 : 0,
               height: 6,
               decoration: BoxDecoration(
-                color: theme.colorScheme.tertiary,
+                color: selected
+                    ? theme.colorScheme.primary
+                    : theme.colorScheme.tertiary,
                 shape: BoxShape.circle,
               ),
             ),
@@ -268,7 +323,7 @@ class _EventTile extends ConsumerWidget {
     final database = ref.watch(appDatabaseProvider);
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
-      child: GlassPanel(
+      child: LifePilotGlassCard(
         radius: 22,
         padding: EdgeInsets.zero,
         child: ListTile(
@@ -307,6 +362,7 @@ class _LinkedTasks extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return SectionCard(
       title: 'Tasks on this date',
       child: tasks.when(
@@ -317,15 +373,38 @@ class _LinkedTasks extends StatelessWidget {
           return Column(
             children: [
               for (final task in items)
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: Icon(
-                    task.isCompleted
-                        ? Icons.check_circle
-                        : Icons.radio_button_unchecked,
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: LifePilotGlassCard(
+                    radius: 20,
+                    padding: EdgeInsets.zero,
+                    child: ListTile(
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                      ),
+                      leading: Icon(
+                        task.isCompleted
+                            ? Icons.check_circle_rounded
+                            : Icons.radio_button_unchecked_rounded,
+                        color: theme.colorScheme.primary,
+                      ),
+                      title: Text(
+                        task.title,
+                        style: TextStyle(
+                          decoration: task.isCompleted
+                              ? TextDecoration.lineThrough
+                              : null,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      subtitle: Text(
+                        '${task.priority.substring(0, 1).toUpperCase()}${task.priority.substring(1)} Priority',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
                   ),
-                  title: Text(task.title),
-                  subtitle: Text(task.priority),
                 ),
             ],
           );

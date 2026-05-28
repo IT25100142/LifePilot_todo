@@ -6,6 +6,7 @@ import '../../app/router.dart';
 import '../../core/utils/date_helpers.dart';
 import '../../core/utils/formatters.dart';
 import '../../core/widgets/glass.dart';
+import '../../core/widgets/glass_panel.dart';
 import '../../core/widgets/section_card.dart';
 import '../../core/widgets/state_views.dart';
 import '../../data/database/app_database.dart';
@@ -33,65 +34,74 @@ class DashboardScreen extends ConsumerWidget {
       error: (error, _) => ErrorState(error: error),
       data: (_) {
         return Scaffold(
-          body: CustomScrollView(
-            slivers: [
-              SliverAppBar.large(
-                title: const Text('LifePilot'),
-                actions: [
-                  IconButton(
-                    tooltip: 'Settings',
-                    onPressed: () => context.go('/settings'),
-                    icon: const Icon(Icons.settings_outlined),
+          backgroundColor: Colors.transparent,
+          body: Stack(
+            children: [
+              const Positioned.fill(child: _AmbientBackdrop()),
+              CustomScrollView(
+                slivers: [
+                  SliverAppBar.large(
+                    backgroundColor: Colors.transparent,
+                    elevation: 0,
+                    scrolledUnderElevation: 0,
+                    title: const Text('LifePilot'),
+                    actions: [
+                      IconButton(
+                        tooltip: 'Settings',
+                        onPressed: () => context.go('/settings'),
+                        icon: const Icon(Icons.settings_outlined),
+                      ),
+                    ],
+                  ),
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                    sliver: SliverList(
+                      delegate: SliverChildListDelegate([
+                        const _SearchBar(),
+                        const SizedBox(height: 16),
+                        if (ref.watch(searchQueryProvider).trim().isEmpty) ...[
+                          AnimatedGlassItem(
+                            child: _HeroHeader(
+                              currency: currency,
+                              entries: entries,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          _QuickActions(ref: ref),
+                          const SizedBox(height: 16),
+                          LayoutBuilder(
+                            builder: (context, constraints) {
+                              final wide = constraints.maxWidth >= 900;
+                              final children = [
+                                _TodayTasks(tasks: tasks),
+                                _UpcomingEvents(events: events),
+                              ];
+                              if (!wide) {
+                                return Column(
+                                  children: [
+                                    children[0],
+                                    const SizedBox(height: 16),
+                                    children[1],
+                                  ],
+                                );
+                              }
+                              return Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Expanded(child: children[0]),
+                                  const SizedBox(width: 16),
+                                  Expanded(child: children[1]),
+                                ],
+                              );
+                            },
+                          ),
+                        ] else ...[
+                          _SearchResultsView(currency: currency),
+                        ],
+                      ]),
+                    ),
                   ),
                 ],
-              ),
-              SliverPadding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-                sliver: SliverList(
-                  delegate: SliverChildListDelegate([
-                    const _SearchBar(),
-                    const SizedBox(height: 16),
-                    if (ref.watch(searchQueryProvider).trim().isEmpty) ...[
-                      AnimatedGlassItem(
-                        child: _HeroHeader(
-                          currency: currency,
-                          entries: entries,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      _QuickActions(ref: ref),
-                      const SizedBox(height: 16),
-                      LayoutBuilder(
-                        builder: (context, constraints) {
-                          final wide = constraints.maxWidth >= 900;
-                          final children = [
-                            _TodayTasks(tasks: tasks),
-                            _UpcomingEvents(events: events),
-                          ];
-                          if (!wide) {
-                            return Column(
-                              children: [
-                                children[0],
-                                const SizedBox(height: 16),
-                                children[1],
-                              ],
-                            );
-                          }
-                          return Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Expanded(child: children[0]),
-                              const SizedBox(width: 16),
-                              Expanded(child: children[1]),
-                            ],
-                          );
-                        },
-                      ),
-                    ] else ...[
-                      _SearchResultsView(currency: currency),
-                    ],
-                  ]),
-                ),
               ),
             ],
           ),
@@ -123,9 +133,8 @@ class _HeroHeader extends StatelessWidget {
                 .toList(),
           );
 
-    return GlassPanel(
+    return LifePilotGlassCard(
       padding: const EdgeInsets.all(26),
-      opacity: theme.brightness == Brightness.dark ? 0.18 : 0.5,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -141,7 +150,7 @@ class _HeroHeader extends StatelessWidget {
                   'Today at a glance',
                   style: theme.textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.w900,
-                    letterSpacing: 0,
+                    letterSpacing: -0.75,
                   ),
                 ),
               ),
@@ -197,11 +206,10 @@ class _MetricPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return GlassPanel(
+    return LifePilotGlassCard(
       constraints: const BoxConstraints(minWidth: 160),
       radius: 22,
       padding: const EdgeInsets.all(14),
-      opacity: theme.brightness == Brightness.dark ? 0.18 : 0.42,
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -211,7 +219,15 @@ class _MetricPill extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(label, style: theme.textTheme.labelMedium),
+                Text(
+                  label,
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant.withValues(
+                      alpha: 0.8,
+                    ),
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
                 const SizedBox(height: 4),
                 FittedBox(
                   fit: BoxFit.scaleDown,
@@ -220,7 +236,7 @@ class _MetricPill extends StatelessWidget {
                     value,
                     style: theme.textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.w900,
-                      letterSpacing: 0,
+                      letterSpacing: -0.75,
                     ),
                   ),
                 ),
@@ -381,15 +397,26 @@ class _SearchBar extends ConsumerStatefulWidget {
 
 class _SearchBarState extends ConsumerState<_SearchBar> {
   late final TextEditingController _controller;
+  late final FocusNode _focusNode;
+  bool _isFocused = false;
 
   @override
   void initState() {
     super.initState();
     _controller = TextEditingController(text: ref.read(searchQueryProvider));
+    _focusNode = FocusNode()..addListener(_onFocusChange);
+  }
+
+  void _onFocusChange() {
+    setState(() {
+      _isFocused = _focusNode.hasFocus;
+    });
   }
 
   @override
   void dispose() {
+    _focusNode.removeListener(_onFocusChange);
+    _focusNode.dispose();
     _controller.dispose();
     super.dispose();
   }
@@ -401,18 +428,95 @@ class _SearchBarState extends ConsumerState<_SearchBar> {
       _controller.text = query;
     }
 
-    return GlassPanel(
-      radius: 20,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      opacity: Theme.of(context).brightness == Brightness.dark ? 0.12 : 0.46,
+    final theme = Theme.of(context);
+    final dark = theme.brightness == Brightness.dark;
+
+    final inactiveCardGradient = LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: dark
+          ? [
+              Colors.white.withValues(alpha: 0.08),
+              Colors.white.withValues(alpha: 0.02),
+            ]
+          : [
+              Colors.white.withValues(alpha: 0.16),
+              Colors.white.withValues(alpha: 0.06),
+            ],
+    );
+
+    final inactiveBorderGradient = LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: dark
+          ? [
+              Colors.white.withValues(alpha: 0.22),
+              Colors.white.withValues(alpha: 0.04),
+            ]
+          : [
+              Colors.white.withValues(alpha: 0.38),
+              Colors.white.withValues(alpha: 0.08),
+            ],
+    );
+
+    final activeCardGradient = LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: dark
+          ? [
+              theme.colorScheme.primary.withValues(alpha: 0.15),
+              theme.colorScheme.primary.withValues(alpha: 0.03),
+            ]
+          : [
+              theme.colorScheme.primary.withValues(alpha: 0.22),
+              theme.colorScheme.primary.withValues(alpha: 0.08),
+            ],
+    );
+
+    final activeBorderGradient = LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [
+        theme.colorScheme.primary.withValues(alpha: 0.70),
+        theme.colorScheme.primary.withValues(alpha: 0.24),
+      ],
+    );
+
+    final shadowColor = _isFocused
+        ? theme.colorScheme.primary.withValues(alpha: dark ? 0.16 : 0.08)
+        : (dark
+              ? Colors.black.withValues(alpha: 0.24)
+              : Colors.black.withValues(alpha: 0.06));
+
+    return LifePilotGlassCard(
+      radius: 30,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+      cardGradient: _isFocused ? activeCardGradient : inactiveCardGradient,
+      borderGradient: _isFocused
+          ? activeBorderGradient
+          : inactiveBorderGradient,
+      shadowColor: shadowColor,
       child: TextField(
         controller: _controller,
+        focusNode: _focusNode,
+        style: theme.textTheme.bodyLarge?.copyWith(
+          color: theme.colorScheme.onSurface,
+        ),
         decoration: InputDecoration(
           hintText: 'Search tasks, events, money...',
-          prefixIcon: const Icon(Icons.search),
+          hintStyle: theme.textTheme.bodyLarge?.copyWith(
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.45),
+          ),
+          prefixIcon: Icon(
+            Icons.search_rounded,
+            color: _isFocused
+                ? theme.colorScheme.primary
+                : theme.colorScheme.onSurface.withValues(alpha: 0.5),
+          ),
           suffixIcon: query.isNotEmpty
               ? IconButton(
-                  icon: const Icon(Icons.clear),
+                  icon: const Icon(Icons.clear_rounded),
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
                   onPressed: () {
                     _controller.clear();
                     ref.read(searchQueryProvider.notifier).state = '';
@@ -423,6 +527,7 @@ class _SearchBarState extends ConsumerState<_SearchBar> {
           border: InputBorder.none,
           enabledBorder: InputBorder.none,
           focusedBorder: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(vertical: 14),
         ),
         onChanged: (value) {
           ref.read(searchQueryProvider.notifier).state = value;
@@ -597,6 +702,61 @@ class _ResultSectionHeader extends StatelessWidget {
           style: theme.textTheme.titleMedium?.copyWith(
             fontWeight: FontWeight.w800,
             color: theme.colorScheme.primary,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _AmbientBackdrop extends StatelessWidget {
+  const _AmbientBackdrop();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    final primaryGlow = theme.colorScheme.primary.withValues(
+      alpha: isDark ? 0.18 : 0.12,
+    );
+    final secondaryGlow = theme.colorScheme.tertiary.withValues(
+      alpha: isDark ? 0.14 : 0.08,
+    );
+
+    return Stack(
+      children: [
+        Positioned.fill(
+          child: Container(
+            color: isDark ? const Color(0xFF060B0C) : const Color(0xFFF4FAFB),
+          ),
+        ),
+        Positioned(
+          top: -120,
+          left: -120,
+          width: 380,
+          height: 380,
+          child: Container(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: RadialGradient(
+                colors: [primaryGlow, primaryGlow.withValues(alpha: 0)],
+              ),
+            ),
+          ),
+        ),
+        Positioned(
+          bottom: 120,
+          right: -150,
+          width: 480,
+          height: 480,
+          child: Container(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: RadialGradient(
+                colors: [secondaryGlow, secondaryGlow.withValues(alpha: 0)],
+              ),
+            ),
           ),
         ),
       ],

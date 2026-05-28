@@ -10,6 +10,10 @@ class LifePilotGlassCard extends StatelessWidget {
     this.radius = LifePilotTheme.glassRadius,
     this.constraints,
     this.onTap,
+    this.cardGradient,
+    this.borderGradient,
+    this.shadowColor,
+    this.blurSigma,
     super.key,
   });
 
@@ -18,6 +22,10 @@ class LifePilotGlassCard extends StatelessWidget {
   final double radius;
   final BoxConstraints? constraints;
   final VoidCallback? onTap;
+  final Gradient? cardGradient;
+  final Gradient? borderGradient;
+  final Color? shadowColor;
+  final double? blurSigma;
 
   @override
   Widget build(BuildContext context) {
@@ -26,7 +34,7 @@ class LifePilotGlassCard extends StatelessWidget {
     final glassExt = theme.extension<GlassThemeExtension>();
 
     // Fallbacks if theme extension is not registered
-    final cardGradient = glassExt?.cardGradient ??
+    final resolvedCardGradient = cardGradient ?? glassExt?.cardGradient ??
         LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -41,7 +49,7 @@ class LifePilotGlassCard extends StatelessWidget {
                 ],
         );
 
-    final borderGradient = glassExt?.borderGradient ??
+    final resolvedBorderGradient = borderGradient ?? glassExt?.borderGradient ??
         LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -56,8 +64,8 @@ class LifePilotGlassCard extends StatelessWidget {
                 ],
         );
 
-    final blurSigma = glassExt?.blurSigma ?? 20.0;
-    final shadowColor = glassExt?.shadowColor ??
+    final resolvedBlurSigma = blurSigma ?? glassExt?.blurSigma ?? 20.0;
+    final resolvedShadowColor = shadowColor ?? glassExt?.shadowColor ??
         (dark
             ? Colors.black.withValues(alpha: 0.24)
             : Colors.black.withValues(alpha: 0.06));
@@ -69,10 +77,10 @@ class LifePilotGlassCard extends StatelessWidget {
       constraints: constraints,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(radius),
-        gradient: cardGradient,
+        gradient: resolvedCardGradient,
         boxShadow: [
           BoxShadow(
-            color: shadowColor,
+            color: resolvedShadowColor,
             blurRadius: 32,
             offset: const Offset(0, 16),
           ),
@@ -89,10 +97,10 @@ class LifePilotGlassCard extends StatelessWidget {
     content = ClipRRect(
       borderRadius: BorderRadius.circular(radius),
       child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: blurSigma, sigmaY: blurSigma),
+        filter: ImageFilter.blur(sigmaX: resolvedBlurSigma, sigmaY: resolvedBlurSigma),
         child: CustomPaint(
           foregroundPainter: GradientBorderPainter(
-            gradient: borderGradient,
+            gradient: resolvedBorderGradient,
             strokeWidth: 1.0,
             radius: radius,
           ),
