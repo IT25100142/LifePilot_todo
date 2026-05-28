@@ -34,7 +34,9 @@ class LifePilotGlassCard extends StatelessWidget {
     final glassExt = theme.extension<GlassThemeExtension>();
 
     // Fallbacks if theme extension is not registered
-    final resolvedCardGradient = cardGradient ?? glassExt?.cardGradient ??
+    final resolvedCardGradient =
+        cardGradient ??
+        glassExt?.cardGradient ??
         LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -49,7 +51,9 @@ class LifePilotGlassCard extends StatelessWidget {
                 ],
         );
 
-    final resolvedBorderGradient = borderGradient ?? glassExt?.borderGradient ??
+    final resolvedBorderGradient =
+        borderGradient ??
+        glassExt?.borderGradient ??
         LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -65,7 +69,9 @@ class LifePilotGlassCard extends StatelessWidget {
         );
 
     final resolvedBlurSigma = blurSigma ?? glassExt?.blurSigma ?? 20.0;
-    final resolvedShadowColor = shadowColor ?? glassExt?.shadowColor ??
+    final resolvedShadowColor =
+        shadowColor ??
+        glassExt?.shadowColor ??
         (dark
             ? Colors.black.withValues(alpha: 0.24)
             : Colors.black.withValues(alpha: 0.06));
@@ -97,7 +103,10 @@ class LifePilotGlassCard extends StatelessWidget {
     content = ClipRRect(
       borderRadius: BorderRadius.circular(radius),
       child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: resolvedBlurSigma, sigmaY: resolvedBlurSigma),
+        filter: ImageFilter.blur(
+          sigmaX: resolvedBlurSigma,
+          sigmaY: resolvedBlurSigma,
+        ),
         child: CustomPaint(
           foregroundPainter: GradientBorderPainter(
             gradient: resolvedBorderGradient,

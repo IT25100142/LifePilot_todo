@@ -263,7 +263,10 @@ class GlassThemeExtension extends ThemeExtension<GlassThemeExtension> {
   }
 
   @override
-  GlassThemeExtension lerp(ThemeExtension<GlassThemeExtension>? other, double t) {
+  GlassThemeExtension lerp(
+    ThemeExtension<GlassThemeExtension>? other,
+    double t,
+  ) {
     if (other is! GlassThemeExtension) return this;
     return GlassThemeExtension(
       cardGradient: Gradient.lerp(cardGradient, other.cardGradient, t)!,

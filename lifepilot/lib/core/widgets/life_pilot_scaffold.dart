@@ -166,9 +166,10 @@ class _FloatingDockTabState extends State<FloatingDockTab>
       vsync: this,
       duration: const Duration(milliseconds: 100),
     );
-    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.90).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOut),
-    );
+    _scaleAnimation = Tween<double>(
+      begin: 1.0,
+      end: 0.90,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
   }
 
   @override
@@ -221,8 +222,9 @@ class _FloatingDockTabState extends State<FloatingDockTab>
                 overflow: TextOverflow.ellipsis,
                 style: theme.textTheme.labelSmall?.copyWith(
                   color: color,
-                  fontWeight:
-                      widget.isSelected ? FontWeight.w800 : FontWeight.w600,
+                  fontWeight: widget.isSelected
+                      ? FontWeight.w800
+                      : FontWeight.w600,
                   fontSize: 10,
                 ),
               ),

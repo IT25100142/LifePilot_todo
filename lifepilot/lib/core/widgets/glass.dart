@@ -89,7 +89,6 @@ class _LiquidBackgroundState extends State<LiquidBackground>
   }
 }
 
-
 class GlassPanel extends StatelessWidget {
   const GlassPanel({
     required this.child,
