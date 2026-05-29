@@ -40,13 +40,14 @@ final routerProvider = Provider<GoRouter>((ref) {
     initialLocation: '/',
     refreshListenable: RouterRefreshListenable(ref),
     redirect: (context, state) {
-      final isLocked = ref.read(authProvider);
+      final authState = ref.read(authProvider);
       final goingToLogin = state.matchedLocation == '/login';
 
-      if (isLocked && !goingToLogin) {
+      if ((authState.isLocked || authState.isFirstTimeLaunch) &&
+          !goingToLogin) {
         return '/login';
       }
-      if (!isLocked && goingToLogin) {
+      if (!authState.isLocked && !authState.isFirstTimeLaunch && goingToLogin) {
         return '/';
       }
       return null;

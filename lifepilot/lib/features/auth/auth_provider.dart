@@ -1,40 +1,119 @@
 import 'dart:convert';
+import 'dart:math' as math;
 import 'package:cryptography/cryptography.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-class AuthNotifier extends Notifier<bool> {
+class AuthState {
+  const AuthState({
+    required this.isLocked,
+    required this.isFirstTimeLaunch,
+    required this.isRecovering,
+    this.recoveryKey,
+  });
+
+  final bool isLocked;
+  final bool isFirstTimeLaunch;
+  final bool isRecovering;
+  final String? recoveryKey;
+
+  AuthState copyWith({
+    bool? isLocked,
+    bool? isFirstTimeLaunch,
+    bool? isRecovering,
+    String? recoveryKey,
+  }) {
+    return AuthState(
+      isLocked: isLocked ?? this.isLocked,
+      isFirstTimeLaunch: isFirstTimeLaunch ?? this.isFirstTimeLaunch,
+      isRecovering: isRecovering ?? this.isRecovering,
+      recoveryKey: recoveryKey ?? this.recoveryKey,
+    );
+  }
+}
+
+class AuthNotifier extends Notifier<AuthState> {
   final _localAuth = LocalAuthentication();
   late final SharedPreferences _prefs;
   String _hashedPin = '';
+  String _hashedRecoveryKey = '';
 
   @override
-  bool build() {
+  AuthState build() {
     _init();
-    return true; // starts locked
+    return const AuthState(
+      isLocked: true,
+      isFirstTimeLaunch: false,
+      isRecovering: false,
+    );
   }
 
   Future<void> _init() async {
     try {
       _prefs = await SharedPreferences.getInstance();
-      final stored = _prefs.getString('secure_pin_hash');
-      if (stored == null) {
-        _hashedPin = await _hash('1420'); // master fallback PIN
-        await _prefs.setString('secure_pin_hash', _hashedPin);
+      final hasPin = _prefs.containsKey('secure_pin_hash');
+      final hasUsername = _prefs.containsKey('secure_username');
+
+      if (!hasPin || !hasUsername) {
+        state = state.copyWith(isFirstTimeLaunch: true);
       } else {
-        _hashedPin = stored;
+        _hashedPin = _prefs.getString('secure_pin_hash') ?? '';
+        _hashedRecoveryKey = _prefs.getString('secure_recovery_hash') ?? '';
+        state = state.copyWith(isFirstTimeLaunch: false);
       }
     } catch (_) {
       // Handle fallback for test or mock environments
-      _hashedPin = await _hash('1420');
+      state = state.copyWith(isFirstTimeLaunch: true);
     }
   }
 
-  Future<String> _hash(String pin) async {
+  Future<String> _hash(String val) async {
     final sha256 = Sha256();
-    final hash = await sha256.hash(utf8.encode(pin));
+    final hash = await sha256.hash(utf8.encode(val));
     return base64Encode(hash.bytes);
+  }
+
+  String _generateRecoveryKey() {
+    final rand = math.Random.secure();
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    String part1 = '';
+    String part2 = '';
+    for (int i = 0; i < 4; i++) {
+      part1 += chars[rand.nextInt(chars.length)];
+      part2 += chars[rand.nextInt(chars.length)];
+    }
+    return 'LP-$part1-$part2';
+  }
+
+  Future<void> createAccount(String username, String pin) async {
+    if (_hashedPin.isEmpty) {
+      try {
+        _prefs = await SharedPreferences.getInstance();
+      } catch (_) {}
+    }
+    final pinHash = await _hash(pin);
+    final recoveryKey = _generateRecoveryKey();
+    final recoveryHash = await _hash(recoveryKey);
+
+    try {
+      await _prefs.setString('secure_username', username);
+      await _prefs.setString('secure_pin_hash', pinHash);
+      await _prefs.setString('secure_recovery_hash', recoveryHash);
+    } catch (_) {}
+
+    _hashedPin = pinHash;
+    _hashedRecoveryKey = recoveryHash;
+
+    state = state.copyWith(recoveryKey: recoveryKey);
+  }
+
+  void completeOnboarding() {
+    state = state.copyWith(
+      isFirstTimeLaunch: false,
+      isLocked: false,
+      recoveryKey: null,
+    );
   }
 
   Future<bool> verifyPin(String pin) async {
@@ -43,7 +122,30 @@ class AuthNotifier extends Notifier<bool> {
     }
     final enteredHash = await _hash(pin);
     if (enteredHash == _hashedPin) {
-      state = false; // unlock
+      state = state.copyWith(isLocked: false);
+      return true;
+    }
+    return false;
+  }
+
+  Future<bool> resetPinWithRecoveryKey(String inputKey, String newPin) async {
+    if (_hashedRecoveryKey.isEmpty) {
+      await _init();
+    }
+    final cleanedKey = inputKey.trim().toUpperCase();
+    final keyHash = await _hash(cleanedKey);
+
+    if (keyHash == _hashedRecoveryKey) {
+      final pinHash = await _hash(newPin);
+      try {
+        await _prefs.setString('secure_pin_hash', pinHash);
+      } catch (_) {}
+      _hashedPin = pinHash;
+      state = state.copyWith(
+        isLocked: false,
+        isRecovering: false,
+        isFirstTimeLaunch: false,
+      );
       return true;
     }
     return false;
@@ -65,7 +167,7 @@ class AuthNotifier extends Notifier<bool> {
       );
 
       if (didAuthenticate) {
-        state = false; // unlock
+        state = state.copyWith(isLocked: false);
         return true;
       }
     } catch (_) {
@@ -74,13 +176,23 @@ class AuthNotifier extends Notifier<bool> {
     return false;
   }
 
+  void enterRecovery() {
+    state = state.copyWith(isRecovering: true);
+  }
+
+  void exitRecovery() {
+    state = state.copyWith(isRecovering: false);
+  }
+
   void lock() {
-    state = true;
+    state = state.copyWith(isLocked: true);
   }
 
   void unlock() {
-    state = false;
+    state = state.copyWith(isLocked: false);
   }
 }
 
-final authProvider = NotifierProvider<AuthNotifier, bool>(AuthNotifier.new);
+final authProvider = NotifierProvider<AuthNotifier, AuthState>(
+  AuthNotifier.new,
+);

@@ -20,6 +20,7 @@ import '../focus/focus_providers.dart';
 import '../habits/habit_providers.dart';
 import '../habits/widgets/habit_heatmap.dart';
 import '../todo/todo_screen.dart';
+import '../insights/insights_provider.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -63,6 +64,8 @@ class DashboardScreen extends ConsumerWidget {
                       else if (isWide) ...[
                         const _DashboardHeader(),
                         const SizedBox(height: 24),
+                        const _SystemInsightsProjections(),
+                        const SizedBox(height: 24),
                         const _DashboardWeekStrip(),
                         const SizedBox(height: 24),
                         Row(
@@ -101,6 +104,8 @@ class DashboardScreen extends ConsumerWidget {
                         const SizedBox(height: 96),
                       ] else ...[
                         const _DashboardHeader(),
+                        const SizedBox(height: 24),
+                        const _SystemInsightsProjections(),
                         const SizedBox(height: 24),
                         const _DashboardWeekStrip(),
                         const SizedBox(height: 16),
@@ -961,6 +966,123 @@ class _QuickFocusChip extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _SystemInsightsProjections extends ConsumerWidget {
+  const _SystemInsightsProjections();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final insightsAsync = ref.watch(systemInsightsProvider);
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'System Insights & Projections',
+          style: theme.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w700,
+            letterSpacing: 1.2,
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.86),
+          ),
+        ),
+        const SizedBox(height: 16),
+        LifePilotGlassCard(
+          radius: 20,
+          padding: const EdgeInsets.all(20),
+          child: insightsAsync.when(
+            loading: () => const Center(
+              child: Padding(
+                padding: EdgeInsets.all(16.0),
+                child: CircularProgressIndicator(),
+              ),
+            ),
+            error: (err, _) => Center(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Text('Error computing insights: $err'),
+              ),
+            ),
+            data: (insights) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.insights_rounded,
+                        color: theme.colorScheme.primary,
+                        size: 24,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'Estimated Runway: ${insights.runwayDays} Days Remaining',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            letterSpacing: 1.1,
+                            fontWeight: FontWeight.w800,
+                            color: theme.colorScheme.onSurface,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: isDark
+                          ? const Color(0xFF2A2E33)
+                          : const Color(0xFFE8ECEF),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: isDark
+                            ? const Color(0xFF3F464E)
+                            : const Color(0xFFCFD5D8),
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.05),
+                          blurRadius: 8,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(
+                          Icons.psychology_rounded,
+                          color: theme.colorScheme.tertiary,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            insights.behavioralInsight,
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              fontStyle: FontStyle.italic,
+                              color: isDark
+                                  ? const Color(0xFFD0D6DC)
+                                  : const Color(0xFF4A5568),
+                              height: 1.4,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 }
