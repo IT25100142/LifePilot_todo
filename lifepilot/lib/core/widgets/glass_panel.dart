@@ -2,8 +2,10 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/theme.dart';
+import '../../features/canvas_studio/canvas_studio_provider.dart';
 
 class GlassNoiseCache {
   static ui.Image? _noiseImage;
@@ -51,7 +53,7 @@ class GlassNoiseCache {
   }
 }
 
-class LifePilotGlassCard extends StatefulWidget {
+class LifePilotGlassCard extends ConsumerStatefulWidget {
   const LifePilotGlassCard({
     required this.child,
     this.padding,
@@ -78,10 +80,10 @@ class LifePilotGlassCard extends StatefulWidget {
   final bool isPressed;
 
   @override
-  State<LifePilotGlassCard> createState() => _LifePilotGlassCardState();
+  ConsumerState<LifePilotGlassCard> createState() => _LifePilotGlassCardState();
 }
 
-class _LifePilotGlassCardState extends State<LifePilotGlassCard> {
+class _LifePilotGlassCardState extends ConsumerState<LifePilotGlassCard> {
   bool _isHovered = false;
   Offset _mousePosition = Offset.zero;
 
@@ -90,6 +92,7 @@ class _LifePilotGlassCardState extends State<LifePilotGlassCard> {
     final theme = Theme.of(context);
     final dark = theme.brightness == Brightness.dark;
     final glassExt = theme.extension<GlassThemeExtension>();
+    final glassPhysics = ref.watch(canvasStudioProvider);
 
     // Fallbacks if theme extension is not registered
     final resolvedCardGradient =
@@ -112,7 +115,7 @@ class _LifePilotGlassCardState extends State<LifePilotGlassCard> {
     final resolvedBorderGradient =
         widget.borderGradient ?? glassExt?.borderGradient;
 
-    final resolvedBlurSigma = widget.blurSigma ?? glassExt?.blurSigma ?? 22.0;
+    final resolvedBlurSigma = widget.blurSigma ?? glassPhysics.blurSigma;
     final resolvedShadowColor =
         widget.shadowColor ??
         glassExt?.shadowColor ??
@@ -165,12 +168,14 @@ class _LifePilotGlassCardState extends State<LifePilotGlassCard> {
             noiseImage: GlassNoiseCache.noiseImage,
             radius: widget.radius,
             isPressed: widget.isPressed,
+            grainOpacity: glassPhysics.grainOpacity,
           ),
           foregroundPainter: SpecularBorderPainter(
             radius: widget.radius,
             strokeWidth: 0.75, // Crisp 0.75px specular border highlight
             customBorderGradient: resolvedBorderGradient,
             isPressed: widget.isPressed,
+            specularOpacity: glassPhysics.specularOpacity,
           ),
           child: container,
         ),
@@ -212,6 +217,7 @@ class GlassBackgroundEffectsPainter extends CustomPainter {
     required this.noiseImage,
     required this.radius,
     required this.isPressed,
+    required this.grainOpacity,
   });
 
   final bool isHovered;
@@ -220,6 +226,7 @@ class GlassBackgroundEffectsPainter extends CustomPainter {
   final ui.Image noiseImage;
   final double radius;
   final bool isPressed;
+  final double grainOpacity;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -311,9 +318,7 @@ class GlassBackgroundEffectsPainter extends CustomPainter {
 
     final noisePaint = Paint()
       ..shader = noiseShader
-      ..color = const Color(
-        0x03FFFFFF,
-      ); // Colors.white.withValues(alpha: 0.015) (0.015 * 255 = 3.825 ~= 3)
+      ..color = Colors.white.withValues(alpha: grainOpacity.clamp(0.0, 1.0));
 
     canvas.drawRect(rect, noisePaint);
   }
@@ -325,7 +330,8 @@ class GlassBackgroundEffectsPainter extends CustomPainter {
         oldDelegate.spotlightColor != spotlightColor ||
         oldDelegate.noiseImage != noiseImage ||
         oldDelegate.radius != radius ||
-        oldDelegate.isPressed != isPressed;
+        oldDelegate.isPressed != isPressed ||
+        oldDelegate.grainOpacity != grainOpacity;
   }
 }
 
@@ -333,12 +339,14 @@ class SpecularBorderPainter extends CustomPainter {
   SpecularBorderPainter({
     required this.radius,
     required this.strokeWidth,
+    required this.specularOpacity,
     this.customBorderGradient,
     this.isPressed = false,
   });
 
   final double radius;
   final double strokeWidth;
+  final double specularOpacity;
   final Gradient? customBorderGradient;
   final bool isPressed;
 
@@ -380,28 +388,26 @@ class SpecularBorderPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..shader =
           (isPressed
-                  ? const LinearGradient(
+                  ? LinearGradient(
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                       colors: [
-                        Color(
-                          0x33000000,
-                        ), // Colors.black.withValues(alpha: 0.20)
-                        Color(
-                          0x00000000,
-                        ), // Colors.black.withValues(alpha: 0.0)
+                        Colors.black.withValues(
+                          alpha: (specularOpacity * 1.33).clamp(0.0, 1.0),
+                        ),
+                        const Color(0x00000000),
                       ],
                     )
-                  : const LinearGradient(
+                  : LinearGradient(
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                       colors: [
-                        Color(
-                          0x26FFFFFF,
-                        ), // Colors.white.withValues(alpha: 0.15)
-                        Color(
-                          0x05FFFFFF,
-                        ), // Colors.white.withValues(alpha: 0.02)
+                        Colors.white.withValues(
+                          alpha: specularOpacity.clamp(0.0, 1.0),
+                        ),
+                        Colors.white.withValues(
+                          alpha: (specularOpacity * 0.13).clamp(0.0, 1.0),
+                        ),
                       ],
                     ))
               .createShader(bounds);
@@ -431,28 +437,24 @@ class SpecularBorderPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..shader =
           (isPressed
-                  ? const LinearGradient(
+                  ? LinearGradient(
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                       colors: [
-                        Color(
-                          0x00FFFFFF,
-                        ), // Colors.white.withValues(alpha: 0.0)
-                        Color(
-                          0x14FFFFFF,
-                        ), // Colors.white.withValues(alpha: 0.08)
+                        const Color(0x00FFFFFF),
+                        Colors.white.withValues(
+                          alpha: (specularOpacity * 0.53).clamp(0.0, 1.0),
+                        ),
                       ],
                     )
-                  : const LinearGradient(
+                  : LinearGradient(
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                       colors: [
-                        Color(
-                          0x00000000,
-                        ), // Colors.black.withValues(alpha: 0.0)
-                        Color(
-                          0x33000000,
-                        ), // Colors.black.withValues(alpha: 0.20)
+                        const Color(0x00000000),
+                        Colors.black.withValues(
+                          alpha: (specularOpacity * 1.33).clamp(0.0, 1.0),
+                        ),
                       ],
                     ))
               .createShader(bounds);
@@ -465,7 +467,8 @@ class SpecularBorderPainter extends CustomPainter {
     return oldDelegate.radius != radius ||
         oldDelegate.strokeWidth != strokeWidth ||
         oldDelegate.customBorderGradient != customBorderGradient ||
-        oldDelegate.isPressed != isPressed;
+        oldDelegate.isPressed != isPressed ||
+        oldDelegate.specularOpacity != specularOpacity;
   }
 }
 

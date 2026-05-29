@@ -13,6 +13,7 @@ import '../../core/widgets/glass_panel.dart';
 import '../../core/widgets/state_views.dart';
 import '../../data/database/database_provider.dart';
 import '../theme/theme_provider.dart';
+import '../canvas_studio/canvas_studio_provider.dart';
 import 'settings_providers.dart';
 
 class SettingsScreen extends ConsumerWidget {
@@ -43,6 +44,8 @@ class SettingsScreen extends ConsumerWidget {
                 _ThemeSection(themeMode: state.themeMode),
                 const SizedBox(height: 16),
                 const _MeshThemeSection(),
+                const SizedBox(height: 16),
+                const _GlassPhysicsStudioSection(),
                 const SizedBox(height: 16),
                 const _SettingsGroupHeader('Currency'),
                 _CurrencySection(currency: state.currency),
@@ -1370,6 +1373,137 @@ class _MeshThemeSectionState extends ConsumerState<_MeshThemeSection> {
           ],
         ),
       ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Glass Physics Studio Customizer Section
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _GlassPhysicsStudioSection extends ConsumerWidget {
+  const _GlassPhysicsStudioSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final physics = ref.watch(canvasStudioProvider);
+    final notifier = ref.read(canvasStudioProvider.notifier);
+    final goldColor = const Color(0xFFD6BD92);
+
+    return LifePilotGlassCard(
+      radius: 24,
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'GLASS PHYSICS STUDIO',
+            style: theme.textTheme.labelMedium?.copyWith(
+              fontWeight: FontWeight.w800,
+              letterSpacing: 1.5,
+              color: goldColor,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Fine-tune the physical material properties of the interface in real-time.',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // Blur Intensity Slider
+          _buildSliderRow(
+            context: context,
+            label: 'Blur Intensity',
+            value: physics.blurSigma,
+            min: 4.0,
+            max: 45.0,
+            displayValue: physics.blurSigma.toStringAsFixed(1),
+            onChanged: (val) => notifier.setBlurSigma(val),
+          ),
+          const SizedBox(height: 16),
+
+          // Specular Gloss Slider
+          _buildSliderRow(
+            context: context,
+            label: 'Specular Gloss',
+            value: physics.specularOpacity,
+            min: 0.0,
+            max: 0.40,
+            displayValue: physics.specularOpacity.toStringAsFixed(3),
+            onChanged: (val) => notifier.setSpecularOpacity(val),
+          ),
+          const SizedBox(height: 16),
+
+          // Grain Texture Opacity Slider
+          _buildSliderRow(
+            context: context,
+            label: 'Grain Texture',
+            value: physics.grainOpacity,
+            min: 0.0,
+            max: 0.05,
+            displayValue: physics.grainOpacity.toStringAsFixed(4),
+            onChanged: (val) => notifier.setGrainOpacity(val),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSliderRow({
+    required BuildContext context,
+    required String label,
+    required double value,
+    required double min,
+    required double max,
+    required String displayValue,
+    required ValueChanged<double> onChanged,
+  }) {
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              label,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            Text(
+              displayValue,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w800,
+                color: theme.colorScheme.primary,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        SliderTheme(
+          data: SliderThemeData(
+            trackHeight: 4,
+            activeTrackColor: theme.colorScheme.primary,
+            inactiveTrackColor: theme.colorScheme.onSurface.withValues(
+              alpha: 0.1,
+            ),
+            thumbColor: theme.colorScheme.primary,
+            overlayColor: theme.colorScheme.primary.withValues(alpha: 0.12),
+            valueIndicatorColor: theme.colorScheme.primary,
+          ),
+          child: Slider(
+            value: value.clamp(min, max),
+            min: min,
+            max: max,
+            onChanged: onChanged,
+          ),
+        ),
+      ],
     );
   }
 }
