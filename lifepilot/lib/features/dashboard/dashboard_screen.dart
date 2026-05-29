@@ -21,6 +21,7 @@ import '../habits/habit_providers.dart';
 import '../habits/widgets/habit_heatmap.dart';
 import '../todo/todo_screen.dart';
 import '../insights/insights_provider.dart';
+import '../canvas_studio/grid_provider.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -30,6 +31,19 @@ class DashboardScreen extends ConsumerWidget {
     final currency = ref.watch(activeCurrencyCodeProvider);
     final query = ref.watch(searchQueryProvider).trim();
     final isWide = MediaQuery.sizeOf(context).width >= 800;
+
+    final grid = ref.watch(gridProvider);
+    final visibleCards = grid.visibleCards;
+    final isZen = grid.layoutDensity == DashboardLayoutDensity.zen;
+
+    final double spacing = isZen ? 24.0 : 12.0;
+    final double spacingMobile = isZen ? 16.0 : 8.0;
+
+    // Visibility toggles
+    final showRunway = visibleCards['runway'] ?? true;
+    final showTasks = visibleCards['tasks'] ?? true;
+    final showHabits = visibleCards['habits'] ?? true;
+    final showFocus = visibleCards['focus'] ?? true;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -58,64 +72,83 @@ class DashboardScreen extends ConsumerWidget {
                   sliver: SliverList(
                     delegate: SliverChildListDelegate([
                       const _SearchBar(),
-                      const SizedBox(height: 24),
+                      SizedBox(height: spacing),
                       if (query.isNotEmpty)
                         _SearchResultsView(currency: currency)
                       else if (isWide) ...[
                         const _DashboardHeader(),
-                        const SizedBox(height: 24),
-                        const _SystemInsightsProjections(),
-                        const SizedBox(height: 24),
+                        SizedBox(height: spacing),
+                        if (showRunway) ...[
+                          const _SystemInsightsProjections(),
+                          SizedBox(height: spacing),
+                        ],
                         const _DashboardWeekStrip(),
-                        const SizedBox(height: 24),
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Row 2 Left Column: Finance Analytics
-                            const Expanded(
-                              flex: 5,
-                              child: LifePilotFinanceAnalytics(),
-                            ),
-                            const SizedBox(width: 24),
-                            // Row 2 Right Column: Priority Tasks
-                            const Expanded(
-                              flex: 6,
-                              child: _DashboardPriorityTasks(),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 24),
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Row 3 Left Column: Habit Heatmap
-                            const Expanded(
-                              flex: 5,
-                              child: _DashboardHabitMesh(),
-                            ),
-                            const SizedBox(width: 24),
-                            // Row 3 Right Column: Quick Focus Deck
-                            const Expanded(
-                              flex: 6,
-                              child: _DashboardQuickFocus(),
-                            ),
-                          ],
-                        ),
+                        SizedBox(height: spacing),
+                        if (showTasks)
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Row 2 Left Column: Finance Analytics
+                              const Expanded(
+                                flex: 5,
+                                child: LifePilotFinanceAnalytics(),
+                              ),
+                              SizedBox(width: spacing),
+                              // Row 2 Right Column: Priority Tasks
+                              const Expanded(
+                                flex: 6,
+                                child: _DashboardPriorityTasks(),
+                              ),
+                            ],
+                          )
+                        else
+                          const LifePilotFinanceAnalytics(),
+                        SizedBox(height: spacing),
+                        if (showHabits && showFocus)
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Row 3 Left Column: Habit Heatmap
+                              const Expanded(
+                                flex: 5,
+                                child: _DashboardHabitMesh(),
+                              ),
+                              SizedBox(width: spacing),
+                              // Row 3 Right Column: Quick Focus Deck
+                              const Expanded(
+                                flex: 6,
+                                child: _DashboardQuickFocus(),
+                              ),
+                            ],
+                          )
+                        else if (showHabits)
+                          const _DashboardHabitMesh()
+                        else if (showFocus)
+                          const _DashboardQuickFocus(),
                         const SizedBox(height: 96),
                       ] else ...[
                         const _DashboardHeader(),
-                        const SizedBox(height: 24),
-                        const _SystemInsightsProjections(),
-                        const SizedBox(height: 24),
+                        SizedBox(height: spacingMobile),
+                        if (showRunway) ...[
+                          const _SystemInsightsProjections(),
+                          SizedBox(height: spacingMobile),
+                        ],
                         const _DashboardWeekStrip(),
-                        const SizedBox(height: 16),
+                        SizedBox(height: spacingMobile),
                         const LifePilotFinanceAnalytics(),
-                        const SizedBox(height: 16),
-                        const _DashboardPriorityTasks(),
-                        const SizedBox(height: 16),
-                        const _DashboardHabitMesh(),
-                        const SizedBox(height: 16),
-                        const _DashboardQuickFocus(),
+                        SizedBox(height: spacingMobile),
+                        if (showTasks) ...[
+                          const _DashboardPriorityTasks(),
+                          SizedBox(height: spacingMobile),
+                        ],
+                        if (showHabits) ...[
+                          const _DashboardHabitMesh(),
+                          SizedBox(height: spacingMobile),
+                        ],
+                        if (showFocus) ...[
+                          const _DashboardQuickFocus(),
+                          SizedBox(height: spacingMobile),
+                        ],
                         const SizedBox(height: 96),
                       ],
                     ]),
@@ -130,12 +163,15 @@ class DashboardScreen extends ConsumerWidget {
   }
 }
 
-class _DashboardHeader extends StatelessWidget {
+class _DashboardHeader extends ConsumerWidget {
   const _DashboardHeader();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final grid = ref.watch(gridProvider);
+    final isZen = grid.layoutDensity == DashboardLayoutDensity.zen;
+
     final hour = DateTime.now().hour;
     final String greeting;
     if (hour < 12) {
@@ -147,41 +183,45 @@ class _DashboardHeader extends StatelessWidget {
     }
 
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      padding: EdgeInsets.symmetric(vertical: isZen ? 8.0 : 4.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             greeting,
-            style: theme.textTheme.headlineMedium?.copyWith(
-              fontWeight: FontWeight.w300,
-              letterSpacing: 1.6,
-              color: theme.colorScheme.onSurface,
-            ),
+            style:
+                (isZen
+                        ? theme.textTheme.headlineMedium
+                        : theme.textTheme.titleLarge)
+                    ?.copyWith(
+                      fontWeight: FontWeight.w300,
+                      letterSpacing: 1.6,
+                      color: theme.colorScheme.onSurface,
+                    ),
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: isZen ? 8 : 4),
           Row(
             children: [
               Container(
-                width: 8,
-                height: 8,
+                width: isZen ? 8 : 6,
+                height: isZen ? 8 : 6,
                 decoration: BoxDecoration(
                   color: theme.colorScheme.primary,
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
                       color: theme.colorScheme.primary.withValues(alpha: 0.5),
-                      blurRadius: 6,
+                      blurRadius: isZen ? 6 : 4,
                     ),
                   ],
                 ),
               ),
-              const SizedBox(width: 8),
+              SizedBox(width: isZen ? 8 : 6),
               Text(
                 'SYSTEM OPERATIONAL • SECURE FALLBACK SYNC',
                 style: theme.textTheme.labelMedium?.copyWith(
                   fontWeight: FontWeight.w700,
-                  fontSize: 10,
+                  fontSize: isZen ? 10 : 8,
                   letterSpacing: 1.2,
                   color: theme.colorScheme.onSurfaceVariant.withValues(
                     alpha: 0.6,
@@ -203,14 +243,18 @@ class _DashboardWeekStrip extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final eventsAsync = ref.watch(eventsProvider);
+    final grid = ref.watch(gridProvider);
+    final isZen = grid.layoutDensity == DashboardLayoutDensity.zen;
 
     final today = DateTime.now();
     final monday = today.subtract(Duration(days: today.weekday - 1));
     final weekDays = List.generate(7, (i) => monday.add(Duration(days: i)));
 
     return LifePilotGlassCard(
-      radius: 20,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      radius: isZen ? 20 : 12,
+      padding: isZen
+          ? const EdgeInsets.symmetric(horizontal: 14, vertical: 12)
+          : const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -222,12 +266,18 @@ class _DashboardWeekStrip extends ConsumerWidget {
               letterSpacing: 1.2,
             ),
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: isZen ? 12 : 6),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               for (final day in weekDays)
-                _buildDayCell(context, day, today, eventsAsync.valueOrNull),
+                _buildDayCell(
+                  context,
+                  day,
+                  today,
+                  eventsAsync.valueOrNull,
+                  isZen,
+                ),
             ],
           ),
         ],
@@ -240,6 +290,7 @@ class _DashboardWeekStrip extends ConsumerWidget {
     DateTime day,
     DateTime today,
     List<CalendarEvent>? events,
+    bool isZen,
   ) {
     final theme = Theme.of(context);
     final isToday = isSameDate(day, today);
@@ -259,13 +310,16 @@ class _DashboardWeekStrip extends ConsumerWidget {
     BoxDecoration decoration;
     if (isToday) {
       decoration = BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: theme.colorScheme.primary, width: 1.5),
+        borderRadius: BorderRadius.circular(isZen ? 16 : 8),
+        border: Border.all(
+          color: theme.colorScheme.primary,
+          width: isZen ? 1.5 : 1.0,
+        ),
         color: theme.colorScheme.primary.withValues(alpha: 0.12),
         boxShadow: [
           BoxShadow(
             color: theme.colorScheme.primary.withValues(alpha: 0.15),
-            blurRadius: 6,
+            blurRadius: isZen ? 6 : 4,
           ),
         ],
       );
@@ -280,14 +334,14 @@ class _DashboardWeekStrip extends ConsumerWidget {
             label,
             style: theme.textTheme.bodySmall?.copyWith(
               fontWeight: FontWeight.w700,
-              fontSize: 10,
+              fontSize: isZen ? 10 : 8,
               color: theme.colorScheme.onSurface.withValues(alpha: 0.45),
             ),
           ),
-          const SizedBox(height: 6),
+          SizedBox(height: isZen ? 6 : 2),
           Container(
-            width: 36,
-            height: 36,
+            width: isZen ? 36 : 28,
+            height: isZen ? 36 : 28,
             decoration: decoration,
             alignment: Alignment.center,
             child: Stack(
@@ -298,7 +352,7 @@ class _DashboardWeekStrip extends ConsumerWidget {
                   '${day.day}',
                   style: TextStyle(
                     fontWeight: isToday ? FontWeight.w700 : FontWeight.w500,
-                    fontSize: 12,
+                    fontSize: isZen ? 12 : 10,
                     color: isToday
                         ? theme.colorScheme.primary
                         : theme.colorScheme.onSurface,
@@ -306,10 +360,10 @@ class _DashboardWeekStrip extends ConsumerWidget {
                 ),
                 if (hasEvents)
                   Positioned(
-                    bottom: 4,
+                    bottom: isZen ? 4 : 2,
                     child: Container(
-                      width: 4,
-                      height: 4,
+                      width: isZen ? 4 : 3,
+                      height: isZen ? 4 : 3,
                       decoration: BoxDecoration(
                         color: isToday
                             ? theme.colorScheme.primary
@@ -333,6 +387,8 @@ class _DashboardPriorityTasks extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final tasksAsync = ref.watch(tasksProvider);
+    final grid = ref.watch(gridProvider);
+    final isZen = grid.layoutDensity == DashboardLayoutDensity.zen;
 
     return tasksAsync.when(
       loading: () => const SizedBox(
@@ -348,6 +404,9 @@ class _DashboardPriorityTasks extends ConsumerWidget {
 
         return SectionCard(
           title: 'Urgent Tasks',
+          padding: isZen
+              ? const EdgeInsets.all(20)
+              : const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           action: TextButton(
             onPressed: () => context.go('/todo'),
             child: const Text('View all'),
@@ -361,7 +420,7 @@ class _DashboardPriorityTasks extends ConsumerWidget {
                   children: [
                     for (final task in highPriorityTasks)
                       Padding(
-                        padding: const EdgeInsets.only(bottom: 10),
+                        padding: EdgeInsets.only(bottom: isZen ? 10 : 6),
                         child: TaskTile(task: task),
                       ),
                   ],
@@ -882,10 +941,14 @@ class _DashboardQuickFocus extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final grid = ref.watch(gridProvider);
+    final isZen = grid.layoutDensity == DashboardLayoutDensity.zen;
 
     return LifePilotGlassCard(
-      radius: 20,
-      padding: const EdgeInsets.all(16),
+      radius: isZen ? 20 : 12,
+      padding: isZen
+          ? const EdgeInsets.all(16)
+          : const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -897,14 +960,14 @@ class _DashboardQuickFocus extends ConsumerWidget {
               letterSpacing: 1.2,
             ),
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: isZen ? 12 : 6),
           Text(
             'Tap to enter deep immersion instantly.',
             style: theme.textTheme.bodyMedium?.copyWith(
               color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
             ),
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: isZen ? 16 : 8),
           Row(
             children: [
               for (final mins in [25, 45, 60])
@@ -916,6 +979,7 @@ class _DashboardQuickFocus extends ConsumerWidget {
                     ),
                     child: _QuickFocusChip(
                       minutes: mins,
+                      isZen: isZen,
                       onTap: () {
                         ref
                             .read(focusTimerProvider.notifier)
@@ -934,10 +998,15 @@ class _DashboardQuickFocus extends ConsumerWidget {
 }
 
 class _QuickFocusChip extends StatefulWidget {
-  const _QuickFocusChip({required this.minutes, required this.onTap});
+  const _QuickFocusChip({
+    required this.minutes,
+    required this.onTap,
+    required this.isZen,
+  });
 
   final int minutes;
   final VoidCallback onTap;
+  final bool isZen;
 
   @override
   State<_QuickFocusChip> createState() => _QuickFocusChipState();
@@ -966,9 +1035,9 @@ class _QuickFocusChipState extends State<_QuickFocusChip> {
           scale: _isPressed ? 0.95 : (_isHovered ? 1.05 : 1.0),
           duration: const Duration(milliseconds: 100),
           child: LifePilotGlassCard(
-            radius: 20,
+            radius: widget.isZen ? 20 : 12,
             isPressed: _isPressed,
-            padding: const EdgeInsets.symmetric(vertical: 14),
+            padding: EdgeInsets.symmetric(vertical: widget.isZen ? 14 : 8),
             child: Center(
               child: Text(
                 '${widget.minutes}m',
@@ -994,6 +1063,8 @@ class _SystemInsightsProjections extends ConsumerWidget {
     final insightsAsync = ref.watch(systemInsightsProvider);
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final grid = ref.watch(gridProvider);
+    final isZen = grid.layoutDensity == DashboardLayoutDensity.zen;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1006,10 +1077,10 @@ class _SystemInsightsProjections extends ConsumerWidget {
             color: theme.colorScheme.onSurface.withValues(alpha: 0.86),
           ),
         ),
-        const SizedBox(height: 16),
+        SizedBox(height: isZen ? 16 : 8),
         LifePilotGlassCard(
-          radius: 20,
-          padding: const EdgeInsets.all(20),
+          radius: isZen ? 20 : 12,
+          padding: isZen ? const EdgeInsets.all(20) : const EdgeInsets.all(12),
           child: insightsAsync.when(
             loading: () => const Center(
               child: Padding(
@@ -1032,67 +1103,73 @@ class _SystemInsightsProjections extends ConsumerWidget {
                       Icon(
                         Icons.insights_rounded,
                         color: theme.colorScheme.primary,
-                        size: 24,
+                        size: isZen ? 24 : 18,
                       ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
                           'Estimated Runway: ${insights.runwayDays} Days Remaining',
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            letterSpacing: 1.1,
-                            fontWeight: FontWeight.w800,
-                            color: theme.colorScheme.onSurface,
-                          ),
+                          style:
+                              (isZen
+                                      ? theme.textTheme.titleMedium
+                                      : theme.textTheme.bodyLarge)
+                                  ?.copyWith(
+                                    letterSpacing: 1.1,
+                                    fontWeight: FontWeight.w800,
+                                    color: theme.colorScheme.onSurface,
+                                  ),
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 16),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: isDark
-                          ? const Color(0xFF2A2E33)
-                          : const Color(0xFFE8ECEF),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
+                  if (!isZen) ...[
+                    const SizedBox(height: 12),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
                         color: isDark
-                            ? const Color(0xFF3F464E)
-                            : const Color(0xFFCFD5D8),
+                            ? const Color(0xFF2A2E33)
+                            : const Color(0xFFE8ECEF),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: isDark
+                              ? const Color(0xFF3F464E)
+                              : const Color(0xFFCFD5D8),
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.05),
+                            blurRadius: 6,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
                       ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.05),
-                          blurRadius: 8,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Icon(
-                          Icons.psychology_rounded,
-                          color: theme.colorScheme.tertiary,
-                          size: 20,
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            insights.behavioralInsight,
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              fontStyle: FontStyle.italic,
-                              color: isDark
-                                  ? const Color(0xFFD0D6DC)
-                                  : const Color(0xFF4A5568),
-                              height: 1.4,
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(
+                            Icons.psychology_rounded,
+                            color: theme.colorScheme.tertiary,
+                            size: 18,
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              insights.behavioralInsight,
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                fontStyle: FontStyle.italic,
+                                color: isDark
+                                    ? const Color(0xFFD0D6DC)
+                                    : const Color(0xFF4A5568),
+                                height: 1.3,
+                              ),
                             ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
+                  ],
                 ],
               );
             },

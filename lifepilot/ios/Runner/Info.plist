@@ -46,6 +46,6 @@
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>NSFaceIDUsageDescription</key>
-	<string>LifePilot needs FaceID authentication to unlock the application.</string>
+	<string>LifePilot requires biometric authentication to secure your private command vault.</string>
 </dict>
 </plist>

@@ -110,10 +110,17 @@ void main() {
 
       await tester.pumpAndSettle();
 
+      // Scroll to bring the Import button into view
+      await tester.scrollUntilVisible(
+        find.text('Import Encrypted Backup'),
+        200.0,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
+
       // 1. Find and tap the "Import Encrypted Backup" button
       final importButton = find.text('Import Encrypted Backup');
       expect(importButton, findsOneWidget);
-      await tester.ensureVisible(importButton);
       await tester.tap(importButton);
       await tester.pumpAndSettle();
 
@@ -190,8 +197,14 @@ void main() {
 
       await tester.pumpAndSettle();
 
+      await tester.scrollUntilVisible(
+        find.text('Import Encrypted Backup'),
+        200.0,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
+
       final importButton = find.text('Import Encrypted Backup');
-      await tester.ensureVisible(importButton);
       await tester.tap(importButton);
       await tester.pumpAndSettle();
 
@@ -258,8 +271,14 @@ void main() {
 
       await tester.pumpAndSettle();
 
+      await tester.scrollUntilVisible(
+        find.text('Import Encrypted Backup'),
+        200.0,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
+
       final importButton = find.text('Import Encrypted Backup');
-      await tester.ensureVisible(importButton);
       await tester.tap(importButton);
       await tester.pumpAndSettle();
 

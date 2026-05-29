@@ -162,9 +162,7 @@ class _LifePilotGlassCardState extends ConsumerState<LifePilotGlassCard> {
           painter: GlassBackgroundEffectsPainter(
             isHovered: _isHovered,
             mousePosition: _mousePosition,
-            spotlightColor: const Color(
-              0xFFD6BD92,
-            ), // Champagne Gold theme tone
+            spotlightColor: glassPhysics.activeAccentColor.color,
             noiseImage: GlassNoiseCache.noiseImage,
             radius: widget.radius,
             isPressed: widget.isPressed,

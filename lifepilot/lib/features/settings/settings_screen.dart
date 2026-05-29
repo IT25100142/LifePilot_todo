@@ -14,6 +14,7 @@ import '../../core/widgets/state_views.dart';
 import '../../data/database/database_provider.dart';
 import '../theme/theme_provider.dart';
 import '../canvas_studio/canvas_studio_provider.dart';
+import '../canvas_studio/grid_provider.dart';
 import 'settings_providers.dart';
 
 class SettingsScreen extends ConsumerWidget {
@@ -46,6 +47,8 @@ class SettingsScreen extends ConsumerWidget {
                 const _MeshThemeSection(),
                 const SizedBox(height: 16),
                 const _GlassPhysicsStudioSection(),
+                const SizedBox(height: 16),
+                const _DashboardGridManagerSection(),
                 const SizedBox(height: 16),
                 const _SettingsGroupHeader('Currency'),
                 _CurrencySection(currency: state.currency),
@@ -1504,6 +1507,210 @@ class _GlassPhysicsStudioSection extends ConsumerWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Dashboard Grid Manager Section
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _DashboardGridManagerSection extends ConsumerWidget {
+  const _DashboardGridManagerSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final grid = ref.watch(gridProvider);
+    final notifier = ref.read(gridProvider.notifier);
+    final goldColor = const Color(0xFFD6BD92);
+
+    final cardKeys = [
+      {
+        'key': 'runway',
+        'label': 'Predictive Fiscal Runway',
+        'desc': 'Displays days of remaining fiscal runway',
+        'icon': Icons.insights_rounded,
+      },
+      {
+        'key': 'tasks',
+        'label': 'Urgent Tasks List',
+        'desc': 'Displays priority pending checklist items',
+        'icon': Icons.checklist_rounded,
+      },
+      {
+        'key': 'habits',
+        'label': 'Habit Consistency Heatmap',
+        'desc': 'Displays current streak and history grid',
+        'icon': Icons.grid_on_rounded,
+      },
+      {
+        'key': 'focus',
+        'label': 'Quick Focus Deck',
+        'desc': 'Displays deep work quick entry timers',
+        'icon': Icons.timer_rounded,
+      },
+    ];
+
+    return LifePilotGlassCard(
+      radius: 24,
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'DASHBOARD GRID MANAGER',
+            style: theme.textTheme.labelMedium?.copyWith(
+              fontWeight: FontWeight.w800,
+              letterSpacing: 1.5,
+              color: goldColor,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Toggle visible widgets and set layout density for your main dashboard.',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+            ),
+          ),
+          const SizedBox(height: 18),
+
+          // Layout Density Selector
+          Text(
+            'LAYOUT PRESENTATION DENSITY',
+            style: theme.textTheme.labelSmall?.copyWith(
+              fontWeight: FontWeight.w700,
+              letterSpacing: 1.2,
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.56),
+            ),
+          ),
+          const SizedBox(height: 8),
+          _GlassSegmentedSelector<DashboardLayoutDensity>(
+            segments: const [
+              ButtonSegment(
+                value: DashboardLayoutDensity.zen,
+                label: Text('Zen'),
+                icon: Icon(Icons.spa_outlined),
+              ),
+              ButtonSegment(
+                value: DashboardLayoutDensity.executive,
+                label: Text('Executive'),
+                icon: Icon(Icons.analytics_outlined),
+              ),
+            ],
+            selected: grid.layoutDensity,
+            onSelected: (value) {
+              notifier.setLayoutDensity(value);
+            },
+          ),
+
+          const SizedBox(height: 20),
+          Divider(
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.08),
+            height: 1,
+          ),
+          const SizedBox(height: 16),
+
+          Text(
+            'VISIBLE COMPONENT TILES',
+            style: theme.textTheme.labelSmall?.copyWith(
+              fontWeight: FontWeight.w700,
+              letterSpacing: 1.2,
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.56),
+            ),
+          ),
+          const SizedBox(height: 8),
+
+          for (int i = 0; i < cardKeys.length; i++) ...[
+            _GridToggleRow(
+              title: cardKeys[i]['label'] as String,
+              subtitle: cardKeys[i]['desc'] as String,
+              icon: cardKeys[i]['icon'] as IconData,
+              value: grid.visibleCards[cardKeys[i]['key']] ?? true,
+              onChanged: (visible) {
+                notifier.setCardVisible(cardKeys[i]['key'] as String, visible);
+              },
+            ),
+            if (i < cardKeys.length - 1)
+              Divider(
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.08),
+                height: 1,
+                indent: 48,
+              ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _GridToggleRow extends StatelessWidget {
+  const _GridToggleRow({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.value,
+    required this.onChanged,
+  });
+
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.primary.withValues(
+                alpha: isDark ? 0.15 : 0.08,
+              ),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, color: theme.colorScheme.primary, size: 20),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 15,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant.withValues(
+                      alpha: 0.65,
+                    ),
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Switch.adaptive(
+            value: value,
+            activeTrackColor: theme.colorScheme.primary,
+            onChanged: onChanged,
+          ),
+        ],
+      ),
     );
   }
 }

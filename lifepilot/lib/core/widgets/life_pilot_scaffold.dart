@@ -1,7 +1,9 @@
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/canvas_studio/canvas_studio_provider.dart';
 import 'glass.dart';
 import 'mesh_backdrop.dart';
 
@@ -219,7 +221,7 @@ class _LifePilotScaffoldState extends State<LifePilotScaffold> {
 // FloatingDockTab — premium spring-elastic tactile tab with smooth indicators
 // ─────────────────────────────────────────────────────────────────────────────
 
-class FloatingDockTab extends StatefulWidget {
+class FloatingDockTab extends ConsumerStatefulWidget {
   const FloatingDockTab({
     required this.icon,
     required this.selectedIcon,
@@ -236,10 +238,10 @@ class FloatingDockTab extends StatefulWidget {
   final VoidCallback onTap;
 
   @override
-  State<FloatingDockTab> createState() => _FloatingDockTabState();
+  ConsumerState<FloatingDockTab> createState() => _FloatingDockTabState();
 }
 
-class _FloatingDockTabState extends State<FloatingDockTab>
+class _FloatingDockTabState extends ConsumerState<FloatingDockTab>
     with SingleTickerProviderStateMixin {
   late final AnimationController _pressController;
   late final Animation<double> _pressScale;
@@ -273,6 +275,7 @@ class _FloatingDockTabState extends State<FloatingDockTab>
     final activeColor = theme.colorScheme.primary;
     final inactiveColor = theme.colorScheme.onSurface.withValues(alpha: 0.48);
     final color = widget.isSelected ? activeColor : inactiveColor;
+    final accentColor = ref.watch(canvasStudioProvider).activeAccentColor.color;
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
@@ -313,9 +316,7 @@ class _FloatingDockTabState extends State<FloatingDockTab>
                       boxShadow: widget.isSelected
                           ? [
                               BoxShadow(
-                                color: const Color(
-                                  0xFFD6BD92,
-                                ).withValues(alpha: 0.25),
+                                color: accentColor.withValues(alpha: 0.25),
                                 blurRadius: 10,
                                 spreadRadius: 1,
                               ),
