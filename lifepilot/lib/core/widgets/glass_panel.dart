@@ -62,6 +62,7 @@ class LifePilotGlassCard extends StatefulWidget {
     this.borderGradient,
     this.shadowColor,
     this.blurSigma,
+    this.isPressed = false,
     super.key,
   });
 
@@ -74,6 +75,7 @@ class LifePilotGlassCard extends StatefulWidget {
   final Gradient? borderGradient;
   final Color? shadowColor;
   final double? blurSigma;
+  final bool isPressed;
 
   @override
   State<LifePilotGlassCard> createState() => _LifePilotGlassCardState();
@@ -126,20 +128,22 @@ class _LifePilotGlassCardState extends State<LifePilotGlassCard> {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(widget.radius),
         gradient: resolvedCardGradient,
-        boxShadow: [
-          BoxShadow(
-            color: resolvedShadowColor,
-            blurRadius: 40,
-            offset: const Offset(0, 18),
-          ),
-          BoxShadow(
-            color: dark
-                ? const Color(0xFFF2EBDD).withValues(alpha: 0.06)
-                : const Color(0xFFFFFFFF).withValues(alpha: 0.55),
-            blurRadius: 2,
-            offset: const Offset(0, 1),
-          ),
-        ],
+        boxShadow: widget.isPressed
+            ? []
+            : [
+                BoxShadow(
+                  color: resolvedShadowColor,
+                  blurRadius: 40,
+                  offset: const Offset(0, 18),
+                ),
+                BoxShadow(
+                  color: dark
+                      ? const Color(0xFFF2EBDD).withValues(alpha: 0.06)
+                      : const Color(0xFFFFFFFF).withValues(alpha: 0.55),
+                  blurRadius: 2,
+                  offset: const Offset(0, 1),
+                ),
+              ],
       ),
       child: widget.child,
     );
@@ -159,11 +163,14 @@ class _LifePilotGlassCardState extends State<LifePilotGlassCard> {
               0xFFD6BD92,
             ), // Champagne Gold theme tone
             noiseImage: GlassNoiseCache.noiseImage,
+            radius: widget.radius,
+            isPressed: widget.isPressed,
           ),
           foregroundPainter: SpecularBorderPainter(
             radius: widget.radius,
             strokeWidth: 0.75, // Crisp 0.75px specular border highlight
             customBorderGradient: resolvedBorderGradient,
+            isPressed: widget.isPressed,
           ),
           child: container,
         ),
@@ -203,29 +210,78 @@ class GlassBackgroundEffectsPainter extends CustomPainter {
     required this.mousePosition,
     required this.spotlightColor,
     required this.noiseImage,
+    required this.radius,
+    required this.isPressed,
   });
 
   final bool isHovered;
   final Offset mousePosition;
   final Color spotlightColor;
   final ui.Image noiseImage;
+  final double radius;
+  final bool isPressed;
 
   @override
   void paint(Canvas canvas, Size size) {
     final rect = Offset.zero & size;
 
-    // 1. Draw Spotlight (Dynamic Pointer Illuminator)
-    if (isHovered) {
-      final spotlightPaint = Paint()
-        ..shader = ui.Gradient.radial(
-          mousePosition,
-          120.0, // wide radius: 120 logical units
-          [
-            spotlightColor.withValues(alpha: 0.04), // micro-opacity cap: 0.04
-            spotlightColor.withValues(alpha: 0.0),
-          ],
-        );
-      canvas.drawRect(rect, spotlightPaint);
+    if (isPressed) {
+      // Draw neomorphic inset depression shadows
+      canvas.save();
+      final rrect = RRect.fromRectAndRadius(rect, Radius.circular(radius));
+      canvas.clipRRect(rrect);
+
+      // Top-Left dark inset shadow
+      final shadowPath = Path()
+        ..moveTo(rect.left, rect.bottom)
+        ..lineTo(rect.left, rect.top + radius)
+        ..arcToPoint(
+          Offset(rect.left + radius, rect.top),
+          radius: Radius.circular(radius),
+        )
+        ..lineTo(rect.right, rect.top);
+
+      final shadowPaint = Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 8.0
+        ..color = Colors.black.withValues(alpha: 0.28)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4.0);
+
+      canvas.drawPath(shadowPath, shadowPaint);
+
+      // Bottom-Right light inset reflection
+      final lightPath = Path()
+        ..moveTo(rect.right, rect.top)
+        ..lineTo(rect.right, rect.bottom - radius)
+        ..arcToPoint(
+          Offset(rect.right - radius, rect.bottom),
+          radius: Radius.circular(radius),
+        )
+        ..lineTo(rect.left, rect.bottom);
+
+      final lightPaint = Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 4.0
+        ..color = Colors.white.withValues(alpha: 0.18)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2.0);
+
+      canvas.drawPath(lightPath, lightPaint);
+
+      canvas.restore();
+    } else {
+      // 1. Draw Spotlight (Dynamic Pointer Illuminator)
+      if (isHovered) {
+        final spotlightPaint = Paint()
+          ..shader = ui.Gradient.radial(
+            mousePosition,
+            120.0, // wide radius: 120 logical units
+            [
+              spotlightColor.withValues(alpha: 0.04), // micro-opacity cap: 0.04
+              spotlightColor.withValues(alpha: 0.0),
+            ],
+          );
+        canvas.drawRect(rect, spotlightPaint);
+      }
     }
 
     // 2. Draw Sandblasted Grain Filter (Tiled Noise)
@@ -267,7 +323,9 @@ class GlassBackgroundEffectsPainter extends CustomPainter {
     return oldDelegate.isHovered != isHovered ||
         oldDelegate.mousePosition != mousePosition ||
         oldDelegate.spotlightColor != spotlightColor ||
-        oldDelegate.noiseImage != noiseImage;
+        oldDelegate.noiseImage != noiseImage ||
+        oldDelegate.radius != radius ||
+        oldDelegate.isPressed != isPressed;
   }
 }
 
@@ -276,11 +334,13 @@ class SpecularBorderPainter extends CustomPainter {
     required this.radius,
     required this.strokeWidth,
     this.customBorderGradient,
+    this.isPressed = false,
   });
 
   final double radius;
   final double strokeWidth;
   final Gradient? customBorderGradient;
+  final bool isPressed;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -305,7 +365,7 @@ class SpecularBorderPainter extends CustomPainter {
       return;
     }
 
-    // 1. Top-Left Path (Highlight)
+    // 1. Top-Left Path (Highlight / Deep Translucent Shadow Line)
     final pathTopLeft = Path()
       ..moveTo(dRect.left, dRect.bottom - dRadius)
       ..lineTo(dRect.left, dRect.top + dRadius)
@@ -318,18 +378,37 @@ class SpecularBorderPainter extends CustomPainter {
     final highlightPaint = Paint()
       ..strokeWidth = strokeWidth
       ..style = PaintingStyle.stroke
-      ..shader = const LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [
-          Color(0x26FFFFFF), // Colors.white.withValues(alpha: 0.15)
-          Color(0x05FFFFFF), // Colors.white.withValues(alpha: 0.02)
-        ],
-      ).createShader(bounds);
+      ..shader =
+          (isPressed
+                  ? const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Color(
+                          0x33000000,
+                        ), // Colors.black.withValues(alpha: 0.20)
+                        Color(
+                          0x00000000,
+                        ), // Colors.black.withValues(alpha: 0.0)
+                      ],
+                    )
+                  : const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Color(
+                          0x26FFFFFF,
+                        ), // Colors.white.withValues(alpha: 0.15)
+                        Color(
+                          0x05FFFFFF,
+                        ), // Colors.white.withValues(alpha: 0.02)
+                      ],
+                    ))
+              .createShader(bounds);
 
     canvas.drawPath(pathTopLeft, highlightPaint);
 
-    // 2. Bottom-Right Path (Shadow)
+    // 2. Bottom-Right Path (Shadow / Faint White Light Capture)
     final pathBottomRight = Path()
       ..moveTo(dRect.right - dRadius, dRect.top)
       ..arcToPoint(
@@ -350,14 +429,33 @@ class SpecularBorderPainter extends CustomPainter {
     final shadowPaint = Paint()
       ..strokeWidth = strokeWidth
       ..style = PaintingStyle.stroke
-      ..shader = const LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [
-          Color(0x00000000), // Colors.black.withValues(alpha: 0.0)
-          Color(0x33000000), // Colors.black.withValues(alpha: 0.20)
-        ],
-      ).createShader(bounds);
+      ..shader =
+          (isPressed
+                  ? const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Color(
+                          0x00FFFFFF,
+                        ), // Colors.white.withValues(alpha: 0.0)
+                        Color(
+                          0x14FFFFFF,
+                        ), // Colors.white.withValues(alpha: 0.08)
+                      ],
+                    )
+                  : const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Color(
+                          0x00000000,
+                        ), // Colors.black.withValues(alpha: 0.0)
+                        Color(
+                          0x33000000,
+                        ), // Colors.black.withValues(alpha: 0.20)
+                      ],
+                    ))
+              .createShader(bounds);
 
     canvas.drawPath(pathBottomRight, shadowPaint);
   }
@@ -366,6 +464,157 @@ class SpecularBorderPainter extends CustomPainter {
   bool shouldRepaint(covariant SpecularBorderPainter oldDelegate) {
     return oldDelegate.radius != radius ||
         oldDelegate.strokeWidth != strokeWidth ||
-        oldDelegate.customBorderGradient != customBorderGradient;
+        oldDelegate.customBorderGradient != customBorderGradient ||
+        oldDelegate.isPressed != isPressed;
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Specular Light Sweep ("Gleam" Effect) components
+// ─────────────────────────────────────────────────────────────────────────────
+
+class LifePilotGleamRegistry {
+  static final _controllers = <String, LifePilotGleamController>{};
+
+  static void register(String id, LifePilotGleamController controller) {
+    _controllers[id] = controller;
+  }
+
+  static void unregister(String id) {
+    _controllers.remove(id);
+  }
+
+  static void trigger(String id) {
+    _controllers[id]?.trigger();
+  }
+}
+
+class LifePilotGleamController extends ChangeNotifier {
+  void trigger() {
+    notifyListeners();
+  }
+}
+
+class LifePilotGleam extends StatefulWidget {
+  const LifePilotGleam({
+    required this.child,
+    this.controller,
+    this.gleamId,
+    this.radius = LifePilotTheme.glassRadius,
+    super.key,
+  });
+
+  final Widget child;
+  final LifePilotGleamController? controller;
+  final String? gleamId;
+  final double radius;
+
+  @override
+  State<LifePilotGleam> createState() => _LifePilotGleamState();
+}
+
+class _LifePilotGleamState extends State<LifePilotGleam>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _animController;
+  late final LifePilotGleamController _localController;
+
+  @override
+  void initState() {
+    super.initState();
+    _animController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
+    );
+    _localController = widget.controller ?? LifePilotGleamController();
+    _localController.addListener(_onTrigger);
+    if (widget.gleamId != null) {
+      LifePilotGleamRegistry.register(widget.gleamId!, _localController);
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant LifePilotGleam oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.gleamId != widget.gleamId) {
+      if (oldWidget.gleamId != null) {
+        LifePilotGleamRegistry.unregister(oldWidget.gleamId!);
+      }
+      if (widget.gleamId != null) {
+        LifePilotGleamRegistry.register(widget.gleamId!, _localController);
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    if (widget.gleamId != null) {
+      LifePilotGleamRegistry.unregister(widget.gleamId!);
+    }
+    _localController.removeListener(_onTrigger);
+    if (widget.controller == null) {
+      _localController.dispose();
+    }
+    _animController.dispose();
+    super.dispose();
+  }
+
+  void _onTrigger() {
+    if (_animController.isAnimating) {
+      _animController.stop();
+    }
+    _animController.forward(from: 0.0);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return RepaintBoundary(
+      child: CustomPaint(
+        foregroundPainter: _GleamPainter(
+          animation: _animController,
+          radius: widget.radius,
+        ),
+        child: widget.child,
+      ),
+    );
+  }
+}
+
+class _GleamPainter extends CustomPainter {
+  _GleamPainter({required this.animation, required this.radius})
+    : super(repaint: animation);
+
+  final Animation<double> animation;
+  final double radius;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final t = animation.value;
+    if (t == 0.0 || t == 1.0) return;
+
+    final rect = Offset.zero & size;
+    final rrect = RRect.fromRectAndRadius(rect, Radius.circular(radius));
+
+    canvas.save();
+    canvas.clipRRect(rrect);
+
+    final paint = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment(-1.5 + t * 3.0, -1.5 + t * 3.0),
+        end: Alignment(-0.5 + t * 3.0, -0.5 + t * 3.0),
+        colors: [
+          Colors.white.withValues(alpha: 0.0),
+          Colors.white.withValues(alpha: 0.25),
+          Colors.white.withValues(alpha: 0.0),
+        ],
+        stops: const [0.1, 0.5, 0.9],
+      ).createShader(rect);
+
+    canvas.drawRect(rect, paint);
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(covariant _GleamPainter oldDelegate) {
+    return oldDelegate.radius != radius;
   }
 }

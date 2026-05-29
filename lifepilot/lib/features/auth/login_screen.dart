@@ -781,47 +781,46 @@ class _PinKeyState extends State<_PinKey> {
         child: AnimatedScale(
           scale: _isPressed ? 0.92 : (_isHovered ? 1.08 : 1.0),
           duration: const Duration(milliseconds: 100),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 150),
+          child: SizedBox(
             width: 64,
             height: 64,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: _isPressed
-                  ? champagneGold.withValues(alpha: 0.3)
+            child: LifePilotGlassCard(
+              radius: 32,
+              isPressed: _isPressed,
+              padding: EdgeInsets.zero,
+              cardGradient: _isPressed
+                  ? LinearGradient(
+                      colors: [
+                        champagneGold.withValues(alpha: 0.15),
+                        champagneGold.withValues(alpha: 0.05),
+                      ],
+                    )
                   : (_isHovered
-                        ? champagneGold.withValues(alpha: 0.12)
-                        : Colors.white.withValues(alpha: 0.06)),
-              border: Border.all(
-                color: _isPressed || _isHovered
-                    ? champagneGold.withValues(alpha: 0.5)
-                    : Colors.white.withValues(alpha: 0.15),
-                width: 1.2,
-              ),
-              boxShadow: _isHovered
-                  ? [
-                      BoxShadow(
-                        color: champagneGold.withValues(alpha: 0.1),
-                        blurRadius: 8,
-                        spreadRadius: 1,
-                      ),
-                    ]
-                  : null,
-            ),
-            alignment: Alignment.center,
-            child: IconTheme.merge(
-              data: IconThemeData(
-                color: _isHovered || _isPressed ? champagneGold : Colors.white,
-              ),
-              child: DefaultTextStyle.merge(
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w600,
-                  color: _isHovered || _isPressed
-                      ? champagneGold
-                      : Colors.white,
+                        ? LinearGradient(
+                            colors: [
+                              champagneGold.withValues(alpha: 0.08),
+                              champagneGold.withValues(alpha: 0.02),
+                            ],
+                          )
+                        : null),
+              child: Center(
+                child: IconTheme.merge(
+                  data: IconThemeData(
+                    color: _isHovered || _isPressed
+                        ? champagneGold
+                        : Colors.white,
+                  ),
+                  child: DefaultTextStyle.merge(
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w600,
+                      color: _isHovered || _isPressed
+                          ? champagneGold
+                          : Colors.white,
+                    ),
+                    child: widget.child,
+                  ),
                 ),
-                child: widget.child,
               ),
             ),
           ),

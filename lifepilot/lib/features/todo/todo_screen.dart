@@ -211,6 +211,10 @@ class TaskTileState extends ConsumerState<TaskTile> {
       ),
       confirmDismiss: (direction) async {
         if (direction == DismissDirection.startToEnd) {
+          if (!task.isCompleted) {
+            LifePilotGleamRegistry.trigger('task_${task.id}');
+            await Future.delayed(const Duration(milliseconds: 100));
+          }
           await ref.read(toggleTaskCompletionProvider)(task);
           return false;
         }
@@ -223,107 +227,115 @@ class TaskTileState extends ConsumerState<TaskTile> {
         }
         return false;
       },
-      child: LifePilotGlassCard(
+      child: LifePilotGleam(
+        gleamId: 'task_${task.id}',
         radius: 20,
-        padding: EdgeInsets.zero,
-        borderGradient: borderGradient,
-        shadowColor: shadowColor,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              minVerticalPadding: 14,
-              leading: Checkbox(
-                value: task.isCompleted,
-                onChanged: (_) async {
-                  await ref.read(toggleTaskCompletionProvider)(task);
-                },
-              ),
-              title: Text(
-                task.title,
-                style: TextStyle(
-                  decoration: task.isCompleted
-                      ? TextDecoration.lineThrough
-                      : null,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.4,
+        child: LifePilotGlassCard(
+          radius: 20,
+          padding: EdgeInsets.zero,
+          borderGradient: borderGradient,
+          shadowColor: shadowColor,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                minVerticalPadding: 14,
+                leading: Checkbox(
+                  value: task.isCompleted,
+                  onChanged: (_) async {
+                    if (!task.isCompleted) {
+                      LifePilotGleamRegistry.trigger('task_${task.id}');
+                      await Future.delayed(const Duration(milliseconds: 100));
+                    }
+                    await ref.read(toggleTaskCompletionProvider)(task);
+                  },
                 ),
-              ),
-              subtitle: Padding(
-                padding: const EdgeInsets.only(top: 6),
-                child: Wrap(
-                  spacing: 8,
-                  runSpacing: 6,
-                  children: [
-                    _Chip(
-                      label: shortDate(task.dueDate),
-                      color: overdue
-                          ? theme.colorScheme.error
-                          : theme.colorScheme.secondary,
-                    ),
-                    if (task.tags.isNotEmpty)
-                      for (final tag in task.tags.split(','))
-                        if (tag.trim().isNotEmpty) _CategoryBadge(tag: tag),
-                    if (task.recurrencePattern != null &&
-                        task.recurrencePattern != 'none')
+                title: Text(
+                  task.title,
+                  style: TextStyle(
+                    decoration: task.isCompleted
+                        ? TextDecoration.lineThrough
+                        : null,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.4,
+                  ),
+                ),
+                subtitle: Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: Wrap(
+                    spacing: 8,
+                    runSpacing: 6,
+                    children: [
                       _Chip(
-                        label: switch (task.recurrencePattern) {
-                          'daily' => 'Daily',
-                          'weekly' => 'Weekly',
-                          'monthly' => 'Monthly',
-                          _ => '',
-                        },
-                        color: const Color(0xFF286C63),
+                        label: shortDate(task.dueDate),
+                        color: overdue
+                            ? theme.colorScheme.error
+                            : theme.colorScheme.secondary,
                       ),
+                      if (task.tags.isNotEmpty)
+                        for (final tag in task.tags.split(','))
+                          if (tag.trim().isNotEmpty) _CategoryBadge(tag: tag),
+                      if (task.recurrencePattern != null &&
+                          task.recurrencePattern != 'none')
+                        _Chip(
+                          label: switch (task.recurrencePattern) {
+                            'daily' => 'Daily',
+                            'weekly' => 'Weekly',
+                            'monthly' => 'Monthly',
+                            _ => '',
+                          },
+                          color: const Color(0xFF286C63),
+                        ),
+                    ],
+                  ),
+                ),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (hasSubtasks)
+                      IconButton(
+                        visualDensity: VisualDensity.compact,
+                        icon: Icon(
+                          _isExpanded
+                              ? Icons.keyboard_arrow_up
+                              : Icons.keyboard_arrow_down,
+                          size: 20,
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _isExpanded = !_isExpanded;
+                          });
+                        },
+                      ),
+                    PopupMenuButton<String>(
+                      onSelected: (value) async {
+                        if (value == 'edit') {
+                          showTaskForm(context, ref, task: task);
+                        } else if (value == 'delete') {
+                          await ref
+                              .read(notificationServiceProvider)
+                              .cancel(taskReminderId(task.id));
+                          await database.deleteTask(task.id);
+                        }
+                      },
+                      itemBuilder: (context) => const [
+                        PopupMenuItem(value: 'edit', child: Text('Edit')),
+                        PopupMenuItem(value: 'delete', child: Text('Delete')),
+                      ],
+                    ),
                   ],
                 ),
               ),
-              trailing: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (hasSubtasks)
-                    IconButton(
-                      visualDensity: VisualDensity.compact,
-                      icon: Icon(
-                        _isExpanded
-                            ? Icons.keyboard_arrow_up
-                            : Icons.keyboard_arrow_down,
-                        size: 20,
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                      onPressed: () {
-                        setState(() {
-                          _isExpanded = !_isExpanded;
-                        });
-                      },
-                    ),
-                  PopupMenuButton<String>(
-                    onSelected: (value) async {
-                      if (value == 'edit') {
-                        showTaskForm(context, ref, task: task);
-                      } else if (value == 'delete') {
-                        await ref
-                            .read(notificationServiceProvider)
-                            .cancel(taskReminderId(task.id));
-                        await database.deleteTask(task.id);
-                      }
-                    },
-                    itemBuilder: (context) => const [
-                      PopupMenuItem(value: 'edit', child: Text('Edit')),
-                      PopupMenuItem(value: 'delete', child: Text('Delete')),
-                    ],
-                  ),
-                ],
+              AnimatedSize(
+                duration: const Duration(milliseconds: 250),
+                curve: Curves.easeInOut,
+                child: _isExpanded && hasSubtasks
+                    ? _SubtaskList(taskId: task.id)
+                    : const SizedBox.shrink(),
               ),
-            ),
-            AnimatedSize(
-              duration: const Duration(milliseconds: 250),
-              curve: Curves.easeInOut,
-              child: _isExpanded && hasSubtasks
-                  ? _SubtaskList(taskId: task.id)
-                  : const SizedBox.shrink(),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

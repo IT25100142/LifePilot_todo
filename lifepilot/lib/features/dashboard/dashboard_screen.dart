@@ -933,36 +933,52 @@ class _DashboardQuickFocus extends ConsumerWidget {
   }
 }
 
-class _QuickFocusChip extends StatelessWidget {
+class _QuickFocusChip extends StatefulWidget {
   const _QuickFocusChip({required this.minutes, required this.onTap});
 
   final int minutes;
   final VoidCallback onTap;
 
   @override
+  State<_QuickFocusChip> createState() => _QuickFocusChipState();
+}
+
+class _QuickFocusChipState extends State<_QuickFocusChip> {
+  bool _isHovered = false;
+  bool _isPressed = false;
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        alignment: Alignment.center,
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
-          color: theme.colorScheme.onSurface.withValues(alpha: 0.06),
-          border: Border.all(
-            color: theme.colorScheme.onSurface.withValues(alpha: 0.1),
-            width: 1.2,
-          ),
-        ),
-        child: Text(
-          '${minutes}m',
-          style: theme.textTheme.titleSmall?.copyWith(
-            fontWeight: FontWeight.w700,
-            letterSpacing: 0.8,
-            color: theme.colorScheme.primary,
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() {
+        _isHovered = false;
+        _isPressed = false;
+      }),
+      child: GestureDetector(
+        onTapDown: (_) => setState(() => _isPressed = true),
+        onTapUp: (_) => setState(() => _isPressed = false),
+        onTapCancel: () => setState(() => _isPressed = false),
+        onTap: widget.onTap,
+        child: AnimatedScale(
+          scale: _isPressed ? 0.95 : (_isHovered ? 1.05 : 1.0),
+          duration: const Duration(milliseconds: 100),
+          child: LifePilotGlassCard(
+            radius: 20,
+            isPressed: _isPressed,
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            child: Center(
+              child: Text(
+                '${widget.minutes}m',
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.8,
+                  color: theme.colorScheme.primary,
+                ),
+              ),
+            ),
           ),
         ),
       ),

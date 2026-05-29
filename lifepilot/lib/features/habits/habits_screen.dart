@@ -119,115 +119,122 @@ class _HabitCard extends StatelessWidget {
       d = d.subtract(const Duration(days: 1));
     }
 
-    return LifePilotGlassCard(
+    return LifePilotGleam(
+      gleamId: 'habit_${habit.id}',
       radius: 20,
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      habit.title,
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                    if (habit.description.isNotEmpty) ...[
-                      const SizedBox(height: 4),
+      child: LifePilotGlassCard(
+        radius: 20,
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                       Text(
-                        habit.description,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: theme.colorScheme.onSurface.withValues(
-                            alpha: 0.65,
-                          ),
+                        habit.title,
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.5,
                         ),
                       ),
+                      if (habit.description.isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          habit.description,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: theme.colorScheme.onSurface.withValues(
+                              alpha: 0.65,
+                            ),
+                          ),
+                        ),
+                      ],
                     ],
+                  ),
+                ),
+                PopupMenuButton<String>(
+                  icon: const Icon(Icons.more_vert_rounded),
+                  onSelected: (val) async {
+                    if (val == 'delete') {
+                      final confirm = await showDialog<bool>(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          title: const Text('Delete Habit?'),
+                          content: const Text(
+                            'Deleting this habit will permanently erase all associated completion logs.',
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(context, false),
+                              child: const Text('Cancel'),
+                            ),
+                            FilledButton(
+                              onPressed: () => Navigator.pop(context, true),
+                              child: const Text('Delete'),
+                            ),
+                          ],
+                        ),
+                      );
+                      if (confirm == true) {
+                        await ref
+                            .read(habitActionsProvider)
+                            .deleteHabit(habit.id);
+                      }
+                    }
+                  },
+                  itemBuilder: (context) => [
+                    const PopupMenuItem(value: 'delete', child: Text('Delete')),
                   ],
                 ),
-              ),
-              PopupMenuButton<String>(
-                icon: const Icon(Icons.more_vert_rounded),
-                onSelected: (val) async {
-                  if (val == 'delete') {
-                    final confirm = await showDialog<bool>(
-                      context: context,
-                      builder: (context) => AlertDialog(
-                        title: const Text('Delete Habit?'),
-                        content: const Text(
-                          'Deleting this habit will permanently erase all associated completion logs.',
-                        ),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(context, false),
-                            child: const Text('Cancel'),
-                          ),
-                          FilledButton(
-                            onPressed: () => Navigator.pop(context, true),
-                            child: const Text('Delete'),
-                          ),
-                        ],
-                      ),
-                    );
-                    if (confirm == true) {
-                      await ref
-                          .read(habitActionsProvider)
-                          .deleteHabit(habit.id);
-                    }
-                  }
-                },
-                itemBuilder: (context) => [
-                  const PopupMenuItem(value: 'delete', child: Text('Delete')),
-                ],
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              if (habit.categoryTag.isNotEmpty)
-                _HabitCategoryBadge(tag: habit.categoryTag)
-              else
-                const SizedBox.shrink(),
-              Row(
-                children: [
-                  Icon(
-                    Icons.local_fire_department_rounded,
-                    color: theme.colorScheme.primary,
-                    size: 18,
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    '$currentStreak day streak',
-                    style: theme.textTheme.labelMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                if (habit.categoryTag.isNotEmpty)
+                  _HabitCategoryBadge(tag: habit.categoryTag)
+                else
+                  const SizedBox.shrink(),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.local_fire_department_rounded,
                       color: theme.colorScheme.primary,
+                      size: 18,
                     ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          const Divider(height: 1, thickness: 0.5),
-          const SizedBox(height: 16),
-          LifePilotHabitHeatmap(
-            completedDates: completedDates,
-            onDateTapped: (date, isCompleted) {
-              ref
-                  .read(habitActionsProvider)
-                  .toggleHabitLog(habit.id, date, isCompleted);
-            },
-          ),
-        ],
+                    const SizedBox(width: 4),
+                    Text(
+                      '$currentStreak day streak',
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: theme.colorScheme.primary,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            const Divider(height: 1, thickness: 0.5),
+            const SizedBox(height: 16),
+            LifePilotHabitHeatmap(
+              completedDates: completedDates,
+              onDateTapped: (date, isCompleted) {
+                if (!isCompleted) {
+                  LifePilotGleamRegistry.trigger('habit_${habit.id}');
+                }
+                ref
+                    .read(habitActionsProvider)
+                    .toggleHabitLog(habit.id, date, isCompleted);
+              },
+            ),
+          ],
+        ),
       ),
     );
   }
