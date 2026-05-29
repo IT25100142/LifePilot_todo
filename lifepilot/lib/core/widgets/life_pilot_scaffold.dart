@@ -1,7 +1,9 @@
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import 'glass.dart';
+import 'mesh_backdrop.dart';
 
 class LifePilotScaffold extends StatefulWidget {
   const LifePilotScaffold({required this.navigationShell, super.key});
@@ -68,6 +70,7 @@ class _LifePilotScaffoldState extends State<LifePilotScaffold> {
       body: LiquidBackground(
         child: Stack(
           children: [
+            const Positioned.fill(child: LifePilotMeshBackdrop()),
             // ── Page Content with AnimatedSwitcher transitions ──
             Positioned.fill(
               child: Padding(
@@ -128,28 +131,68 @@ class _LifePilotScaffoldState extends State<LifePilotScaffold> {
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       child: RepaintBoundary(
-                        child: GlassPanel(
-                          radius: 32,
-                          padding: const EdgeInsets.symmetric(
-                            vertical: 4,
-                            horizontal: 12,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(32),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.15),
+                                blurRadius: 24,
+                                offset: const Offset(0, 8),
+                              ),
+                            ],
                           ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceAround,
-                            children: [
-                              for (int i = 0; i < _destinations.length; i++)
-                                Expanded(
-                                  child: FloatingDockTab(
-                                    icon: _destinations[i].icon,
-                                    selectedIcon: _destinations[i].selectedIcon,
-                                    label: _destinations[i].label,
-                                    isSelected:
-                                        widget.navigationShell.currentIndex ==
-                                        i,
-                                    onTap: () => _goBranch(i),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(32),
+                            child: BackdropFilter(
+                              filter: ui.ImageFilter.blur(
+                                sigmaX: 25.0,
+                                sigmaY: 25.0,
+                              ),
+                              child: CustomPaint(
+                                foregroundPainter:
+                                    const SpecularTopBorderPainter(
+                                      radius: 32,
+                                      strokeWidth: 0.75,
+                                    ),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 4,
+                                    horizontal: 12,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Theme.of(context).colorScheme.surface
+                                        .withValues(alpha: 0.45),
+                                    borderRadius: BorderRadius.circular(32),
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceAround,
+                                    children: [
+                                      for (
+                                        int i = 0;
+                                        i < _destinations.length;
+                                        i++
+                                      )
+                                        Expanded(
+                                          child: FloatingDockTab(
+                                            icon: _destinations[i].icon,
+                                            selectedIcon:
+                                                _destinations[i].selectedIcon,
+                                            label: _destinations[i].label,
+                                            isSelected:
+                                                widget
+                                                    .navigationShell
+                                                    .currentIndex ==
+                                                i,
+                                            onTap: () => _goBranch(i),
+                                          ),
+                                        ),
+                                    ],
                                   ),
                                 ),
-                            ],
+                              ),
+                            ),
                           ),
                         ),
                       ),
@@ -250,17 +293,34 @@ class _FloatingDockTabState extends State<FloatingDockTab>
               Stack(
                 alignment: Alignment.center,
                 children: [
-                  // Expanding selection glow circle
+                  // Smooth, horizontally elongated high-glass capsule badge with champagne gold micro-glow
                   AnimatedContainer(
                     duration: const Duration(milliseconds: 320),
                     curve: Curves.easeOutCubic,
-                    width: widget.isSelected ? 48 : 0,
-                    height: widget.isSelected ? 48 : 0,
+                    width: widget.isSelected ? 52 : 0,
+                    height: widget.isSelected ? 32 : 0,
                     decoration: BoxDecoration(
-                      shape: BoxShape.circle,
+                      borderRadius: BorderRadius.circular(16),
                       color: widget.isSelected
-                          ? activeColor.withValues(alpha: 0.14)
+                          ? Colors.white.withValues(alpha: 0.08)
                           : Colors.transparent,
+                      border: Border.all(
+                        color: widget.isSelected
+                            ? Colors.white.withValues(alpha: 0.15)
+                            : Colors.transparent,
+                        width: 0.5,
+                      ),
+                      boxShadow: widget.isSelected
+                          ? [
+                              BoxShadow(
+                                color: const Color(
+                                  0xFFD6BD92,
+                                ).withValues(alpha: 0.25),
+                                blurRadius: 10,
+                                spreadRadius: 1,
+                              ),
+                            ]
+                          : [],
                     ),
                   ),
                   // Icon itself with smooth cross-fade
@@ -370,4 +430,55 @@ class _LifePilotDestination {
   final String label;
   final IconData icon;
   final IconData selectedIcon;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SpecularTopBorderPainter — applies a highlight exclusively along the top edge
+// ─────────────────────────────────────────────────────────────────────────────
+
+class SpecularTopBorderPainter extends CustomPainter {
+  const SpecularTopBorderPainter({
+    required this.radius,
+    required this.strokeWidth,
+  });
+
+  final double radius;
+  final double strokeWidth;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final halfStroke = strokeWidth / 2;
+    final dRect = Rect.fromLTWH(
+      halfStroke,
+      halfStroke,
+      size.width - strokeWidth,
+      size.height - strokeWidth,
+    );
+    final dRadius = radius - halfStroke;
+
+    final pathTop = Path()
+      ..moveTo(dRect.left, dRect.top + dRadius)
+      ..arcToPoint(
+        Offset(dRect.left + dRadius, dRect.top),
+        radius: Radius.circular(dRadius),
+      )
+      ..lineTo(dRect.right - dRadius, dRect.top)
+      ..arcToPoint(
+        Offset(dRect.right, dRect.top + dRadius),
+        radius: Radius.circular(dRadius),
+      );
+
+    final paint = Paint()
+      ..strokeWidth = strokeWidth
+      ..style = PaintingStyle.stroke
+      ..color = Colors.white.withValues(alpha: 0.15);
+
+    canvas.drawPath(pathTop, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant SpecularTopBorderPainter oldDelegate) {
+    return oldDelegate.radius != radius ||
+        oldDelegate.strokeWidth != strokeWidth;
+  }
 }

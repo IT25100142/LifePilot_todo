@@ -1,4 +1,5 @@
 import 'dart:isolate';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants/app_constants.dart';
@@ -200,5 +201,8 @@ final systemInsightsProvider = FutureProvider<SystemInsights>((ref) async {
     exchangeRates: ref.watch(exchangeRateProvider).rates,
   );
 
+  if (kIsWeb) {
+    return await Future.microtask(() => _computeInsights(payload));
+  }
   return await Isolate.run(() => _computeInsights(payload));
 });
