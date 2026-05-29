@@ -1,15 +1,19 @@
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class LifePilotMeshBackdrop extends StatefulWidget {
+import '../../features/theme/theme_provider.dart';
+
+class LifePilotMeshBackdrop extends ConsumerStatefulWidget {
   const LifePilotMeshBackdrop({super.key});
 
   @override
-  State<LifePilotMeshBackdrop> createState() => _LifePilotMeshBackdropState();
+  ConsumerState<LifePilotMeshBackdrop> createState() =>
+      _LifePilotMeshBackdropState();
 }
 
-class _LifePilotMeshBackdropState extends State<LifePilotMeshBackdrop>
+class _LifePilotMeshBackdropState extends ConsumerState<LifePilotMeshBackdrop>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
 
@@ -30,7 +34,10 @@ class _LifePilotMeshBackdropState extends State<LifePilotMeshBackdrop>
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final activeProfile = ref.watch(themePaletteProvider);
+    final activeColors =
+        meshPaletteConfig[activeProfile] ??
+        meshPaletteConfig[LifePilotPaletteProfile.champagne]!;
     final size = MediaQuery.sizeOf(context);
 
     return ClipRect(
@@ -64,57 +71,63 @@ class _LifePilotMeshBackdropState extends State<LifePilotMeshBackdrop>
           return Stack(
             clipBehavior: Clip.none,
             children: [
-              // Orb 1 (Champagne Gold)
+              // Orb 1 (Champagne Gold / Primary)
               Positioned(
                 left: x1 - (baseOrbSize * scale1 / 2),
                 top: y1 - (baseOrbSize * scale1 / 2),
                 width: baseOrbSize * scale1,
                 height: baseOrbSize * scale1,
-                child: DecoratedBox(
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 800),
+                  curve: Curves.easeInOut,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     gradient: RadialGradient(
                       colors: [
-                        theme.colorScheme.primary.withValues(alpha: 0.08),
-                        theme.colorScheme.primary.withValues(alpha: 0.0),
+                        activeColors.primary.withValues(alpha: 0.08),
+                        activeColors.primary.withValues(alpha: 0.0),
                       ],
                     ),
                   ),
                 ),
               ),
 
-              // Orb 2 (Muted Velvet Indigo)
+              // Orb 2 (Muted Velvet Indigo / Tertiary)
               Positioned(
                 left: x2 - (baseOrbSize * scale2 / 2),
                 top: y2 - (baseOrbSize * scale2 / 2),
                 width: baseOrbSize * scale2,
                 height: baseOrbSize * scale2,
-                child: DecoratedBox(
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 800),
+                  curve: Curves.easeInOut,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     gradient: RadialGradient(
                       colors: [
-                        theme.colorScheme.tertiary.withValues(alpha: 0.06),
-                        theme.colorScheme.tertiary.withValues(alpha: 0.0),
+                        activeColors.tertiary.withValues(alpha: 0.06),
+                        activeColors.tertiary.withValues(alpha: 0.0),
                       ],
                     ),
                   ),
                 ),
               ),
 
-              // Orb 3 (Slate Charcoal / Teal)
+              // Orb 3 (Slate Charcoal / Teal / Secondary)
               Positioned(
                 left: x3 - (baseOrbSize * scale3 / 2),
                 top: y3 - (baseOrbSize * scale3 / 2),
                 width: baseOrbSize * scale3,
                 height: baseOrbSize * scale3,
-                child: DecoratedBox(
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 800),
+                  curve: Curves.easeInOut,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     gradient: RadialGradient(
                       colors: [
-                        theme.colorScheme.secondary.withValues(alpha: 0.05),
-                        theme.colorScheme.secondary.withValues(alpha: 0.0),
+                        activeColors.secondary.withValues(alpha: 0.05),
+                        activeColors.secondary.withValues(alpha: 0.0),
                       ],
                     ),
                   ),

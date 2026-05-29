@@ -12,6 +12,7 @@ import '../../data/database/app_database.dart';
 import '../../core/widgets/glass_panel.dart';
 import '../../core/widgets/state_views.dart';
 import '../../data/database/database_provider.dart';
+import '../theme/theme_provider.dart';
 import 'settings_providers.dart';
 
 class SettingsScreen extends ConsumerWidget {
@@ -40,6 +41,8 @@ class SettingsScreen extends ConsumerWidget {
               children: [
                 const _SettingsGroupHeader('Appearance'),
                 _ThemeSection(themeMode: state.themeMode),
+                const SizedBox(height: 16),
+                const _MeshThemeSection(),
                 const SizedBox(height: 16),
                 const _SettingsGroupHeader('Currency'),
                 _CurrencySection(currency: state.currency),
@@ -1244,6 +1247,129 @@ class _SpinningIconState extends State<_SpinningIcon>
     return RotationTransition(
       turns: _controller,
       child: Icon(widget.icon, color: widget.color, size: 20),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Member Signature Theme Palette Selector Section
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _MeshThemeSection extends ConsumerStatefulWidget {
+  const _MeshThemeSection();
+
+  @override
+  ConsumerState<_MeshThemeSection> createState() => _MeshThemeSectionState();
+}
+
+class _MeshThemeSectionState extends ConsumerState<_MeshThemeSection> {
+  late final LifePilotGleamController _gleamController;
+
+  @override
+  void initState() {
+    super.initState();
+    _gleamController = LifePilotGleamController();
+  }
+
+  @override
+  void dispose() {
+    _gleamController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final activeProfile = ref.watch(themePaletteProvider);
+    final goldColor = const Color(0xFFD6BD92);
+
+    return LifePilotGleam(
+      controller: _gleamController,
+      radius: 24,
+      child: LifePilotGlassCard(
+        radius: 24,
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'MEMBER SIGNATURE PROFILE',
+              style: theme.textTheme.labelMedium?.copyWith(
+                fontWeight: FontWeight.w800,
+                letterSpacing: 1.5,
+                color: goldColor,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Customize the kinetic mesh background profile.',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+              ),
+            ),
+            const SizedBox(height: 18),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                for (final profile in LifePilotPaletteProfile.values) ...[
+                  GestureDetector(
+                    onTap: () {
+                      if (activeProfile != profile) {
+                        ref
+                            .read(themePaletteProvider.notifier)
+                            .setPaletteProfile(profile);
+                        _gleamController.trigger();
+                      }
+                    },
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      width: 80,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(24),
+                        color: Colors.white.withValues(
+                          alpha: activeProfile == profile ? 0.08 : 0.03,
+                        ),
+                        border: Border.all(
+                          color: activeProfile == profile
+                              ? goldColor
+                              : Colors.white.withValues(alpha: 0.12),
+                          width: activeProfile == profile ? 2.0 : 1.0,
+                        ),
+                      ),
+                      alignment: Alignment.center,
+                      child: Container(
+                        width: 48,
+                        height: 18,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(9),
+                          gradient: LinearGradient(
+                            colors: [
+                              meshPaletteConfig[profile]!.primary,
+                              meshPaletteConfig[profile]!.secondary,
+                              meshPaletteConfig[profile]!.tertiary,
+                            ],
+                          ),
+                          boxShadow: activeProfile == profile
+                              ? [
+                                  BoxShadow(
+                                    color: meshPaletteConfig[profile]!.primary
+                                        .withValues(alpha: 0.3),
+                                    blurRadius: 6,
+                                    spreadRadius: 1,
+                                  ),
+                                ]
+                              : null,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
