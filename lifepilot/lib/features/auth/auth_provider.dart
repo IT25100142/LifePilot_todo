@@ -152,6 +152,9 @@ class AuthNotifier extends Notifier<AuthState> {
   }
 
   Future<bool> authenticateBiometrically() async {
+    if (ref.read(authSessionProvider)) {
+      return false;
+    }
     try {
       final isAvailable =
           await _localAuth.canCheckBiometrics ||
@@ -167,6 +170,7 @@ class AuthNotifier extends Notifier<AuthState> {
       );
 
       if (didAuthenticate) {
+        ref.read(authSessionProvider.notifier).markAsUnlocked();
         state = state.copyWith(isLocked: false);
         return true;
       }
@@ -195,4 +199,19 @@ class AuthNotifier extends Notifier<AuthState> {
 
 final authProvider = NotifierProvider<AuthNotifier, AuthState>(
   AuthNotifier.new,
+);
+
+class AuthSessionNotifier extends Notifier<bool> {
+  @override
+  bool build() {
+    return false;
+  }
+
+  void markAsUnlocked() {
+    state = true;
+  }
+}
+
+final authSessionProvider = NotifierProvider<AuthSessionNotifier, bool>(
+  AuthSessionNotifier.new,
 );

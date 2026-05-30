@@ -32,7 +32,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final authState = ref.read(authProvider);
-      if (!authState.isFirstTimeLaunch && !authState.isRecovering) {
+      final isUnlocked = ref.read(authSessionProvider);
+      if (!authState.isFirstTimeLaunch &&
+          !authState.isRecovering &&
+          !isUnlocked) {
         _triggerBiometrics();
       }
     });
@@ -46,7 +49,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _triggerBiometrics() async {
-    await ref.read(authProvider.notifier).authenticateBiometrically();
+    final isUnlocked = ref.read(authSessionProvider);
+    if (isUnlocked) {
+      return;
+    }
+    final success = await ref
+        .read(authProvider.notifier)
+        .authenticateBiometrically();
+    if (success) {
+      ref.read(authSessionProvider.notifier).markAsUnlocked();
+    }
   }
 
   void _onKeyPress(String key) {

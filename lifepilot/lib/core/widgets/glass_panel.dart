@@ -357,7 +357,7 @@ class SpecularBorderPainter extends CustomPainter {
       size.width - strokeWidth,
       size.height - strokeWidth,
     );
-    final dRadius = radius - halfStroke;
+    final dRadius = math.max(0.0, radius - halfStroke);
     final bounds = Offset.zero & size;
 
     if (customBorderGradient != null) {
