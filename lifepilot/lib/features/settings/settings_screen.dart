@@ -15,6 +15,7 @@ import '../../data/database/database_provider.dart';
 import '../theme/theme_provider.dart';
 import '../canvas_studio/canvas_studio_provider.dart';
 import '../canvas_studio/grid_provider.dart';
+import '../../core/theme/theme_customizer_provider.dart';
 import 'settings_providers.dart';
 
 class SettingsScreen extends ConsumerWidget {
@@ -1160,13 +1161,15 @@ class _AboutSection extends StatelessWidget {
   }
 }
 
-class _AmbientBackdrop extends StatelessWidget {
+class _AmbientBackdrop extends ConsumerWidget {
   const _AmbientBackdrop();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final customizer = ref.watch(themeCustomizerProvider);
+    final tint = customizer.backdropTintColor;
 
     final primaryGlow = const Color(
       0xFFD6BD92,
@@ -1175,42 +1178,54 @@ class _AmbientBackdrop extends StatelessWidget {
       0xFFC8A97A,
     ).withValues(alpha: isDark ? 0.10 : 0.08);
 
-    return Stack(
-      children: [
-        Positioned.fill(
-          child: Container(
-            color: isDark ? const Color(0xFF151316) : const Color(0xFFF7F3EC),
-          ),
-        ),
-        Positioned(
-          top: -120,
-          left: -120,
-          width: 380,
-          height: 380,
-          child: Container(
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: RadialGradient(
-                colors: [primaryGlow, primaryGlow.withValues(alpha: 0)],
+    return TweenAnimationBuilder<Color?>(
+      tween: ColorTween(begin: tint, end: tint),
+      duration: const Duration(milliseconds: 300),
+      builder: (context, animatedTint, child) {
+        final currentTint = animatedTint ?? tint;
+        final baseColor = isDark
+            ? Color.alphaBlend(
+                currentTint.withValues(alpha: 0.5),
+                const Color(0xFF151316),
+              )
+            : Color.alphaBlend(
+                currentTint.withValues(alpha: 0.1),
+                const Color(0xFFF7F3EC),
+              );
+        return Stack(
+          children: [
+            Positioned.fill(child: Container(color: baseColor)),
+            Positioned(
+              top: -120,
+              left: -120,
+              width: 380,
+              height: 380,
+              child: Container(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [primaryGlow, primaryGlow.withValues(alpha: 0)],
+                  ),
+                ),
               ),
             ),
-          ),
-        ),
-        Positioned(
-          bottom: 120,
-          right: -150,
-          width: 480,
-          height: 480,
-          child: Container(
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: RadialGradient(
-                colors: [secondaryGlow, secondaryGlow.withValues(alpha: 0)],
+            Positioned(
+              bottom: 120,
+              right: -150,
+              width: 480,
+              height: 480,
+              child: Container(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [secondaryGlow, secondaryGlow.withValues(alpha: 0)],
+                  ),
+                ),
               ),
             ),
-          ),
-        ),
-      ],
+          ],
+        );
+      },
     );
   }
 }
@@ -1390,8 +1405,8 @@ class _GlassPhysicsStudioSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final physics = ref.watch(canvasStudioProvider);
-    final notifier = ref.read(canvasStudioProvider.notifier);
+    final customizer = ref.watch(themeCustomizerProvider);
+    final notifier = ref.read(themeCustomizerProvider.notifier);
     final goldColor = const Color(0xFFD6BD92);
 
     return LifePilotGlassCard(
@@ -1417,39 +1432,90 @@ class _GlassPhysicsStudioSection extends ConsumerWidget {
           ),
           const SizedBox(height: 20),
 
-          // Blur Intensity Slider
+          // Glass Blur Scale Slider
           _buildSliderRow(
             context: context,
-            label: 'Blur Intensity',
-            value: physics.blurSigma,
-            min: 4.0,
-            max: 45.0,
-            displayValue: physics.blurSigma.toStringAsFixed(1),
-            onChanged: (val) => notifier.setBlurSigma(val),
+            label: 'Glass Blur Scale',
+            value: customizer.glassBlurScale,
+            min: 0.0,
+            max: 30.0,
+            displayValue: customizer.glassBlurScale.toStringAsFixed(1),
+            onChanged: (val) => notifier.setGlassBlurScale(val),
           ),
           const SizedBox(height: 16),
 
-          // Specular Gloss Slider
+          // Surface Opacity Slider
           _buildSliderRow(
             context: context,
-            label: 'Specular Gloss',
-            value: physics.specularOpacity,
-            min: 0.0,
-            max: 0.40,
-            displayValue: physics.specularOpacity.toStringAsFixed(3),
-            onChanged: (val) => notifier.setSpecularOpacity(val),
+            label: 'Surface Opacity',
+            value: customizer.surfaceOpacity,
+            min: 0.05,
+            max: 0.60,
+            displayValue: customizer.surfaceOpacity.toStringAsFixed(2),
+            onChanged: (val) => notifier.setSurfaceOpacity(val),
           ),
           const SizedBox(height: 16),
 
-          // Grain Texture Opacity Slider
+          // Specular & Grain Intensity Slider
           _buildSliderRow(
             context: context,
-            label: 'Grain Texture',
-            value: physics.grainOpacity,
+            label: 'Specular & Grain Intensity',
+            value: customizer.specularGrainIntensity,
             min: 0.0,
-            max: 0.05,
-            displayValue: physics.grainOpacity.toStringAsFixed(4),
-            onChanged: (val) => notifier.setGrainOpacity(val),
+            max: 1.0,
+            displayValue: customizer.specularGrainIntensity.toStringAsFixed(2),
+            onChanged: (val) => notifier.setSpecularGrainIntensity(val),
+          ),
+          const SizedBox(height: 16),
+
+          // Backdrop Tint Color Chips Selector
+          Text(
+            'Backdrop Tint Color',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              for (final color in const [
+                Color(0xFF0F0E11), // Deep Obsidian
+                Color(0xFF0D1B2A), // Midnight Navy
+                Color(0xFF14121F), // Dark Indigo
+                Color(0xFF1A0E1B), // Royal Plum
+                Color(0xFF0E1A14), // Forest Emerald
+              ]) ...[
+                GestureDetector(
+                  onTap: () => notifier.setBackdropTintColor(color),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    margin: const EdgeInsets.only(right: 12),
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: color,
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: customizer.backdropTintColor == color
+                            ? goldColor
+                            : Colors.white.withValues(alpha: 0.2),
+                        width: customizer.backdropTintColor == color
+                            ? 2.0
+                            : 1.0,
+                      ),
+                      boxShadow: customizer.backdropTintColor == color
+                          ? [
+                              BoxShadow(
+                                color: goldColor.withValues(alpha: 0.3),
+                                blurRadius: 6,
+                              ),
+                            ]
+                          : null,
+                    ),
+                  ),
+                ),
+              ],
+            ],
           ),
         ],
       ),
@@ -1523,6 +1589,7 @@ class _DashboardGridManagerSection extends ConsumerWidget {
     final theme = Theme.of(context);
     final grid = ref.watch(gridProvider);
     final notifier = ref.read(gridProvider.notifier);
+    final customizer = ref.watch(themeCustomizerProvider);
     final goldColor = const Color(0xFFD6BD92);
 
     final cardKeys = [
@@ -1585,22 +1652,24 @@ class _DashboardGridManagerSection extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 8),
-          _GlassSegmentedSelector<DashboardLayoutDensity>(
+          _GlassSegmentedSelector<String>(
             segments: const [
               ButtonSegment(
-                value: DashboardLayoutDensity.zen,
+                value: 'Zen',
                 label: Text('Zen'),
                 icon: Icon(Icons.spa_outlined),
               ),
               ButtonSegment(
-                value: DashboardLayoutDensity.executive,
+                value: 'Executive',
                 label: Text('Executive'),
                 icon: Icon(Icons.analytics_outlined),
               ),
             ],
-            selected: grid.layoutDensity,
+            selected: customizer.interfaceDensity,
             onSelected: (value) {
-              notifier.setLayoutDensity(value);
+              ref
+                  .read(themeCustomizerProvider.notifier)
+                  .setInterfaceDensity(value);
             },
           ),
 

@@ -1,18 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/theme.dart';
+import '../theme/theme_customizer_provider.dart';
 import 'glass_panel.dart';
 
-class LiquidBackground extends StatefulWidget {
+export 'interactive_button.dart';
+
+class LiquidBackground extends ConsumerStatefulWidget {
   const LiquidBackground({required this.child, super.key});
 
   final Widget child;
 
   @override
-  State<LiquidBackground> createState() => _LiquidBackgroundState();
+  ConsumerState<LiquidBackground> createState() => _LiquidBackgroundState();
 }
 
-class _LiquidBackgroundState extends State<LiquidBackground>
+class _LiquidBackgroundState extends ConsumerState<LiquidBackground>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
 
@@ -35,56 +39,85 @@ class _LiquidBackgroundState extends State<LiquidBackground>
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final dark = theme.brightness == Brightness.dark;
+    final customizer = ref.watch(themeCustomizerProvider);
+    final tint = customizer.backdropTintColor;
 
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, child) {
-        final t = _controller.value;
-        return DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment(-0.9 + t * 0.22, -1),
-              end: Alignment(0.9 - t * 0.18, 1),
-              colors: dark
-                  ? const [
-                      Color(0xFF151316),
-                      Color(0xFF1A171A),
-                      Color(0xFF1D1A1E),
-                    ]
-                  : const [
-                      Color(0xFFF7F3EC),
-                      Color(0xFFF9F6F0),
-                      Color(0xFFFFFCF8),
-                    ],
-            ),
-          ),
-          child: Stack(
-            children: [
-              Positioned.fill(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topRight,
-                      end: Alignment.bottomLeft,
-                      colors: [
-                        const Color(
-                          0xFFD6BD92,
-                        ).withValues(alpha: dark ? 0.12 : 0.16),
-                        Colors.transparent,
-                        const Color(
-                          0xFFC8A97A,
-                        ).withValues(alpha: dark ? 0.10 : 0.14),
-                      ],
+    return TweenAnimationBuilder<Color?>(
+      tween: ColorTween(begin: tint, end: tint),
+      duration: const Duration(milliseconds: 300),
+      builder: (context, animatedTint, child) {
+        final currentTint = animatedTint ?? tint;
+        return AnimatedBuilder(
+          animation: _controller,
+          builder: (context, child) {
+            final t = _controller.value;
+            final baseColors = dark
+                ? [
+                    Color.alphaBlend(
+                      currentTint.withValues(alpha: 0.45),
+                      const Color(0xFF151316),
                     ),
-                  ),
+                    Color.alphaBlend(
+                      currentTint.withValues(alpha: 0.3),
+                      const Color(0xFF1A171A),
+                    ),
+                    Color.alphaBlend(
+                      currentTint.withValues(alpha: 0.15),
+                      const Color(0xFF1D1A1E),
+                    ),
+                  ]
+                : [
+                    Color.alphaBlend(
+                      currentTint.withValues(alpha: 0.08),
+                      const Color(0xFFF7F3EC),
+                    ),
+                    Color.alphaBlend(
+                      currentTint.withValues(alpha: 0.05),
+                      const Color(0xFFF9F6F0),
+                    ),
+                    Color.alphaBlend(
+                      currentTint.withValues(alpha: 0.02),
+                      const Color(0xFFFFFCF8),
+                    ),
+                  ];
+
+            return DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment(-0.9 + t * 0.22, -1),
+                  end: Alignment(0.9 - t * 0.18, 1),
+                  colors: baseColors,
                 ),
               ),
-              Positioned.fill(child: child!),
-            ],
-          ),
+              child: Stack(
+                children: [
+                  Positioned.fill(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topRight,
+                          end: Alignment.bottomLeft,
+                          colors: [
+                            const Color(
+                              0xFFD6BD92,
+                            ).withValues(alpha: dark ? 0.12 : 0.16),
+                            Colors.transparent,
+                            const Color(
+                              0xFFC8A97A,
+                            ).withValues(alpha: dark ? 0.10 : 0.14),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  Positioned.fill(child: child!),
+                ],
+              ),
+            );
+          },
+          child: widget.child,
         );
       },
-      child: widget.child,
     );
   }
 }

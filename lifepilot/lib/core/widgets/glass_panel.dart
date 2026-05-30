@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/theme.dart';
 import '../../features/canvas_studio/canvas_studio_provider.dart';
+import '../theme/theme_customizer_provider.dart';
 
 class GlassNoiseCache {
   static ui.Image? _noiseImage;
@@ -93,125 +94,151 @@ class _LifePilotGlassCardState extends ConsumerState<LifePilotGlassCard> {
     final dark = theme.brightness == Brightness.dark;
     final glassExt = theme.extension<GlassThemeExtension>();
     final glassPhysics = ref.watch(canvasStudioProvider);
+    final customizer = ref.watch(themeCustomizerProvider);
 
-    // Fallbacks if theme extension is not registered
-    final resolvedCardGradient =
-        widget.cardGradient ??
-        glassExt?.cardGradient ??
-        LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: dark
-              ? [
-                  Colors.white.withValues(alpha: 0.06),
-                  Colors.white.withValues(alpha: 0.01),
-                ]
-              : [
-                  Colors.white.withValues(alpha: 0.12),
-                  Colors.white.withValues(alpha: 0.04),
-                ],
+    return TweenAnimationBuilder<ThemeCustomizerState>(
+      tween: ThemeCustomizerStateTween(begin: customizer, end: customizer),
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeOutCubic,
+      builder: (context, animatedState, child) {
+        // Fallbacks if theme extension is not registered
+        final resolvedCardGradient =
+            widget.cardGradient ??
+            LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: dark
+                  ? [
+                      Colors.white.withValues(
+                        alpha: animatedState.surfaceOpacity,
+                      ),
+                      Colors.white.withValues(
+                        alpha: animatedState.surfaceOpacity * 0.16,
+                      ),
+                    ]
+                  : [
+                      Colors.white.withValues(
+                        alpha: (animatedState.surfaceOpacity * 1.5).clamp(
+                          0.0,
+                          1.0,
+                        ),
+                      ),
+                      Colors.white.withValues(
+                        alpha: (animatedState.surfaceOpacity * 0.5).clamp(
+                          0.0,
+                          1.0,
+                        ),
+                      ),
+                    ],
+            );
+
+        final resolvedBorderGradient =
+            widget.borderGradient ?? glassExt?.borderGradient;
+
+        final resolvedBlurSigma =
+            widget.blurSigma ?? animatedState.glassBlurScale;
+        final resolvedShadowColor =
+            widget.shadowColor ??
+            glassExt?.shadowColor ??
+            (dark
+                ? Colors.black.withValues(alpha: 0.24)
+                : Colors.black.withValues(alpha: 0.06));
+
+        final double animSpecular = animatedState.specularGrainIntensity * 0.3;
+        final double animGrain = animatedState.specularGrainIntensity * 0.02;
+
+        Widget container = AnimatedContainer(
+          duration: LifePilotTheme.pageDuration,
+          curve: LifePilotTheme.quickCurve,
+          padding: widget.padding,
+          constraints: widget.constraints,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(widget.radius),
+            gradient: resolvedCardGradient,
+            boxShadow: widget.isPressed
+                ? []
+                : [
+                    BoxShadow(
+                      color: resolvedShadowColor,
+                      blurRadius: 40,
+                      offset: const Offset(0, 18),
+                    ),
+                    BoxShadow(
+                      color: dark
+                          ? const Color(0xFFF2EBDD).withValues(alpha: 0.06)
+                          : const Color(0xFFFFFFFF).withValues(alpha: 0.55),
+                      blurRadius: 2,
+                      offset: const Offset(0, 1),
+                    ),
+                  ],
+          ),
+          child: widget.child,
         );
 
-    final resolvedBorderGradient =
-        widget.borderGradient ?? glassExt?.borderGradient;
-
-    final resolvedBlurSigma = widget.blurSigma ?? glassPhysics.blurSigma;
-    final resolvedShadowColor =
-        widget.shadowColor ??
-        glassExt?.shadowColor ??
-        (dark
-            ? Colors.black.withValues(alpha: 0.24)
-            : Colors.black.withValues(alpha: 0.06));
-
-    Widget container = AnimatedContainer(
-      duration: LifePilotTheme.pageDuration,
-      curve: LifePilotTheme.quickCurve,
-      padding: widget.padding,
-      constraints: widget.constraints,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(widget.radius),
-        gradient: resolvedCardGradient,
-        boxShadow: widget.isPressed
-            ? []
-            : [
-                BoxShadow(
-                  color: resolvedShadowColor,
-                  blurRadius: 40,
-                  offset: const Offset(0, 18),
-                ),
-                BoxShadow(
-                  color: dark
-                      ? const Color(0xFFF2EBDD).withValues(alpha: 0.06)
-                      : const Color(0xFFFFFFFF).withValues(alpha: 0.55),
-                  blurRadius: 2,
-                  offset: const Offset(0, 1),
-                ),
-              ],
-      ),
-      child: widget.child,
-    );
-
-    Widget content = ClipRRect(
-      borderRadius: BorderRadius.circular(widget.radius),
-      child: BackdropFilter(
-        filter: ui.ImageFilter.blur(
-          sigmaX: resolvedBlurSigma,
-          sigmaY: resolvedBlurSigma,
-        ),
-        child: Stack(
-          fit: StackFit.passthrough,
-          children: [
-            Positioned.fill(
-              child: ExcludeSemantics(
-                child: CustomPaint(
-                  painter: GlassBackgroundEffectsPainter(
-                    isHovered: _isHovered,
-                    mousePosition: _mousePosition,
-                    spotlightColor: glassPhysics.activeAccentColor.color,
-                    noiseImage: GlassNoiseCache.noiseImage,
-                    radius: widget.radius,
-                    isPressed: widget.isPressed,
-                    grainOpacity: glassPhysics.grainOpacity,
-                  ),
-                  foregroundPainter: SpecularBorderPainter(
-                    radius: widget.radius,
-                    strokeWidth: 0.75, // Crisp 0.75px specular border highlight
-                    customBorderGradient: resolvedBorderGradient,
-                    isPressed: widget.isPressed,
-                    specularOpacity: glassPhysics.specularOpacity,
-                  ),
-                ),
-              ),
-            ),
-            container,
-          ],
-        ),
-      ),
-    );
-
-    if (widget.onTap != null) {
-      content = Material(
-        color: Colors.transparent,
-        child: InkWell(
+        Widget content = ClipRRect(
           borderRadius: BorderRadius.circular(widget.radius),
-          onTap: widget.onTap,
-          child: content,
-        ),
-      );
-    }
+          child: BackdropFilter(
+            filter: ui.ImageFilter.blur(
+              sigmaX: resolvedBlurSigma,
+              sigmaY: resolvedBlurSigma,
+            ),
+            child: Stack(
+              fit: StackFit.passthrough,
+              children: [
+                Positioned.fill(
+                  child: ExcludeSemantics(
+                    child: CustomPaint(
+                      painter: GlassBackgroundEffectsPainter(
+                        isHovered: _isHovered,
+                        mousePosition: _mousePosition,
+                        spotlightColor: glassPhysics.activeAccentColor.color,
+                        noiseImage: GlassNoiseCache.noiseImage,
+                        radius: widget.radius,
+                        isPressed: widget.isPressed,
+                        grainOpacity: animGrain,
+                      ),
+                      foregroundPainter: SpecularBorderPainter(
+                        radius: widget.radius,
+                        strokeWidth:
+                            0.75, // Crisp 0.75px specular border highlight
+                        customBorderGradient: resolvedBorderGradient,
+                        isPressed: widget.isPressed,
+                        specularOpacity: animSpecular,
+                      ),
+                    ),
+                  ),
+                ),
+                container,
+              ],
+            ),
+          ),
+        );
 
-    return MouseRegion(
-      onEnter: (event) => setState(() {
-        _isHovered = true;
-        _mousePosition = event.localPosition;
-      }),
-      onHover: (event) => setState(() {
-        _mousePosition = event.localPosition;
-      }),
-      onExit: (event) => setState(() {
-        _isHovered = false;
-      }),
-      child: content,
+        if (widget.onTap != null) {
+          content = Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(widget.radius),
+              onTap: widget.onTap,
+              child: content,
+            ),
+          );
+        }
+
+        return MouseRegion(
+          onEnter: (event) => setState(() {
+            _isHovered = true;
+            _mousePosition = event.localPosition;
+          }),
+          onHover: (event) => setState(() {
+            _mousePosition = event.localPosition;
+          }),
+          onExit: (event) => setState(() {
+            _isHovered = false;
+          }),
+          child: content,
+        );
+      },
     );
   }
 }

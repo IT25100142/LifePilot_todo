@@ -22,6 +22,7 @@ import '../habits/widgets/habit_heatmap.dart';
 import '../todo/todo_screen.dart';
 import '../insights/insights_provider.dart';
 import '../canvas_studio/grid_provider.dart';
+import '../../core/theme/theme_customizer_provider.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -34,7 +35,8 @@ class DashboardScreen extends ConsumerWidget {
 
     final grid = ref.watch(gridProvider);
     final visibleCards = grid.visibleCards;
-    final isZen = grid.layoutDensity == DashboardLayoutDensity.zen;
+    final customizer = ref.watch(themeCustomizerProvider);
+    final isZen = customizer.interfaceDensity == 'Zen';
 
     final double spacing = isZen ? 24.0 : 12.0;
     final double spacingMobile = isZen ? 16.0 : 8.0;
@@ -50,115 +52,173 @@ class DashboardScreen extends ConsumerWidget {
       body: Stack(
         children: [
           const Positioned.fill(child: _AmbientBackdrop()),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: CustomScrollView(
-              slivers: [
-                SliverAppBar(
-                  backgroundColor: Colors.transparent,
-                  elevation: 0,
-                  scrolledUnderElevation: 0,
-                  title: const Text('LifePilot'),
-                  actions: [
-                    IconButton(
-                      tooltip: 'Settings',
-                      onPressed: () => context.go('/settings'),
-                      icon: const Icon(Icons.settings_outlined),
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 400),
+            transitionBuilder: (Widget child, Animation<double> animation) {
+              final offsetAnimation =
+                  Tween<Offset>(
+                    begin: const Offset(0.0, 0.05),
+                    end: Offset.zero,
+                  ).animate(
+                    CurvedAnimation(
+                      parent: animation,
+                      curve: LifePilotTheme.quickCurve,
                     ),
-                  ],
-                ),
-                SliverPadding(
-                  padding: const EdgeInsets.only(bottom: 24),
-                  sliver: SliverList(
-                    delegate: SliverChildListDelegate([
-                      const _SearchBar(),
-                      SizedBox(height: spacing),
-                      if (query.isNotEmpty)
-                        _SearchResultsView(currency: currency)
-                      else if (isWide) ...[
-                        const _DashboardHeader(),
-                        SizedBox(height: spacing),
-                        if (showRunway) ...[
-                          const _SystemInsightsProjections(),
-                          SizedBox(height: spacing),
-                        ],
-                        const _DashboardWeekStrip(),
-                        SizedBox(height: spacing),
-                        if (showTasks)
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // Row 2 Left Column: Finance Analytics
-                              const Expanded(
-                                flex: 5,
-                                child: LifePilotFinanceAnalytics(),
-                              ),
-                              SizedBox(width: spacing),
-                              // Row 2 Right Column: Priority Tasks
-                              const Expanded(
-                                flex: 6,
-                                child: _DashboardPriorityTasks(),
-                              ),
-                            ],
-                          )
-                        else
-                          const LifePilotFinanceAnalytics(),
-                        SizedBox(height: spacing),
-                        if (showHabits && showFocus)
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // Row 3 Left Column: Habit Heatmap
-                              const Expanded(
-                                flex: 5,
-                                child: _DashboardHabitMesh(),
-                              ),
-                              SizedBox(width: spacing),
-                              // Row 3 Right Column: Quick Focus Deck
-                              const Expanded(
-                                flex: 6,
-                                child: _DashboardQuickFocus(),
-                              ),
-                            ],
-                          )
-                        else if (showHabits)
-                          const _DashboardHabitMesh()
-                        else if (showFocus)
-                          const _DashboardQuickFocus(),
-                        const SizedBox(height: 96),
-                      ] else ...[
-                        const _DashboardHeader(),
-                        SizedBox(height: spacingMobile),
-                        if (showRunway) ...[
-                          const _SystemInsightsProjections(),
-                          SizedBox(height: spacingMobile),
-                        ],
-                        const _DashboardWeekStrip(),
-                        SizedBox(height: spacingMobile),
-                        const LifePilotFinanceAnalytics(),
-                        SizedBox(height: spacingMobile),
-                        if (showTasks) ...[
-                          const _DashboardPriorityTasks(),
-                          SizedBox(height: spacingMobile),
-                        ],
-                        if (showHabits) ...[
-                          const _DashboardHabitMesh(),
-                          SizedBox(height: spacingMobile),
-                        ],
-                        if (showFocus) ...[
-                          const _DashboardQuickFocus(),
-                          SizedBox(height: spacingMobile),
-                        ],
-                        const SizedBox(height: 96),
-                      ],
-                    ]),
+                  );
+              return FadeTransition(
+                opacity: animation,
+                child: SlideTransition(position: offsetAnimation, child: child),
+              );
+            },
+            child: isZen
+                ? Center(
+                    key: const ValueKey('dashboard_zen'),
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 800.0),
+                      child: Padding(
+                        padding: const EdgeInsets.all(32.0),
+                        child: _buildDashboardScrollView(
+                          context,
+                          ref,
+                          spacing: spacing,
+                          spacingMobile: spacingMobile,
+                          currency: currency,
+                          query: query,
+                          showRunway: showRunway,
+                          showTasks: showTasks,
+                          showHabits: showHabits,
+                          showFocus: showFocus,
+                          isWide: isWide,
+                        ),
+                      ),
+                    ),
+                  )
+                : Padding(
+                    key: const ValueKey('dashboard_executive'),
+                    padding: const EdgeInsets.all(12.0),
+                    child: _buildDashboardScrollView(
+                      context,
+                      ref,
+                      spacing: spacing,
+                      spacingMobile: spacingMobile,
+                      currency: currency,
+                      query: query,
+                      showRunway: showRunway,
+                      showTasks: showTasks,
+                      showHabits: showHabits,
+                      showFocus: showFocus,
+                      isWide: isWide,
+                    ),
                   ),
-                ),
-              ],
-            ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildDashboardScrollView(
+    BuildContext context,
+    WidgetRef ref, {
+    required double spacing,
+    required double spacingMobile,
+    required String currency,
+    required String query,
+    required bool showRunway,
+    required bool showTasks,
+    required bool showHabits,
+    required bool showFocus,
+    required bool isWide,
+  }) {
+    return CustomScrollView(
+      slivers: [
+        SliverAppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          scrolledUnderElevation: 0,
+          title: const Text('LifePilot'),
+          actions: [
+            IconButton(
+              tooltip: 'Settings',
+              onPressed: () => context.go('/settings'),
+              icon: const Icon(Icons.settings_outlined),
+            ),
+          ],
+        ),
+        SliverPadding(
+          padding: const EdgeInsets.only(bottom: 24),
+          sliver: SliverList(
+            delegate: SliverChildListDelegate([
+              const _SearchBar(),
+              SizedBox(height: spacing),
+              if (query.isNotEmpty)
+                _SearchResultsView(currency: currency)
+              else if (isWide) ...[
+                const _DashboardHeader(),
+                SizedBox(height: spacing),
+                if (showRunway) ...[
+                  const _SystemInsightsProjections(),
+                  SizedBox(height: spacing),
+                ],
+                const _DashboardWeekStrip(),
+                SizedBox(height: spacing),
+                if (showTasks)
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Expanded(
+                        flex: 5,
+                        child: LifePilotFinanceAnalytics(),
+                      ),
+                      SizedBox(width: spacing),
+                      const Expanded(flex: 6, child: _DashboardPriorityTasks()),
+                    ],
+                  )
+                else
+                  const LifePilotFinanceAnalytics(),
+                SizedBox(height: spacing),
+                if (showHabits && showFocus)
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Expanded(flex: 5, child: _DashboardHabitMesh()),
+                      SizedBox(width: spacing),
+                      const Expanded(flex: 6, child: _DashboardQuickFocus()),
+                    ],
+                  )
+                else if (showHabits)
+                  const _DashboardHabitMesh()
+                else if (showFocus)
+                  const _DashboardQuickFocus(),
+                const SizedBox(height: 96),
+              ] else ...[
+                const _DashboardHeader(),
+                SizedBox(height: spacingMobile),
+                if (showRunway) ...[
+                  const _SystemInsightsProjections(),
+                  SizedBox(height: spacingMobile),
+                ],
+                const _DashboardWeekStrip(),
+                SizedBox(height: spacingMobile),
+                const LifePilotFinanceAnalytics(),
+                SizedBox(height: spacingMobile),
+                if (showTasks) ...[
+                  const _DashboardPriorityTasks(),
+                  SizedBox(height: spacingMobile),
+                ],
+                if (showHabits) ...[
+                  const _DashboardHabitMesh(),
+                  SizedBox(height: spacingMobile),
+                ],
+                if (showFocus) ...[
+                  const _DashboardQuickFocus(),
+                  SizedBox(height: spacingMobile),
+                ],
+                const SizedBox(height: 96),
+              ],
+            ]),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -169,8 +229,7 @@ class _DashboardHeader extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final grid = ref.watch(gridProvider);
-    final isZen = grid.layoutDensity == DashboardLayoutDensity.zen;
+    final isZen = ref.watch(themeCustomizerProvider).interfaceDensity == 'Zen';
 
     final hour = DateTime.now().hour;
     final String greeting;
@@ -247,8 +306,7 @@ class _DashboardWeekStrip extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final eventsAsync = ref.watch(eventsProvider);
-    final grid = ref.watch(gridProvider);
-    final isZen = grid.layoutDensity == DashboardLayoutDensity.zen;
+    final isZen = ref.watch(themeCustomizerProvider).interfaceDensity == 'Zen';
 
     final today = DateTime.now();
     final monday = today.subtract(Duration(days: today.weekday - 1));
@@ -397,8 +455,7 @@ class _DashboardPriorityTasks extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final tasksAsync = ref.watch(tasksProvider);
-    final grid = ref.watch(gridProvider);
-    final isZen = grid.layoutDensity == DashboardLayoutDensity.zen;
+    final isZen = ref.watch(themeCustomizerProvider).interfaceDensity == 'Zen';
 
     return ConstrainedBox(
       constraints: const BoxConstraints(minWidth: double.infinity),
@@ -773,13 +830,15 @@ String _priorityLabel(String priority) {
   return '${priority.substring(0, 1).toUpperCase()}${priority.substring(1)}';
 }
 
-class _AmbientBackdrop extends StatelessWidget {
+class _AmbientBackdrop extends ConsumerWidget {
   const _AmbientBackdrop();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final customizer = ref.watch(themeCustomizerProvider);
+    final tint = customizer.backdropTintColor;
 
     final primaryGlow = const Color(
       0xFFD6BD92,
@@ -788,42 +847,54 @@ class _AmbientBackdrop extends StatelessWidget {
       0xFFC8A97A,
     ).withValues(alpha: isDark ? 0.10 : 0.08);
 
-    return Stack(
-      children: [
-        Positioned.fill(
-          child: Container(
-            color: isDark ? const Color(0xFF151316) : const Color(0xFFF7F3EC),
-          ),
-        ),
-        Positioned(
-          top: -120,
-          left: -120,
-          width: 380,
-          height: 380,
-          child: Container(
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: RadialGradient(
-                colors: [primaryGlow, primaryGlow.withValues(alpha: 0)],
+    return TweenAnimationBuilder<Color?>(
+      tween: ColorTween(begin: tint, end: tint),
+      duration: const Duration(milliseconds: 300),
+      builder: (context, animatedTint, child) {
+        final currentTint = animatedTint ?? tint;
+        final baseColor = isDark
+            ? Color.alphaBlend(
+                currentTint.withValues(alpha: 0.5),
+                const Color(0xFF151316),
+              )
+            : Color.alphaBlend(
+                currentTint.withValues(alpha: 0.1),
+                const Color(0xFFF7F3EC),
+              );
+        return Stack(
+          children: [
+            Positioned.fill(child: Container(color: baseColor)),
+            Positioned(
+              top: -120,
+              left: -120,
+              width: 380,
+              height: 380,
+              child: Container(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [primaryGlow, primaryGlow.withValues(alpha: 0)],
+                  ),
+                ),
               ),
             ),
-          ),
-        ),
-        Positioned(
-          bottom: 120,
-          right: -150,
-          width: 480,
-          height: 480,
-          child: Container(
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: RadialGradient(
-                colors: [secondaryGlow, secondaryGlow.withValues(alpha: 0)],
+            Positioned(
+              bottom: 120,
+              right: -150,
+              width: 480,
+              height: 480,
+              child: Container(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [secondaryGlow, secondaryGlow.withValues(alpha: 0)],
+                  ),
+                ),
               ),
             ),
-          ),
-        ),
-      ],
+          ],
+        );
+      },
     );
   }
 }
@@ -954,8 +1025,7 @@ class _DashboardQuickFocus extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final grid = ref.watch(gridProvider);
-    final isZen = grid.layoutDensity == DashboardLayoutDensity.zen;
+    final isZen = ref.watch(themeCustomizerProvider).interfaceDensity == 'Zen';
 
     return ConstrainedBox(
       constraints: const BoxConstraints(minWidth: double.infinity),
@@ -1082,8 +1152,7 @@ class _SystemInsightsProjections extends ConsumerWidget {
     final insightsAsync = ref.watch(systemInsightsProvider);
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final grid = ref.watch(gridProvider);
-    final isZen = grid.layoutDensity == DashboardLayoutDensity.zen;
+    final isZen = ref.watch(themeCustomizerProvider).interfaceDensity == 'Zen';
 
     return ConstrainedBox(
       constraints: const BoxConstraints(minWidth: double.infinity),
