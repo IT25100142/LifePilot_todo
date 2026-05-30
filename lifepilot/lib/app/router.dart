@@ -31,6 +31,9 @@ class RouterRefreshListenable extends ChangeNotifier {
     ref.listen(authProvider, (previous, next) {
       notifyListeners();
     });
+    ref.listen(authSessionProvider, (previous, next) {
+      notifyListeners();
+    });
   }
 }
 
@@ -41,13 +44,15 @@ final routerProvider = Provider<GoRouter>((ref) {
     refreshListenable: RouterRefreshListenable(ref),
     redirect: (context, state) {
       final authState = ref.read(authProvider);
+      final isSessionUnlocked = ref.read(authSessionProvider);
       final goingToLogin = state.matchedLocation == '/login';
 
-      if ((authState.isLocked || authState.isFirstTimeLaunch) &&
-          !goingToLogin) {
+      final isLocked = !isSessionUnlocked && !authState.isFirstTimeLaunch;
+
+      if ((isLocked || authState.isFirstTimeLaunch) && !goingToLogin) {
         return '/login';
       }
-      if (!authState.isLocked && !authState.isFirstTimeLaunch && goingToLogin) {
+      if (!isLocked && !authState.isFirstTimeLaunch && goingToLogin) {
         return '/';
       }
       return null;

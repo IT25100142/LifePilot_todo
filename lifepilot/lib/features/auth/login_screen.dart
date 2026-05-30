@@ -26,6 +26,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   // Recovery states
   final _recoveryKeyController = TextEditingController();
   bool _resettingPasscode = false;
+  bool _hasAttemptedAutoBiometrics = false;
 
   @override
   void initState() {
@@ -35,7 +36,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       final isUnlocked = ref.read(authSessionProvider);
       if (!authState.isFirstTimeLaunch &&
           !authState.isRecovering &&
-          !isUnlocked) {
+          !isUnlocked &&
+          !_hasAttemptedAutoBiometrics) {
+        _hasAttemptedAutoBiometrics = true;
         _triggerBiometrics();
       }
     });

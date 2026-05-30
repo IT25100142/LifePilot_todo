@@ -5,6 +5,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+class BiometricGate {
+  // A true runtime memory gate that cannot be cleared by widget unmounts
+  static bool _nativePromptActiveOrPassed = false;
+}
+
 class AuthState {
   const AuthState({
     required this.isLocked,
@@ -152,14 +157,19 @@ class AuthNotifier extends Notifier<AuthState> {
   }
 
   Future<bool> authenticateBiometrically() async {
-    if (ref.read(authSessionProvider)) {
+    if (ref.read(authSessionProvider) ||
+        BiometricGate._nativePromptActiveOrPassed) {
       return false;
     }
+    BiometricGate._nativePromptActiveOrPassed = true;
     try {
       final isAvailable =
           await _localAuth.canCheckBiometrics ||
           await _localAuth.isDeviceSupported();
-      if (!isAvailable) return false;
+      if (!isAvailable) {
+        BiometricGate._nativePromptActiveOrPassed = false;
+        return false;
+      }
 
       final didAuthenticate = await _localAuth.authenticate(
         localizedReason: 'Authenticate to access your Secure Vault',
@@ -176,6 +186,10 @@ class AuthNotifier extends Notifier<AuthState> {
       }
     } catch (_) {
       // Gracefully fail in testing/headless environments
+    } finally {
+      if (state.isLocked) {
+        BiometricGate._nativePromptActiveOrPassed = false;
+      }
     }
     return false;
   }
