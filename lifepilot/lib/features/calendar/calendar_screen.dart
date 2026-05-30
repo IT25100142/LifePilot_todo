@@ -686,6 +686,7 @@ class _RealTimeIndicatorState extends State<_RealTimeIndicator>
       left: widget.leftOffset - 6,
       right: 0,
       top: top - 4,
+      height: 8.0,
       child: AnimatedBuilder(
         animation: _pulseController,
         builder: (context, child) {

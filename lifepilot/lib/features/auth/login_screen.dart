@@ -27,11 +27,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _recoveryKeyController = TextEditingController();
   bool _resettingPasscode = false;
   bool _hasAttemptedAutoBiometrics = false;
+  late final FocusNode _keyboardFocusNode;
 
   @override
   void initState() {
     super.initState();
+    _keyboardFocusNode = FocusNode();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      _keyboardFocusNode.requestFocus();
       final authState = ref.read(authProvider);
       final isUnlocked = ref.read(authSessionProvider);
       if (!authState.isFirstTimeLaunch &&
@@ -48,6 +51,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   void dispose() {
     _usernameController.dispose();
     _recoveryKeyController.dispose();
+    _keyboardFocusNode.dispose();
     super.dispose();
   }
 
@@ -158,6 +162,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         .read(authProvider.notifier)
         .resetPinWithRecoveryKey(_recoveryKeyController.text, _tempPin);
     if (success) {
+      ref.read(authSessionProvider.notifier).markAsUnlocked();
       setState(() {
         _resettingPasscode = false;
         _tempPin = '';
@@ -180,7 +185,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   Future<void> _verifyPin() async {
     final success = await ref.read(authProvider.notifier).verifyPin(_pin);
-    if (!success) {
+    if (success) {
+      ref.read(authSessionProvider.notifier).markAsUnlocked();
+    } else {
       setState(() {
         _errorState = true;
       });
@@ -248,72 +255,114 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final authState = ref.watch(authProvider);
     final champagneGold = const Color(0xFFD6BD92);
 
-    return Scaffold(
-      body: Stack(
-        children: [
-          // Background Glows
-          Positioned.fill(child: Container(color: const Color(0xFF0F0E11))),
-          Positioned(
-            top: -120,
-            left: -120,
-            width: 380,
-            height: 380,
-            child: Container(
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [
-                    champagneGold.withValues(alpha: 0.12),
-                    champagneGold.withValues(alpha: 0.0),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          Positioned(
-            bottom: -150,
-            right: -150,
-            width: 480,
-            height: 480,
-            child: Container(
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [
-                    champagneGold.withValues(alpha: 0.08),
-                    champagneGold.withValues(alpha: 0.0),
-                  ],
-                ),
-              ),
-            ),
-          ),
-
-          // Frost blur layer (sigma 35.0)
-          Positioned.fill(
-            child: BackdropFilter(
-              filter: ui.ImageFilter.blur(sigmaX: 35.0, sigmaY: 35.0),
+    return KeyboardListener(
+      focusNode: _keyboardFocusNode,
+      autofocus: true,
+      onKeyEvent: (event) {
+        if (event is KeyDownEvent) {
+          final key = event.logicalKey;
+          if (key == LogicalKeyboardKey.backspace) {
+            _onBackspace();
+          } else if (key == LogicalKeyboardKey.digit0 ||
+              key == LogicalKeyboardKey.numpad0) {
+            _onKeyPress('0');
+          } else if (key == LogicalKeyboardKey.digit1 ||
+              key == LogicalKeyboardKey.numpad1) {
+            _onKeyPress('1');
+          } else if (key == LogicalKeyboardKey.digit2 ||
+              key == LogicalKeyboardKey.numpad2) {
+            _onKeyPress('2');
+          } else if (key == LogicalKeyboardKey.digit3 ||
+              key == LogicalKeyboardKey.numpad3) {
+            _onKeyPress('3');
+          } else if (key == LogicalKeyboardKey.digit4 ||
+              key == LogicalKeyboardKey.numpad4) {
+            _onKeyPress('4');
+          } else if (key == LogicalKeyboardKey.digit5 ||
+              key == LogicalKeyboardKey.numpad5) {
+            _onKeyPress('5');
+          } else if (key == LogicalKeyboardKey.digit6 ||
+              key == LogicalKeyboardKey.numpad6) {
+            _onKeyPress('6');
+          } else if (key == LogicalKeyboardKey.digit7 ||
+              key == LogicalKeyboardKey.numpad7) {
+            _onKeyPress('7');
+          } else if (key == LogicalKeyboardKey.digit8 ||
+              key == LogicalKeyboardKey.numpad8) {
+            _onKeyPress('8');
+          } else if (key == LogicalKeyboardKey.digit9 ||
+              key == LogicalKeyboardKey.numpad9) {
+            _onKeyPress('9');
+          }
+        }
+      },
+      child: Scaffold(
+        body: Stack(
+          children: [
+            // Background Glows
+            Positioned.fill(child: Container(color: const Color(0xFF0F0E11))),
+            Positioned(
+              top: -120,
+              left: -120,
+              width: 380,
+              height: 380,
               child: Container(
-                color: Colors.black.withValues(alpha: 0.3),
-                alignment: Alignment.center,
-                child: SafeArea(
-                  child: Center(
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                      child: LifePilotGlassCard(
-                        radius: 28,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 32,
-                          vertical: 40,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      champagneGold.withValues(alpha: 0.12),
+                      champagneGold.withValues(alpha: 0.0),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              bottom: -150,
+              right: -150,
+              width: 480,
+              height: 480,
+              child: Container(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      champagneGold.withValues(alpha: 0.08),
+                      champagneGold.withValues(alpha: 0.0),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
+            // Frost blur layer (sigma 35.0)
+            Positioned.fill(
+              child: BackdropFilter(
+                filter: ui.ImageFilter.blur(sigmaX: 35.0, sigmaY: 35.0),
+                child: Container(
+                  color: Colors.black.withValues(alpha: 0.3),
+                  alignment: Alignment.center,
+                  child: SafeArea(
+                    child: Center(
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                        child: LifePilotGlassCard(
+                          radius: 28,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 32,
+                            vertical: 40,
+                          ),
+                          child: _buildActiveView(authState, champagneGold),
                         ),
-                        child: _buildActiveView(authState, champagneGold),
                       ),
                     ),
                   ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -488,6 +537,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               child: FilledButton(
                 onPressed: () {
                   ref.read(authProvider.notifier).completeOnboarding();
+                  ref.read(authSessionProvider.notifier).markAsUnlocked();
                 },
                 child: const Text('Complete Onboarding'),
               ),

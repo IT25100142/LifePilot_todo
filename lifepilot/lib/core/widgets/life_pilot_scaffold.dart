@@ -17,23 +17,6 @@ class LifePilotScaffold extends StatefulWidget {
 }
 
 class _LifePilotScaffoldState extends State<LifePilotScaffold> {
-  late int _previousIndex;
-
-  @override
-  void initState() {
-    super.initState();
-    _previousIndex = widget.navigationShell.currentIndex;
-  }
-
-  @override
-  void didUpdateWidget(covariant LifePilotScaffold oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.navigationShell.currentIndex !=
-        widget.navigationShell.currentIndex) {
-      _previousIndex = oldWidget.navigationShell.currentIndex;
-    }
-  }
-
   static const _destinations = [
     _LifePilotDestination(
       'Dashboard',
@@ -78,45 +61,7 @@ class _LifePilotScaffoldState extends State<LifePilotScaffold> {
               child: Padding(
                 padding: const EdgeInsets.only(bottom: 96),
                 child: SafeArea(
-                  child: RepaintBoundary(
-                    child: AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 350),
-                      switchInCurve: Curves.easeInOutCubic,
-                      switchOutCurve: Curves.easeInOutCubic,
-                      transitionBuilder: (child, animation) {
-                        final childKey = child.key as ValueKey<int>?;
-                        final isIncoming =
-                            childKey?.value ==
-                            widget.navigationShell.currentIndex;
-                        final isForward =
-                            widget.navigationShell.currentIndex >=
-                            _previousIndex;
-
-                        final beginOffset = isForward
-                            ? (isIncoming
-                                  ? const Offset(0.08, 0.0)
-                                  : const Offset(-0.08, 0.0))
-                            : (isIncoming
-                                  ? const Offset(-0.08, 0.0)
-                                  : const Offset(0.08, 0.0));
-
-                        return FadeTransition(
-                          opacity: animation,
-                          child: SlideTransition(
-                            position: Tween<Offset>(
-                              begin: beginOffset,
-                              end: Offset.zero,
-                            ).animate(animation),
-                            child: child,
-                          ),
-                        );
-                      },
-                      child: RepaintBoundary(
-                        key: ValueKey<int>(widget.navigationShell.currentIndex),
-                        child: widget.navigationShell,
-                      ),
-                    ),
-                  ),
+                  child: RepaintBoundary(child: widget.navigationShell),
                 ),
               ),
             ),

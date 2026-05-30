@@ -182,55 +182,59 @@ class _DashboardHeader extends ConsumerWidget {
       greeting = 'GOOD EVENING, SANKALPA';
     }
 
-    return Padding(
-      padding: EdgeInsets.symmetric(vertical: isZen ? 8.0 : 4.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            greeting,
-            style:
-                (isZen
-                        ? theme.textTheme.headlineMedium
-                        : theme.textTheme.titleLarge)
-                    ?.copyWith(
-                      fontWeight: FontWeight.w300,
-                      letterSpacing: 1.6,
-                      color: theme.colorScheme.onSurface,
-                    ),
-          ),
-          SizedBox(height: isZen ? 8 : 4),
-          Row(
-            children: [
-              Container(
-                width: isZen ? 8 : 6,
-                height: isZen ? 8 : 6,
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.primary,
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: theme.colorScheme.primary.withValues(alpha: 0.5),
-                      blurRadius: isZen ? 6 : 4,
-                    ),
-                  ],
-                ),
-              ),
-              SizedBox(width: isZen ? 8 : 6),
-              Text(
-                'SYSTEM OPERATIONAL • SECURE FALLBACK SYNC',
-                style: theme.textTheme.labelMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  fontSize: isZen ? 10 : 8,
-                  letterSpacing: 1.2,
-                  color: theme.colorScheme.onSurfaceVariant.withValues(
-                    alpha: 0.6,
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minWidth: double.infinity),
+      child: Padding(
+        padding: EdgeInsets.symmetric(vertical: isZen ? 8.0 : 4.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              greeting,
+              style:
+                  (isZen
+                          ? theme.textTheme.headlineMedium
+                          : theme.textTheme.titleLarge)
+                      ?.copyWith(
+                        fontWeight: FontWeight.w300,
+                        letterSpacing: 1.6,
+                        color: theme.colorScheme.onSurface,
+                      ),
+            ),
+            SizedBox(height: isZen ? 8 : 4),
+            Row(
+              children: [
+                Container(
+                  width: isZen ? 8 : 6,
+                  height: isZen ? 8 : 6,
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primary,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: theme.colorScheme.primary.withValues(alpha: 0.5),
+                        blurRadius: isZen ? 6 : 4,
+                      ),
+                    ],
                   ),
                 ),
-              ),
-            ],
-          ),
-        ],
+                SizedBox(width: isZen ? 8 : 6),
+                Text(
+                  'SYSTEM OPERATIONAL • SECURE FALLBACK SYNC',
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    fontSize: isZen ? 10 : 8,
+                    letterSpacing: 1.2,
+                    color: theme.colorScheme.onSurfaceVariant.withValues(
+                      alpha: 0.6,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -250,37 +254,43 @@ class _DashboardWeekStrip extends ConsumerWidget {
     final monday = today.subtract(Duration(days: today.weekday - 1));
     final weekDays = List.generate(7, (i) => monday.add(Duration(days: i)));
 
-    return LifePilotGlassCard(
-      radius: isZen ? 20 : 12,
-      padding: isZen
-          ? const EdgeInsets.symmetric(horizontal: 14, vertical: 12)
-          : const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'WEEKLY RUNWAY',
-            style: theme.textTheme.labelMedium?.copyWith(
-              fontWeight: FontWeight.w700,
-              color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
-              letterSpacing: 1.2,
-            ),
-          ),
-          SizedBox(height: isZen ? 12 : 6),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              for (final day in weekDays)
-                _buildDayCell(
-                  context,
-                  day,
-                  today,
-                  eventsAsync.valueOrNull,
-                  isZen,
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minWidth: double.infinity),
+      child: LifePilotGlassCard(
+        radius: isZen ? 20 : 12,
+        padding: isZen
+            ? const EdgeInsets.symmetric(horizontal: 14, vertical: 12)
+            : const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'WEEKLY RUNWAY',
+              style: theme.textTheme.labelMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: theme.colorScheme.onSurfaceVariant.withValues(
+                  alpha: 0.6,
                 ),
-            ],
-          ),
-        ],
+                letterSpacing: 1.2,
+              ),
+            ),
+            SizedBox(height: isZen ? 12 : 6),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                for (final day in weekDays)
+                  _buildDayCell(
+                    context,
+                    day,
+                    today,
+                    eventsAsync.valueOrNull,
+                    isZen,
+                  ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -390,43 +400,46 @@ class _DashboardPriorityTasks extends ConsumerWidget {
     final grid = ref.watch(gridProvider);
     final isZen = grid.layoutDensity == DashboardLayoutDensity.zen;
 
-    return tasksAsync.when(
-      loading: () => const SizedBox(
-        height: 150,
-        child: Center(child: CircularProgressIndicator()),
-      ),
-      error: (err, _) =>
-          SizedBox(height: 150, child: Center(child: Text('Error: $err'))),
-      data: (items) {
-        final highPriorityTasks = items
-            .where((t) => t.priority == 'high' && !t.isCompleted)
-            .toList();
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minWidth: double.infinity),
+      child: tasksAsync.when(
+        loading: () => const SizedBox(
+          height: 150,
+          child: Center(child: CircularProgressIndicator()),
+        ),
+        error: (err, _) =>
+            SizedBox(height: 150, child: Center(child: Text('Error: $err'))),
+        data: (items) {
+          final highPriorityTasks = items
+              .where((t) => t.priority == 'high' && !t.isCompleted)
+              .toList();
 
-        return SectionCard(
-          title: 'Urgent Tasks',
-          padding: isZen
-              ? const EdgeInsets.all(20)
-              : const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          action: TextButton(
-            onPressed: () => context.go('/todo'),
-            child: const Text('View all'),
-          ),
-          child: highPriorityTasks.isEmpty
-              ? const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 20),
-                  child: Text('All clear! No urgent tasks pending.'),
-                )
-              : Column(
-                  children: [
-                    for (final task in highPriorityTasks)
-                      Padding(
-                        padding: EdgeInsets.only(bottom: isZen ? 10 : 6),
-                        child: TaskTile(task: task),
-                      ),
-                  ],
-                ),
-        );
-      },
+          return SectionCard(
+            title: 'Urgent Tasks',
+            padding: isZen
+                ? const EdgeInsets.all(20)
+                : const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            action: TextButton(
+              onPressed: () => context.go('/todo'),
+              child: const Text('View all'),
+            ),
+            child: highPriorityTasks.isEmpty
+                ? const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 20),
+                    child: Text('All clear! No urgent tasks pending.'),
+                  )
+                : Column(
+                    children: [
+                      for (final task in highPriorityTasks)
+                        Padding(
+                          padding: EdgeInsets.only(bottom: isZen ? 10 : 6),
+                          child: TaskTile(task: task),
+                        ),
+                    ],
+                  ),
+          );
+        },
+      ),
     );
   }
 }
@@ -944,54 +957,60 @@ class _DashboardQuickFocus extends ConsumerWidget {
     final grid = ref.watch(gridProvider);
     final isZen = grid.layoutDensity == DashboardLayoutDensity.zen;
 
-    return LifePilotGlassCard(
-      radius: isZen ? 20 : 12,
-      padding: isZen
-          ? const EdgeInsets.all(16)
-          : const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'QUICK FOCUS',
-            style: theme.textTheme.labelMedium?.copyWith(
-              fontWeight: FontWeight.w700,
-              color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
-              letterSpacing: 1.2,
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minWidth: double.infinity),
+      child: LifePilotGlassCard(
+        radius: isZen ? 20 : 12,
+        padding: isZen
+            ? const EdgeInsets.all(16)
+            : const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'QUICK FOCUS',
+              style: theme.textTheme.labelMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: theme.colorScheme.onSurfaceVariant.withValues(
+                  alpha: 0.6,
+                ),
+                letterSpacing: 1.2,
+              ),
             ),
-          ),
-          SizedBox(height: isZen ? 12 : 6),
-          Text(
-            'Tap to enter deep immersion instantly.',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+            SizedBox(height: isZen ? 12 : 6),
+            Text(
+              'Tap to enter deep immersion instantly.',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+              ),
             ),
-          ),
-          SizedBox(height: isZen ? 16 : 8),
-          Row(
-            children: [
-              for (final mins in [25, 45, 60])
-                Expanded(
-                  child: Padding(
-                    padding: EdgeInsets.only(
-                      left: mins == 25 ? 0 : 4,
-                      right: mins == 60 ? 0 : 4,
-                    ),
-                    child: _QuickFocusChip(
-                      minutes: mins,
-                      isZen: isZen,
-                      onTap: () {
-                        ref
-                            .read(focusTimerProvider.notifier)
-                            .start(Duration(minutes: mins), 'Deep Work');
-                        context.go('/focus');
-                      },
+            SizedBox(height: isZen ? 16 : 8),
+            Row(
+              children: [
+                for (final mins in [25, 45, 60])
+                  Expanded(
+                    child: Padding(
+                      padding: EdgeInsets.only(
+                        left: mins == 25 ? 0 : 4,
+                        right: mins == 60 ? 0 : 4,
+                      ),
+                      child: _QuickFocusChip(
+                        minutes: mins,
+                        isZen: isZen,
+                        onTap: () {
+                          ref
+                              .read(focusTimerProvider.notifier)
+                              .start(Duration(minutes: mins), 'Deep Work');
+                          context.go('/focus');
+                        },
+                      ),
                     ),
                   ),
-                ),
-            ],
-          ),
-        ],
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1066,116 +1085,122 @@ class _SystemInsightsProjections extends ConsumerWidget {
     final grid = ref.watch(gridProvider);
     final isZen = grid.layoutDensity == DashboardLayoutDensity.zen;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'System Insights & Projections',
-          style: theme.textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.w700,
-            letterSpacing: 1.2,
-            color: theme.colorScheme.onSurface.withValues(alpha: 0.86),
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minWidth: double.infinity),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            'System Insights & Projections',
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+              letterSpacing: 1.2,
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.86),
+            ),
           ),
-        ),
-        SizedBox(height: isZen ? 16 : 8),
-        LifePilotGlassCard(
-          radius: isZen ? 20 : 12,
-          padding: isZen ? const EdgeInsets.all(20) : const EdgeInsets.all(12),
-          child: insightsAsync.when(
-            loading: () => const Center(
-              child: Padding(
-                padding: EdgeInsets.all(16.0),
-                child: CircularProgressIndicator(),
+          SizedBox(height: isZen ? 16 : 8),
+          LifePilotGlassCard(
+            radius: isZen ? 20 : 12,
+            padding: isZen
+                ? const EdgeInsets.all(20)
+                : const EdgeInsets.all(12),
+            child: insightsAsync.when(
+              loading: () => const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(16.0),
+                  child: CircularProgressIndicator(),
+                ),
               ),
-            ),
-            error: (err, _) => Center(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Text('Error computing insights: $err'),
+              error: (err, _) => Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Text('Error computing insights: $err'),
+                ),
               ),
-            ),
-            data: (insights) {
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.insights_rounded,
-                        color: theme.colorScheme.primary,
-                        size: isZen ? 24 : 18,
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          'Estimated Runway: ${insights.runwayDays} Days Remaining',
-                          style:
-                              (isZen
-                                      ? theme.textTheme.titleMedium
-                                      : theme.textTheme.bodyLarge)
-                                  ?.copyWith(
-                                    letterSpacing: 1.1,
-                                    fontWeight: FontWeight.w800,
-                                    color: theme.colorScheme.onSurface,
-                                  ),
+              data: (insights) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.insights_rounded,
+                          color: theme.colorScheme.primary,
+                          size: isZen ? 24 : 18,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            'Estimated Runway: ${insights.runwayDays} Days Remaining',
+                            style:
+                                (isZen
+                                        ? theme.textTheme.titleMedium
+                                        : theme.textTheme.bodyLarge)
+                                    ?.copyWith(
+                                      letterSpacing: 1.1,
+                                      fontWeight: FontWeight.w800,
+                                      color: theme.colorScheme.onSurface,
+                                    ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (!isZen) ...[
+                      const SizedBox(height: 12),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? const Color(0xFF2A2E33)
+                              : const Color(0xFFE8ECEF),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: isDark
+                                ? const Color(0xFF3F464E)
+                                : const Color(0xFFCFD5D8),
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.05),
+                              blurRadius: 6,
+                              offset: const Offset(0, 3),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Icon(
+                              Icons.psychology_rounded,
+                              color: theme.colorScheme.tertiary,
+                              size: 18,
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                insights.behavioralInsight,
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  fontStyle: FontStyle.italic,
+                                  color: isDark
+                                      ? const Color(0xFFD0D6DC)
+                                      : const Color(0xFF4A5568),
+                                  height: 1.3,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
-                  ),
-                  if (!isZen) ...[
-                    const SizedBox(height: 12),
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: isDark
-                            ? const Color(0xFF2A2E33)
-                            : const Color(0xFFE8ECEF),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: isDark
-                              ? const Color(0xFF3F464E)
-                              : const Color(0xFFCFD5D8),
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.05),
-                            blurRadius: 6,
-                            offset: const Offset(0, 3),
-                          ),
-                        ],
-                      ),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Icon(
-                            Icons.psychology_rounded,
-                            color: theme.colorScheme.tertiary,
-                            size: 18,
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              insights.behavioralInsight,
-                              style: theme.textTheme.bodyMedium?.copyWith(
-                                fontStyle: FontStyle.italic,
-                                color: isDark
-                                    ? const Color(0xFFD0D6DC)
-                                    : const Color(0xFF4A5568),
-                                height: 1.3,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
                   ],
-                ],
-              );
-            },
+                );
+              },
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

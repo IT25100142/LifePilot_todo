@@ -158,24 +158,33 @@ class _LifePilotGlassCardState extends ConsumerState<LifePilotGlassCard> {
           sigmaX: resolvedBlurSigma,
           sigmaY: resolvedBlurSigma,
         ),
-        child: CustomPaint(
-          painter: GlassBackgroundEffectsPainter(
-            isHovered: _isHovered,
-            mousePosition: _mousePosition,
-            spotlightColor: glassPhysics.activeAccentColor.color,
-            noiseImage: GlassNoiseCache.noiseImage,
-            radius: widget.radius,
-            isPressed: widget.isPressed,
-            grainOpacity: glassPhysics.grainOpacity,
-          ),
-          foregroundPainter: SpecularBorderPainter(
-            radius: widget.radius,
-            strokeWidth: 0.75, // Crisp 0.75px specular border highlight
-            customBorderGradient: resolvedBorderGradient,
-            isPressed: widget.isPressed,
-            specularOpacity: glassPhysics.specularOpacity,
-          ),
-          child: container,
+        child: Stack(
+          fit: StackFit.passthrough,
+          children: [
+            Positioned.fill(
+              child: ExcludeSemantics(
+                child: CustomPaint(
+                  painter: GlassBackgroundEffectsPainter(
+                    isHovered: _isHovered,
+                    mousePosition: _mousePosition,
+                    spotlightColor: glassPhysics.activeAccentColor.color,
+                    noiseImage: GlassNoiseCache.noiseImage,
+                    radius: widget.radius,
+                    isPressed: widget.isPressed,
+                    grainOpacity: glassPhysics.grainOpacity,
+                  ),
+                  foregroundPainter: SpecularBorderPainter(
+                    radius: widget.radius,
+                    strokeWidth: 0.75, // Crisp 0.75px specular border highlight
+                    customBorderGradient: resolvedBorderGradient,
+                    isPressed: widget.isPressed,
+                    specularOpacity: glassPhysics.specularOpacity,
+                  ),
+                ),
+              ),
+            ),
+            container,
+          ],
         ),
       ),
     );
@@ -569,12 +578,21 @@ class _LifePilotGleamState extends State<LifePilotGleam>
   @override
   Widget build(BuildContext context) {
     return RepaintBoundary(
-      child: CustomPaint(
-        foregroundPainter: _GleamPainter(
-          animation: _animController,
-          radius: widget.radius,
-        ),
-        child: widget.child,
+      child: Stack(
+        fit: StackFit.passthrough,
+        children: [
+          widget.child,
+          Positioned.fill(
+            child: ExcludeSemantics(
+              child: CustomPaint(
+                foregroundPainter: _GleamPainter(
+                  animation: _animController,
+                  radius: widget.radius,
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
