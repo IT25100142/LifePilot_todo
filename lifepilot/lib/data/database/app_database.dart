@@ -1,6 +1,8 @@
 import 'dart:io';
+
 import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
@@ -111,8 +113,11 @@ class AppDatabase extends _$AppDatabase {
   static QueryExecutor _openConnection() {
     return LazyDatabase(() async {
       final encryptionKey = await EncryptionService.getOrGenerateKey();
-      final dbFolder = await getApplicationDocumentsDirectory();
-      final file = File(p.join(dbFolder.path, 'lifepilot.sqlite'));
+      File? file;
+      if (!kIsWeb) {
+        final dbFolder = await getApplicationDocumentsDirectory();
+        file = File(p.join(dbFolder.path, 'lifepilot.sqlite'));
+      }
 
       return driftDatabase(
         name: 'lifepilot',
@@ -129,8 +134,9 @@ class AppDatabase extends _$AppDatabase {
             } catch (e) {
               // Delete corrupted/mismatched DB file so app doesn't crash permanently
               try {
-                if (file.existsSync()) {
-                  file.deleteSync();
+                final dbFile = file;
+                if (dbFile != null && dbFile.existsSync()) {
+                  dbFile.deleteSync();
                 }
               } catch (_) {}
               throw Exception('Database decryption failed. Local database has been reset.');

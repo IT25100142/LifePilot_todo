@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:local_auth/local_auth.dart';
 
@@ -11,7 +12,7 @@ class AppLockNotifier extends Notifier<AppLockStatus> {
   @override
   AppLockStatus build() {
     final enabled = ref.watch(biometricsEnabledProvider);
-    if (!enabled) {
+    if (!enabled || kIsWeb) {
       return AppLockStatus.unlocked;
     }
     return AppLockStatus.locked;
