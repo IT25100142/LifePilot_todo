@@ -36,14 +36,20 @@ windows/runner/RCa23288
 # is commented out by default.
 #.vscode/
 
-# Flutter/Dart/Pub related
-**/doc/api/
-**/ios/Flutter/.last_build_id
+# Flutter/Dart transients
 .dart_tool/
+.flutter-plugins
 .flutter-plugins-dependencies
 .pub-cache/
 .pub/
-/build/
+build/
+
+# System/Log garbage
+*.log
+*.log.*
+doc/api/
+
+**/ios/Flutter/.last_build_id
 /coverage/
 
 # Symbolication related
