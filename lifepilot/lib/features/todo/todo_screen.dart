@@ -664,17 +664,17 @@ class _TaskFormState extends ConsumerState<_TaskForm> {
               style: Theme.of(context).textTheme.headlineSmall,
             ),
             const SizedBox(height: 16),
-            TextFormField(
+            SatinGlassTextField(
               controller: _title,
-              decoration: const InputDecoration(labelText: 'Title'),
+              labelText: 'Title',
               validator: (value) => value == null || value.trim().isEmpty
                   ? 'Title is required'
                   : null,
             ),
             const SizedBox(height: 12),
-            TextFormField(
+            SatinGlassTextField(
               controller: _description,
-              decoration: const InputDecoration(labelText: 'Description'),
+              labelText: 'Description',
               maxLines: 3,
             ),
             const SizedBox(height: 16),
@@ -713,11 +713,9 @@ class _TaskFormState extends ConsumerState<_TaskForm> {
               ],
             ),
             const SizedBox(height: 12),
-            TextFormField(
+            SatinGlassTextField(
               controller: _tags,
-              decoration: const InputDecoration(
-                labelText: 'Additional tags (comma separated)',
-              ),
+              labelText: 'Additional tags (comma separated)',
             ),
             const SizedBox(height: 16),
             Text(
@@ -753,11 +751,9 @@ class _TaskFormState extends ConsumerState<_TaskForm> {
             Row(
               children: [
                 Expanded(
-                  child: TextFormField(
+                  child: SatinGlassTextField(
                     controller: _subtaskTitleController,
-                    decoration: const InputDecoration(
-                      hintText: 'Add a sub-task...',
-                    ),
+                    labelText: 'Add a sub-task...',
                   ),
                 ),
                 const SizedBox(width: 8),

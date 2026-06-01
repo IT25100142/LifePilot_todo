@@ -6,6 +6,8 @@ import '../theme/theme_customizer_provider.dart';
 import 'glass_panel.dart';
 
 export 'interactive_button.dart';
+export 'satin_glass_card.dart';
+export 'glass_panel.dart';
 
 class LiquidBackground extends ConsumerStatefulWidget {
   const LiquidBackground({required this.child, super.key});

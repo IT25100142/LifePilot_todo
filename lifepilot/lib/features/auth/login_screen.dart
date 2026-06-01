@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/widgets/glass_panel.dart';
+import '../../core/widgets/glass.dart';
 import 'auth_provider.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -404,25 +404,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               style: TextStyle(fontSize: 14, color: Colors.white70),
             ),
             const SizedBox(height: 32),
-            TextField(
+            SatinGlassTextField(
               controller: _usernameController,
-              style: const TextStyle(color: Colors.white, fontSize: 16),
-              decoration: InputDecoration(
-                labelText: 'Username',
-                labelStyle: TextStyle(color: gold.withValues(alpha: 0.8)),
-                filled: true,
-                fillColor: Colors.white.withValues(alpha: 0.04),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(20),
-                  borderSide: BorderSide(
-                    color: Colors.white.withValues(alpha: 0.15),
-                  ),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(20),
-                  borderSide: BorderSide(color: gold),
-                ),
-              ),
+              labelText: 'Username',
             ),
             const SizedBox(height: 32),
             SizedBox(
@@ -603,28 +587,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           style: TextStyle(fontSize: 13, color: Colors.white70),
         ),
         const SizedBox(height: 32),
-        TextField(
+        SatinGlassTextField(
           controller: _recoveryKeyController,
+          labelText: 'Recovery Key (LP-XXXX-XXXX)',
           style: const TextStyle(
             color: Colors.white,
             fontSize: 16,
             letterSpacing: 1.5,
-          ),
-          decoration: InputDecoration(
-            labelText: 'Recovery Key (LP-XXXX-XXXX)',
-            labelStyle: TextStyle(color: gold.withValues(alpha: 0.8)),
-            filled: true,
-            fillColor: Colors.white.withValues(alpha: 0.04),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(20),
-              borderSide: BorderSide(
-                color: Colors.white.withValues(alpha: 0.15),
-              ),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(20),
-              borderSide: BorderSide(color: gold),
-            ),
           ),
         ),
         const SizedBox(height: 32),

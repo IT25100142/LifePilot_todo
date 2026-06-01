@@ -144,6 +144,7 @@ class _FinanceControls extends ConsumerWidget {
             children: [
               Expanded(
                 child: DropdownButtonFormField<FinanceTypeFilter>(
+                  isExpanded: true,
                   initialValue: ref.watch(selectedFinanceTypeProvider),
                   decoration: const InputDecoration(labelText: 'Type'),
                   items: [
@@ -161,6 +162,7 @@ class _FinanceControls extends ConsumerWidget {
               const SizedBox(width: 12),
               Expanded(
                 child: DropdownButtonFormField<String?>(
+                  isExpanded: true,
                   initialValue: ref.watch(selectedFinanceCategoryProvider),
                   decoration: const InputDecoration(labelText: 'Category'),
                   items: [
@@ -2030,215 +2032,220 @@ class _LifePilotFinanceAnalyticsState
             ? expenditures[touchedCategory]
             : null;
 
-        return LifePilotGlassCard(
-          radius: 24,
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Category Breakdown',
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 1.2,
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.86),
+        return SatinGlassCard(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Category Breakdown',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 1.2,
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.86),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 20),
-              LayoutBuilder(
-                builder: (context, constraints) {
-                  final isWide = constraints.maxWidth >= 500;
-                  final chartWidget = Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      SizedBox(
-                        height: 200,
-                        width: 200,
-                        child: PieChart(
-                          PieChartData(
-                            pieTouchData: PieTouchData(
-                              touchCallback:
-                                  (FlTouchEvent event, pieTouchResponse) {
-                                    setState(() {
-                                      if (!event.isInterestedForInteractions ||
-                                          pieTouchResponse == null ||
-                                          pieTouchResponse.touchedSection ==
-                                              null) {
-                                        _touchedIndex = -1;
-                                        return;
-                                      }
-                                      _touchedIndex = pieTouchResponse
-                                          .touchedSection!
-                                          .touchedSectionIndex;
-                                    });
-                                  },
-                            ),
-                            sectionsSpace: 4,
-                            centerSpaceRadius: 65,
-                            sections: sections,
-                          ),
-                          duration: const Duration(milliseconds: 350),
-                          curve: Curves.easeOutQuart,
-                        ),
-                      ),
-                      IgnorePointer(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              touchedCategory != null
-                                  ? touchedCategory.toUpperCase()
-                                  : 'TOTAL EXPENSES',
-                              style: theme.textTheme.labelSmall?.copyWith(
-                                fontWeight: FontWeight.bold,
-                                letterSpacing: 1.2,
-                                color: theme.colorScheme.onSurface.withValues(
-                                  alpha: 0.48,
-                                ),
-                                fontSize: 10,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              money(
-                                touchedValue ?? totalExpenses,
-                                activeCurrencyCode,
-                              ),
-                              style: theme.textTheme.titleLarge?.copyWith(
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: -0.75,
-                                fontSize: 18,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  );
-
-                  final legendWidget = Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      for (int i = 0; i < categories.length; i++) ...[
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Container(
-                              width: 12,
-                              height: 12,
-                              decoration: BoxDecoration(
-                                color: _getCategoryColor(
-                                  categories[i],
-                                  theme,
-                                  i,
-                                ),
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              categories[i],
-                              style: theme.textTheme.bodyMedium?.copyWith(
-                                fontWeight: FontWeight.w600,
-                                color: theme.colorScheme.onSurface,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              '(${((expenditures[categories[i]]! / totalExpenses) * 100).toStringAsFixed(0)}%)',
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: theme.colorScheme.onSurface.withValues(
-                                  alpha: 0.45,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        if (i < categories.length - 1)
-                          const SizedBox(height: 8),
-                      ],
-                    ],
-                  );
-
-                  final tooltipWidget = touchedCategory != null
-                      ? Positioned(
-                          top: 10,
-                          right: 10,
-                          child: LifePilotGlassCard(
-                            radius: 14,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 8,
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Container(
-                                  width: 8,
-                                  height: 8,
-                                  decoration: BoxDecoration(
-                                    color: _getCategoryColor(
-                                      touchedCategory,
-                                      theme,
-                                      _touchedIndex,
-                                    ),
-                                    shape: BoxShape.circle,
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  touchedCategory,
-                                  style: theme.textTheme.labelMedium?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  money(touchedValue ?? 0, activeCurrencyCode),
-                                  style: theme.textTheme.labelMedium?.copyWith(
-                                    fontWeight: FontWeight.w900,
-                                    color: theme.colorScheme.primary,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        )
-                      : const SizedBox.shrink();
-
-                  if (isWide) {
-                    return Stack(
-                      children: [
-                        Row(
-                          children: [
-                            chartWidget,
-                            const SizedBox(width: 40),
-                            Expanded(child: legendWidget),
-                          ],
-                        ),
-                        tooltipWidget,
-                      ],
-                    );
-                  } else {
-                    return Stack(
+                const SizedBox(height: 20),
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final isWide = constraints.maxWidth >= 500;
+                    final chartWidget = Stack(
                       alignment: Alignment.center,
                       children: [
-                        Column(
-                          children: [
-                            chartWidget,
-                            const SizedBox(height: 24),
-                            legendWidget,
-                          ],
+                        SizedBox(
+                          height: 200,
+                          width: 200,
+                          child: PieChart(
+                            PieChartData(
+                              pieTouchData: PieTouchData(
+                                touchCallback:
+                                    (FlTouchEvent event, pieTouchResponse) {
+                                      setState(() {
+                                        if (!event
+                                                .isInterestedForInteractions ||
+                                            pieTouchResponse == null ||
+                                            pieTouchResponse.touchedSection ==
+                                                null) {
+                                          _touchedIndex = -1;
+                                          return;
+                                        }
+                                        _touchedIndex = pieTouchResponse
+                                            .touchedSection!
+                                            .touchedSectionIndex;
+                                      });
+                                    },
+                              ),
+                              sectionsSpace: 4,
+                              centerSpaceRadius: 65,
+                              sections: sections,
+                            ),
+                            duration: const Duration(milliseconds: 350),
+                            curve: Curves.easeOutQuart,
+                          ),
                         ),
-                        tooltipWidget,
+                        IgnorePointer(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                touchedCategory != null
+                                    ? touchedCategory.toUpperCase()
+                                    : 'TOTAL EXPENSES',
+                                style: theme.textTheme.labelSmall?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 1.2,
+                                  color: theme.colorScheme.onSurface.withValues(
+                                    alpha: 0.48,
+                                  ),
+                                  fontSize: 10,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                money(
+                                  touchedValue ?? totalExpenses,
+                                  activeCurrencyCode,
+                                ),
+                                style: theme.textTheme.titleLarge?.copyWith(
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: -0.75,
+                                  fontSize: 18,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ],
                     );
-                  }
-                },
-              ),
-            ],
+
+                    final legendWidget = Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        for (int i = 0; i < categories.length; i++) ...[
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                width: 12,
+                                height: 12,
+                                decoration: BoxDecoration(
+                                  color: _getCategoryColor(
+                                    categories[i],
+                                    theme,
+                                    i,
+                                  ),
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                categories[i],
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                  color: theme.colorScheme.onSurface,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                '(${((expenditures[categories[i]]! / totalExpenses) * 100).toStringAsFixed(0)}%)',
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: theme.colorScheme.onSurface.withValues(
+                                    alpha: 0.45,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          if (i < categories.length - 1)
+                            const SizedBox(height: 8),
+                        ],
+                      ],
+                    );
+
+                    final tooltipWidget = touchedCategory != null
+                        ? Positioned(
+                            top: 10,
+                            right: 10,
+                            child: LifePilotGlassCard(
+                              radius: 14,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 8,
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Container(
+                                    width: 8,
+                                    height: 8,
+                                    decoration: BoxDecoration(
+                                      color: _getCategoryColor(
+                                        touchedCategory,
+                                        theme,
+                                        _touchedIndex,
+                                      ),
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    touchedCategory,
+                                    style: theme.textTheme.labelMedium
+                                        ?.copyWith(fontWeight: FontWeight.bold),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    money(
+                                      touchedValue ?? 0,
+                                      activeCurrencyCode,
+                                    ),
+                                    style: theme.textTheme.labelMedium
+                                        ?.copyWith(
+                                          fontWeight: FontWeight.w900,
+                                          color: theme.colorScheme.primary,
+                                        ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          )
+                        : const SizedBox.shrink();
+
+                    if (isWide) {
+                      return Stack(
+                        children: [
+                          Row(
+                            children: [
+                              chartWidget,
+                              const SizedBox(width: 40),
+                              Expanded(child: legendWidget),
+                            ],
+                          ),
+                          tooltipWidget,
+                        ],
+                      );
+                    } else {
+                      return Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          Column(
+                            children: [
+                              chartWidget,
+                              const SizedBox(height: 24),
+                              legendWidget,
+                            ],
+                          ),
+                          tooltipWidget,
+                        ],
+                      );
+                    }
+                  },
+                ),
+              ],
+            ),
           ),
         );
       },

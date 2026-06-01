@@ -2,11 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../app/theme.dart';
 import '../../core/utils/date_helpers.dart';
 import '../../core/utils/formatters.dart';
 import '../../core/widgets/glass.dart';
-import '../../core/widgets/glass_panel.dart';
-import '../../core/widgets/section_card.dart';
 import '../../core/widgets/state_views.dart';
 import '../../data/database/app_database.dart';
 import '../calendar/calendar_providers.dart';
@@ -31,7 +30,7 @@ class DashboardScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final currency = ref.watch(activeCurrencyCodeProvider);
     final query = ref.watch(searchQueryProvider).trim();
-    final isWide = MediaQuery.sizeOf(context).width >= 800;
+    final isWide = MediaQuery.sizeOf(context).width >= 1000;
 
     final grid = ref.watch(gridProvider);
     final visibleCards = grid.visibleCards;
@@ -74,9 +73,12 @@ class DashboardScreen extends ConsumerWidget {
                 ? Center(
                     key: const ValueKey('dashboard_zen'),
                     child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 800.0),
+                      constraints: const BoxConstraints(maxWidth: 1400.0),
                       child: Padding(
-                        padding: const EdgeInsets.all(32.0),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 40.0,
+                          vertical: 24.0,
+                        ),
                         child: _buildDashboardScrollView(
                           context,
                           ref,
@@ -95,7 +97,10 @@ class DashboardScreen extends ConsumerWidget {
                   )
                 : Padding(
                     key: const ValueKey('dashboard_executive'),
-                    padding: const EdgeInsets.all(12.0),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 40.0,
+                      vertical: 24.0,
+                    ),
                     child: _buildDashboardScrollView(
                       context,
                       ref,
@@ -129,6 +134,95 @@ class DashboardScreen extends ConsumerWidget {
     required bool showFocus,
     required bool isWide,
   }) {
+    if (isWide) {
+      return SingleChildScrollView(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 1400.0),
+            child: query.isNotEmpty
+                ? Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Left Section (Flex: 3)
+                      Expanded(
+                        flex: 3,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const _DashboardHeader(),
+                            SizedBox(height: spacing),
+                            const _SearchBar(),
+                          ],
+                        ),
+                      ),
+                      SizedBox(width: spacing),
+                      // Results Section (Flex: 9)
+                      Expanded(
+                        flex: 9,
+                        child: _SearchResultsView(currency: currency),
+                      ),
+                    ],
+                  )
+                : Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Left Section (Flex: 3)
+                      Expanded(
+                        flex: 3,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            const _DashboardHeader(),
+                            SizedBox(height: spacing),
+                            const _SearchBar(),
+                          ],
+                        ),
+                      ),
+                      SizedBox(width: spacing),
+                      // Center Section (Flex: 5)
+                      Expanded(
+                        flex: 5,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            const LifePilotFinanceAnalytics(),
+                            if (showTasks) ...[
+                              SizedBox(height: spacing),
+                              const _DashboardPriorityTasks(),
+                            ],
+                          ],
+                        ),
+                      ),
+                      SizedBox(width: spacing),
+                      // Right Section (Flex: 4)
+                      Expanded(
+                        flex: 4,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            if (showRunway) ...[
+                              const _SystemInsightsProjections(),
+                              SizedBox(height: spacing),
+                            ],
+                            const _DashboardWeekStrip(),
+                            if (showHabits) ...[
+                              SizedBox(height: spacing),
+                              const _DashboardHabitMesh(),
+                            ],
+                            if (showFocus) ...[
+                              SizedBox(height: spacing),
+                              const _DashboardQuickFocus(),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+          ),
+        ),
+      );
+    }
+
     return CustomScrollView(
       slivers: [
         SliverAppBar(
@@ -149,48 +243,10 @@ class DashboardScreen extends ConsumerWidget {
           sliver: SliverList(
             delegate: SliverChildListDelegate([
               const _SearchBar(),
-              SizedBox(height: spacing),
+              SizedBox(height: spacingMobile),
               if (query.isNotEmpty)
                 _SearchResultsView(currency: currency)
-              else if (isWide) ...[
-                const _DashboardHeader(),
-                SizedBox(height: spacing),
-                if (showRunway) ...[
-                  const _SystemInsightsProjections(),
-                  SizedBox(height: spacing),
-                ],
-                const _DashboardWeekStrip(),
-                SizedBox(height: spacing),
-                if (showTasks)
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Expanded(
-                        flex: 5,
-                        child: LifePilotFinanceAnalytics(),
-                      ),
-                      SizedBox(width: spacing),
-                      const Expanded(flex: 6, child: _DashboardPriorityTasks()),
-                    ],
-                  )
-                else
-                  const LifePilotFinanceAnalytics(),
-                SizedBox(height: spacing),
-                if (showHabits && showFocus)
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Expanded(flex: 5, child: _DashboardHabitMesh()),
-                      SizedBox(width: spacing),
-                      const Expanded(flex: 6, child: _DashboardQuickFocus()),
-                    ],
-                  )
-                else if (showHabits)
-                  const _DashboardHabitMesh()
-                else if (showFocus)
-                  const _DashboardQuickFocus(),
-                const SizedBox(height: 96),
-              ] else ...[
+              else ...[
                 const _DashboardHeader(),
                 SizedBox(height: spacingMobile),
                 if (showRunway) ...[
@@ -234,11 +290,11 @@ class _DashboardHeader extends ConsumerWidget {
     final hour = DateTime.now().hour;
     final String greeting;
     if (hour < 12) {
-      greeting = 'GOOD MORNING, SANKALPA';
+      greeting = 'Good morning, Sankalpa';
     } else if (hour < 17) {
-      greeting = 'GOOD AFTERNOON, SANKALPA';
+      greeting = 'Good afternoon, Sankalpa';
     } else {
-      greeting = 'GOOD EVENING, SANKALPA';
+      greeting = 'Good evening, Sankalpa';
     }
 
     return ConstrainedBox(
@@ -256,8 +312,8 @@ class _DashboardHeader extends ConsumerWidget {
                           ? theme.textTheme.headlineMedium
                           : theme.textTheme.titleLarge)
                       ?.copyWith(
-                        fontWeight: FontWeight.w300,
-                        letterSpacing: 1.6,
+                        fontWeight: FontWeight.w400,
+                        letterSpacing: 1.5,
                         color: theme.colorScheme.onSurface,
                       ),
             ),
@@ -279,15 +335,19 @@ class _DashboardHeader extends ConsumerWidget {
                   ),
                 ),
                 SizedBox(width: isZen ? 8 : 6),
-                Text(
-                  'SYSTEM OPERATIONAL • SECURE FALLBACK SYNC',
-                  style: theme.textTheme.labelMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    fontSize: isZen ? 10 : 8,
-                    letterSpacing: 1.2,
-                    color: theme.colorScheme.onSurfaceVariant.withValues(
-                      alpha: 0.6,
+                Expanded(
+                  child: Text(
+                    'SYSTEM OPERATIONAL • SECURE FALLBACK SYNC',
+                    style: theme.textTheme.labelMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      fontSize: isZen ? 10 : 8,
+                      letterSpacing: 1.2,
+                      color: theme.colorScheme.onSurfaceVariant.withValues(
+                        alpha: 0.6,
+                      ),
                     ),
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
                   ),
                 ),
               ],
@@ -314,40 +374,41 @@ class _DashboardWeekStrip extends ConsumerWidget {
 
     return ConstrainedBox(
       constraints: const BoxConstraints(minWidth: double.infinity),
-      child: LifePilotGlassCard(
-        radius: isZen ? 20 : 12,
-        padding: isZen
-            ? const EdgeInsets.symmetric(horizontal: 14, vertical: 12)
-            : const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'WEEKLY RUNWAY',
-              style: theme.textTheme.labelMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-                color: theme.colorScheme.onSurfaceVariant.withValues(
-                  alpha: 0.6,
-                ),
-                letterSpacing: 1.2,
-              ),
-            ),
-            SizedBox(height: isZen ? 12 : 6),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                for (final day in weekDays)
-                  _buildDayCell(
-                    context,
-                    day,
-                    today,
-                    eventsAsync.valueOrNull,
-                    isZen,
+      child: SatinGlassCard(
+        child: Padding(
+          padding: isZen
+              ? const EdgeInsets.symmetric(horizontal: 14, vertical: 12)
+              : const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Weekly Runway',
+                style: theme.textTheme.labelMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: theme.colorScheme.onSurfaceVariant.withValues(
+                    alpha: 0.6,
                   ),
-              ],
-            ),
-          ],
+                  letterSpacing: 1.2,
+                ),
+              ),
+              SizedBox(height: isZen ? 12 : 6),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  for (final day in weekDays)
+                    _buildDayCell(
+                      context,
+                      day,
+                      today,
+                      eventsAsync.valueOrNull,
+                      isZen,
+                    ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -455,6 +516,7 @@ class _DashboardPriorityTasks extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final tasksAsync = ref.watch(tasksProvider);
+    final theme = Theme.of(context);
     final isZen = ref.watch(themeCustomizerProvider).interfaceDensity == 'Zen';
 
     return ConstrainedBox(
@@ -471,29 +533,53 @@ class _DashboardPriorityTasks extends ConsumerWidget {
               .where((t) => t.priority == 'high' && !t.isCompleted)
               .toList();
 
-          return SectionCard(
-            title: 'Urgent Tasks',
-            padding: isZen
-                ? const EdgeInsets.all(20)
-                : const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            action: TextButton(
-              onPressed: () => context.go('/todo'),
-              child: const Text('View all'),
-            ),
-            child: highPriorityTasks.isEmpty
-                ? const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 20),
-                    child: Text('All clear! No urgent tasks pending.'),
-                  )
-                : Column(
+          return SatinGlassCard(
+            child: Padding(
+              padding: isZen
+                  ? const EdgeInsets.all(20)
+                  : const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      for (final task in highPriorityTasks)
-                        Padding(
-                          padding: EdgeInsets.only(bottom: isZen ? 10 : 6),
-                          child: TaskTile(task: task),
+                      Text(
+                        'Urgent Tasks',
+                        style: theme.textTheme.labelMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: theme.colorScheme.onSurfaceVariant.withValues(
+                            alpha: 0.6,
+                          ),
+                          letterSpacing: 1.2,
                         ),
+                      ),
+                      TextButton(
+                        onPressed: () => context.go('/todo'),
+                        child: const Text('View all'),
+                      ),
                     ],
                   ),
+                  const SizedBox(height: 16),
+                  highPriorityTasks.isEmpty
+                      ? const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 20),
+                          child: Text('All clear! No urgent tasks pending.'),
+                        )
+                      : Column(
+                          children: [
+                            for (final task in highPriorityTasks)
+                              Padding(
+                                padding: EdgeInsets.only(
+                                  bottom: isZen ? 10 : 6,
+                                ),
+                                child: TaskTile(task: task),
+                              ),
+                          ],
+                        ),
+                ],
+              ),
+            ),
           );
         },
       ),
@@ -542,109 +628,47 @@ class _SearchBarState extends ConsumerState<_SearchBar> {
     }
 
     final theme = Theme.of(context);
-    final dark = theme.brightness == Brightness.dark;
 
-    final inactiveCardGradient = LinearGradient(
-      begin: Alignment.topLeft,
-      end: Alignment.bottomRight,
-      colors: dark
-          ? [
-              Colors.white.withValues(alpha: 0.08),
-              Colors.white.withValues(alpha: 0.02),
-            ]
-          : [
-              Colors.white.withValues(alpha: 0.16),
-              Colors.white.withValues(alpha: 0.06),
-            ],
-    );
-
-    final inactiveBorderGradient = LinearGradient(
-      begin: Alignment.topLeft,
-      end: Alignment.bottomRight,
-      colors: dark
-          ? [
-              Colors.white.withValues(alpha: 0.22),
-              Colors.white.withValues(alpha: 0.04),
-            ]
-          : [
-              Colors.white.withValues(alpha: 0.38),
-              Colors.white.withValues(alpha: 0.08),
-            ],
-    );
-
-    final activeCardGradient = LinearGradient(
-      begin: Alignment.topLeft,
-      end: Alignment.bottomRight,
-      colors: dark
-          ? [
-              theme.colorScheme.primary.withValues(alpha: 0.15),
-              theme.colorScheme.primary.withValues(alpha: 0.03),
-            ]
-          : [
-              theme.colorScheme.primary.withValues(alpha: 0.22),
-              theme.colorScheme.primary.withValues(alpha: 0.08),
-            ],
-    );
-
-    final activeBorderGradient = LinearGradient(
-      begin: Alignment.topLeft,
-      end: Alignment.bottomRight,
-      colors: [
-        theme.colorScheme.primary.withValues(alpha: 0.70),
-        theme.colorScheme.primary.withValues(alpha: 0.24),
-      ],
-    );
-
-    final shadowColor = _isFocused
-        ? theme.colorScheme.primary.withValues(alpha: dark ? 0.16 : 0.08)
-        : (dark
-              ? Colors.black.withValues(alpha: 0.24)
-              : Colors.black.withValues(alpha: 0.06));
-
-    return LifePilotGlassCard(
-      radius: 30,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
-      cardGradient: _isFocused ? activeCardGradient : inactiveCardGradient,
-      borderGradient: _isFocused
-          ? activeBorderGradient
-          : inactiveBorderGradient,
-      shadowColor: shadowColor,
-      child: TextField(
-        controller: _controller,
-        focusNode: _focusNode,
-        style: theme.textTheme.bodyLarge?.copyWith(
-          color: theme.colorScheme.onSurface,
-        ),
-        decoration: InputDecoration(
-          hintText: 'Search tasks, events, money...',
-          hintStyle: theme.textTheme.bodyLarge?.copyWith(
-            color: theme.colorScheme.onSurface.withValues(alpha: 0.45),
+    return SatinGlassCard(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+        child: TextField(
+          controller: _controller,
+          focusNode: _focusNode,
+          style: theme.textTheme.bodyLarge?.copyWith(
+            color: theme.colorScheme.onSurface,
           ),
-          prefixIcon: Icon(
-            Icons.search_rounded,
-            color: _isFocused
-                ? theme.colorScheme.primary
-                : theme.colorScheme.onSurface.withValues(alpha: 0.5),
+          decoration: InputDecoration(
+            hintText: 'Search tasks, events, money...',
+            hintStyle: theme.textTheme.bodyLarge?.copyWith(
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.45),
+            ),
+            prefixIcon: Icon(
+              Icons.search_rounded,
+              color: _isFocused
+                  ? theme.colorScheme.primary
+                  : theme.colorScheme.onSurface.withValues(alpha: 0.5),
+            ),
+            suffixIcon: query.isNotEmpty
+                ? IconButton(
+                    icon: const Icon(Icons.clear_rounded),
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                    onPressed: () {
+                      _controller.clear();
+                      ref.read(searchQueryProvider.notifier).state = '';
+                    },
+                  )
+                : null,
+            filled: false,
+            border: InputBorder.none,
+            enabledBorder: InputBorder.none,
+            focusedBorder: InputBorder.none,
+            contentPadding: const EdgeInsets.symmetric(vertical: 14),
           ),
-          suffixIcon: query.isNotEmpty
-              ? IconButton(
-                  icon: const Icon(Icons.clear_rounded),
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
-                  onPressed: () {
-                    _controller.clear();
-                    ref.read(searchQueryProvider.notifier).state = '';
-                  },
-                )
-              : null,
-          filled: false,
-          border: InputBorder.none,
-          enabledBorder: InputBorder.none,
-          focusedBorder: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(vertical: 14),
+          onChanged: (value) {
+            ref.read(searchQueryProvider.notifier).state = value;
+          },
         ),
-        onChanged: (value) {
-          ref.read(searchQueryProvider.notifier).state = value;
-        },
       ),
     );
   }
@@ -684,10 +708,7 @@ class _SearchResultsView extends ConsumerWidget {
               for (final task in results.tasks)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 8),
-                  child: GlassPanel(
-                    radius: 20,
-                    padding: EdgeInsets.zero,
-                    opacity: theme.brightness == Brightness.dark ? 0.14 : 0.48,
+                  child: SatinGlassCard(
                     child: ListTile(
                       leading: Checkbox(
                         value: task.isCompleted,
@@ -733,10 +754,7 @@ class _SearchResultsView extends ConsumerWidget {
               for (final event in results.events)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 8),
-                  child: GlassPanel(
-                    radius: 20,
-                    padding: EdgeInsets.zero,
-                    opacity: theme.brightness == Brightness.dark ? 0.14 : 0.48,
+                  child: SatinGlassCard(
                     child: ListTile(
                       leading: const GlassIcon(
                         icon: Icons.calendar_today_outlined,
@@ -763,10 +781,7 @@ class _SearchResultsView extends ConsumerWidget {
               for (final tx in results.transactions)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 8),
-                  child: GlassPanel(
-                    radius: 20,
-                    padding: EdgeInsets.zero,
-                    opacity: theme.brightness == Brightness.dark ? 0.14 : 0.48,
+                  child: SatinGlassCard(
                     child: ListTile(
                       leading: GlassIcon(
                         icon: tx.type == 'income'
@@ -907,87 +922,90 @@ class _DashboardHabitMesh extends ConsumerWidget {
     final theme = Theme.of(context);
     final logsAsync = ref.watch(habitLogsProvider);
 
-    return LifePilotGlassCard(
-      radius: 20,
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'HABIT CONSISTENCY',
-                style: theme.textTheme.labelMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: theme.colorScheme.onSurfaceVariant.withValues(
-                    alpha: 0.6,
+    return SatinGlassCard(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Habit Consistency',
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: theme.colorScheme.onSurfaceVariant.withValues(
+                      alpha: 0.6,
+                    ),
+                    letterSpacing: 1.2,
                   ),
-                  letterSpacing: 1.2,
                 ),
-              ),
-              logsAsync.maybeWhen(
-                data: (logs) {
-                  final completedDates = logs
-                      .where((l) => l.isCompleted)
-                      .map(
-                        (l) =>
-                            '${l.date.year}-${l.date.month.toString().padLeft(2, '0')}-${l.date.day.toString().padLeft(2, '0')}',
-                      )
-                      .toSet();
-                  final streak = _calculateAggregatedStreak(completedDates);
-                  if (streak == 0) return const SizedBox.shrink();
-                  return Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.primary.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: theme.colorScheme.primary.withValues(alpha: 0.2),
+                logsAsync.maybeWhen(
+                  data: (logs) {
+                    final completedDates = logs
+                        .where((l) => l.isCompleted)
+                        .map(
+                          (l) =>
+                              '${l.date.year}-${l.date.month.toString().padLeft(2, '0')}-${l.date.day.toString().padLeft(2, '0')}',
+                        )
+                        .toSet();
+                    final streak = _calculateAggregatedStreak(completedDates);
+                    if (streak == 0) return const SizedBox.shrink();
+                    return Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
                       ),
-                    ),
-                    child: Text(
-                      '$streak DAY STREAK',
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        fontWeight: FontWeight.w800,
-                        color: theme.colorScheme.primary,
-                        letterSpacing: 0.5,
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: theme.colorScheme.primary.withValues(
+                            alpha: 0.2,
+                          ),
+                        ),
                       ),
-                    ),
-                  );
-                },
-                orElse: () => const SizedBox.shrink(),
+                      child: Text(
+                        '$streak DAY STREAK',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          fontWeight: FontWeight.w800,
+                          color: theme.colorScheme.primary,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    );
+                  },
+                  orElse: () => const SizedBox.shrink(),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            logsAsync.when(
+              loading: () => const SizedBox(
+                height: 130,
+                child: Center(child: CircularProgressIndicator()),
               ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          logsAsync.when(
-            loading: () => const SizedBox(
-              height: 130,
-              child: Center(child: CircularProgressIndicator()),
+              error: (err, _) => SizedBox(
+                height: 130,
+                child: Center(child: Text('Error loading habits')),
+              ),
+              data: (logs) {
+                final completedDates = logs
+                    .where((l) => l.isCompleted)
+                    .map(
+                      (l) =>
+                          '${l.date.year}-${l.date.month.toString().padLeft(2, '0')}-${l.date.day.toString().padLeft(2, '0')}',
+                    )
+                    .toSet();
+                return LifePilotHabitHeatmap(
+                  completedDates: completedDates,
+                  onDateTapped: (_, __) => context.go('/habits'),
+                );
+              },
             ),
-            error: (err, _) => SizedBox(
-              height: 130,
-              child: Center(child: Text('Error loading habits')),
-            ),
-            data: (logs) {
-              final completedDates = logs
-                  .where((l) => l.isCompleted)
-                  .map(
-                    (l) =>
-                        '${l.date.year}-${l.date.month.toString().padLeft(2, '0')}-${l.date.day.toString().padLeft(2, '0')}',
-                  )
-                  .toSet();
-              return LifePilotHabitHeatmap(
-                completedDates: completedDates,
-                onDateTapped: (_, __) => context.go('/habits'),
-              );
-            },
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -1029,57 +1047,58 @@ class _DashboardQuickFocus extends ConsumerWidget {
 
     return ConstrainedBox(
       constraints: const BoxConstraints(minWidth: double.infinity),
-      child: LifePilotGlassCard(
-        radius: isZen ? 20 : 12,
-        padding: isZen
-            ? const EdgeInsets.all(16)
-            : const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'QUICK FOCUS',
-              style: theme.textTheme.labelMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-                color: theme.colorScheme.onSurfaceVariant.withValues(
-                  alpha: 0.6,
+      child: SatinGlassCard(
+        child: Padding(
+          padding: isZen
+              ? const EdgeInsets.all(16)
+              : const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Quick Focus',
+                style: theme.textTheme.labelMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: theme.colorScheme.onSurfaceVariant.withValues(
+                    alpha: 0.6,
+                  ),
+                  letterSpacing: 1.2,
                 ),
-                letterSpacing: 1.2,
               ),
-            ),
-            SizedBox(height: isZen ? 12 : 6),
-            Text(
-              'Tap to enter deep immersion instantly.',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+              SizedBox(height: isZen ? 12 : 6),
+              Text(
+                'Tap to enter deep immersion instantly.',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                ),
               ),
-            ),
-            SizedBox(height: isZen ? 16 : 8),
-            Row(
-              children: [
-                for (final mins in [25, 45, 60])
-                  Expanded(
-                    child: Padding(
-                      padding: EdgeInsets.only(
-                        left: mins == 25 ? 0 : 4,
-                        right: mins == 60 ? 0 : 4,
-                      ),
-                      child: _QuickFocusChip(
-                        minutes: mins,
-                        isZen: isZen,
-                        onTap: () {
-                          ref
-                              .read(focusTimerProvider.notifier)
-                              .start(Duration(minutes: mins), 'Deep Work');
-                          context.go('/focus');
-                        },
+              SizedBox(height: isZen ? 16 : 8),
+              Row(
+                children: [
+                  for (final mins in [25, 45, 60])
+                    Expanded(
+                      child: Padding(
+                        padding: EdgeInsets.only(
+                          left: mins == 25 ? 0 : 4,
+                          right: mins == 60 ? 0 : 4,
+                        ),
+                        child: _QuickFocusChip(
+                          minutes: mins,
+                          isZen: isZen,
+                          onTap: () {
+                            ref
+                                .read(focusTimerProvider.notifier)
+                                .start(Duration(minutes: mins), 'Deep Work');
+                            context.go('/focus');
+                          },
+                        ),
                       ),
                     ),
-                  ),
-              ],
-            ),
-          ],
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -1123,17 +1142,18 @@ class _QuickFocusChipState extends State<_QuickFocusChip> {
         child: AnimatedScale(
           scale: _isPressed ? 0.95 : (_isHovered ? 1.05 : 1.0),
           duration: const Duration(milliseconds: 100),
-          child: LifePilotGlassCard(
-            radius: widget.isZen ? 20 : 12,
+          child: SatinGlassCard(
             isPressed: _isPressed,
-            padding: EdgeInsets.symmetric(vertical: widget.isZen ? 14 : 8),
-            child: Center(
-              child: Text(
-                '${widget.minutes}m',
-                style: theme.textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.8,
-                  color: theme.colorScheme.primary,
+            child: Padding(
+              padding: EdgeInsets.symmetric(vertical: widget.isZen ? 14 : 8),
+              child: Center(
+                child: Text(
+                  '${widget.minutes}m',
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.8,
+                    color: theme.colorScheme.primary,
+                  ),
                 ),
               ),
             ),
@@ -1162,110 +1182,111 @@ class _SystemInsightsProjections extends ConsumerWidget {
         children: [
           Text(
             'System Insights & Projections',
-            style: theme.textTheme.titleMedium?.copyWith(
+            style: theme.textTheme.labelMedium?.copyWith(
               fontWeight: FontWeight.w700,
+              color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
               letterSpacing: 1.2,
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.86),
             ),
           ),
           SizedBox(height: isZen ? 16 : 8),
-          LifePilotGlassCard(
-            radius: isZen ? 20 : 12,
-            padding: isZen
-                ? const EdgeInsets.all(20)
-                : const EdgeInsets.all(12),
-            child: insightsAsync.when(
-              loading: () => const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(16.0),
-                  child: CircularProgressIndicator(),
+          SatinGlassCard(
+            child: Padding(
+              padding: isZen
+                  ? const EdgeInsets.all(20)
+                  : const EdgeInsets.all(12),
+              child: insightsAsync.when(
+                loading: () => const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(16.0),
+                    child: CircularProgressIndicator(),
+                  ),
                 ),
-              ),
-              error: (err, _) => Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Text('Error computing insights: $err'),
+                error: (err, _) => Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Text('Error computing insights: $err'),
+                  ),
                 ),
-              ),
-              data: (insights) {
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.insights_rounded,
-                          color: theme.colorScheme.primary,
-                          size: isZen ? 24 : 18,
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            'Estimated Runway: ${insights.runwayDays} Days Remaining',
-                            style:
-                                (isZen
-                                        ? theme.textTheme.titleMedium
-                                        : theme.textTheme.bodyLarge)
-                                    ?.copyWith(
-                                      letterSpacing: 1.1,
-                                      fontWeight: FontWeight.w800,
-                                      color: theme.colorScheme.onSurface,
-                                    ),
+                data: (insights) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.insights_rounded,
+                            color: theme.colorScheme.primary,
+                            size: isZen ? 24 : 18,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              'Estimated Runway: ${insights.runwayDays} Days Remaining',
+                              style:
+                                  (isZen
+                                          ? theme.textTheme.titleMedium
+                                          : theme.textTheme.bodyLarge)
+                                      ?.copyWith(
+                                        letterSpacing: 1.1,
+                                        fontWeight: FontWeight.w800,
+                                        color: theme.colorScheme.onSurface,
+                                      ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (!isZen) ...[
+                        const SizedBox(height: 12),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: isDark
+                                ? const Color(0xFF2A2E33)
+                                : const Color(0xFFE8ECEF),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: isDark
+                                  ? const Color(0xFF3F464E)
+                                  : const Color(0xFFCFD5D8),
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.05),
+                                blurRadius: 6,
+                                offset: const Offset(0, 3),
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Icon(
+                                Icons.psychology_rounded,
+                                color: theme.colorScheme.tertiary,
+                                size: 18,
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  insights.behavioralInsight,
+                                  style: theme.textTheme.bodyMedium?.copyWith(
+                                    fontStyle: FontStyle.italic,
+                                    color: isDark
+                                        ? const Color(0xFFD0D6DC)
+                                        : const Color(0xFF4A5568),
+                                    height: 1.3,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
-                    ),
-                    if (!isZen) ...[
-                      const SizedBox(height: 12),
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: isDark
-                              ? const Color(0xFF2A2E33)
-                              : const Color(0xFFE8ECEF),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: isDark
-                                ? const Color(0xFF3F464E)
-                                : const Color(0xFFCFD5D8),
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.05),
-                              blurRadius: 6,
-                              offset: const Offset(0, 3),
-                            ),
-                          ],
-                        ),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Icon(
-                              Icons.psychology_rounded,
-                              color: theme.colorScheme.tertiary,
-                              size: 18,
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Text(
-                                insights.behavioralInsight,
-                                style: theme.textTheme.bodyMedium?.copyWith(
-                                  fontStyle: FontStyle.italic,
-                                  color: isDark
-                                      ? const Color(0xFFD0D6DC)
-                                      : const Color(0xFF4A5568),
-                                  height: 1.3,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
                     ],
-                  ],
-                );
-              },
+                  );
+                },
+              ),
             ),
           ),
         ],

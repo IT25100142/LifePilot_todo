@@ -1,9 +1,11 @@
 import 'dart:io';
 import 'package:drift/drift.dart';
+import 'package:drift/native.dart';
 import 'package:drift_flutter/drift_flutter.dart';
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
+import 'package:sqlite3/sqlite3.dart';
 
 import '../../core/constants/app_constants.dart';
 import '../../core/models/backup_payload_v2.dart';
@@ -159,33 +161,26 @@ class AppDatabase extends _$AppDatabase {
       final encryptionKey = await EncryptionService.getOrGenerateKey();
       final dbFolder = await getApplicationDocumentsDirectory();
       final file = File(p.join(dbFolder.path, 'lifepilot.sqlite'));
+      sqlite3.tempDirectory = (await getTemporaryDirectory()).path;
 
-      return driftDatabase(
-        name: 'lifepilot',
-        web: DriftWebOptions(
-          sqlite3Wasm: Uri.parse('sqlite3.wasm'),
-          driftWorker: Uri.parse('drift_worker.dart.js'),
-        ),
-        native: DriftNativeOptions(
-          setup: (rawDb) {
-            rawDb.execute("PRAGMA key = '$encryptionKey';");
-            rawDb.execute("PRAGMA foreign_keys = ON;");
+      return NativeDatabase(
+        file,
+        setup: (rawDb) {
+          rawDb.execute("PRAGMA key = '$encryptionKey';");
+          rawDb.execute("PRAGMA foreign_keys = ON;");
+          try {
+            rawDb.select('SELECT name FROM sqlite_schema LIMIT 1;');
+          } catch (e) {
             try {
-              // Verify encryption key succeeds on decrypting SQLite pages
-              rawDb.select('SELECT name FROM sqlite_schema LIMIT 1;');
-            } catch (e) {
-              // Delete corrupted/mismatched DB file so app doesn't crash permanently
-              try {
-                if (file.existsSync()) {
-                  file.deleteSync();
-                }
-              } catch (_) {}
-              throw Exception(
-                'Database decryption failed. Local database has been reset.',
-              );
-            }
-          },
-        ),
+              if (file.existsSync()) {
+                file.deleteSync();
+              }
+            } catch (_) {}
+            throw Exception(
+              'Database decryption failed. Local database has been reset.',
+            );
+          }
+        },
       );
     });
   }
