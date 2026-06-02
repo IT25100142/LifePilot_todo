@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:local_auth/local_auth.dart';
 
@@ -10,6 +11,9 @@ class AppLockNotifier extends Notifier<AppLockStatus> {
 
   @override
   AppLockStatus build() {
+    if (kIsWeb) {
+      return AppLockStatus.unlocked;
+    }
     final enabled = ref.watch(biometricsEnabledProvider);
     if (!enabled) {
       return AppLockStatus.unlocked;
@@ -18,6 +22,7 @@ class AppLockNotifier extends Notifier<AppLockStatus> {
   }
 
   void lock() {
+    if (kIsWeb) return;
     final enabled = ref.read(biometricsEnabledProvider);
     if (enabled && state != AppLockStatus.notSupported) {
       state = AppLockStatus.locked;
@@ -31,6 +36,10 @@ class AppLockNotifier extends Notifier<AppLockStatus> {
   }
 
   Future<void> authenticate() async {
+    if (kIsWeb) {
+      state = AppLockStatus.unlocked;
+      return;
+    }
     final enabled = ref.read(biometricsEnabledProvider);
     if (!enabled) {
       state = AppLockStatus.unlocked;
@@ -63,6 +72,6 @@ class AppLockNotifier extends Notifier<AppLockStatus> {
   }
 }
 
-final appLockProvider =
-    NotifierProvider<AppLockNotifier, AppLockStatus>(AppLockNotifier.new);
-
+final appLockProvider = NotifierProvider<AppLockNotifier, AppLockStatus>(
+  AppLockNotifier.new,
+);

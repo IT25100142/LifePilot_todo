@@ -1,8 +1,11 @@
 import 'dart:io';
 import 'package:drift/drift.dart';
+import 'package:drift/native.dart';
 import 'package:drift_flutter/drift_flutter.dart';
+import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
+import 'package:sqlite3/sqlite3.dart';
 
 import '../../core/constants/app_constants.dart';
 import '../../core/models/backup_payload_v2.dart';
@@ -31,6 +34,14 @@ class Tasks extends Table {
   IntColumn get recurrenceParentId => integer().nullable()();
 }
 
+class Subtasks extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get title => text().withLength(min: 1, max: 140)();
+  BoolColumn get isCompleted => boolean().withDefault(const Constant(false))();
+  IntColumn get parentId =>
+      integer().references(Tasks, #id, onDelete: KeyAction.cascade)();
+}
+
 class CalendarEvents extends Table {
   @override
   String get tableName => 'events';
@@ -57,10 +68,13 @@ class FinanceEntries extends Table {
   DateTimeColumn get date => dateTime()();
   TextColumn get note => text().withDefault(const Constant(''))();
   TextColumn get type => text().withDefault(const Constant('expense'))();
+  TextColumn get currency =>
+      text().withDefault(const Constant(AppConstants.defaultCurrency))();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
   DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
   IntColumn get accountId => integer().nullable().references(Accounts, #id)();
-  IntColumn get transferTargetAccountId => integer().nullable().references(Accounts, #id)();
+  IntColumn get transferTargetAccountId =>
+      integer().nullable().references(Accounts, #id)();
 }
 
 class Accounts extends Table {
@@ -94,14 +108,38 @@ class AppSettingsTable extends Table {
   BoolColumn get demoSeeded => boolean().withDefault(const Constant(false))();
 }
 
+class Habits extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get title => text().withLength(min: 1, max: 140)();
+  TextColumn get description => text().withDefault(const Constant(''))();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+  TextColumn get categoryTag => text().withDefault(const Constant(''))();
+}
+
+class HabitLogs extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get habitId =>
+      integer().references(Habits, #id, onDelete: KeyAction.cascade)();
+  DateTimeColumn get date => dateTime()();
+  BoolColumn get isCompleted => boolean().withDefault(const Constant(false))();
+
+  @override
+  List<Set<Column>> get uniqueKeys => [
+    {habitId, date},
+  ];
+}
+
 @DriftDatabase(
   tables: [
     Tasks,
+    Subtasks,
     CalendarEvents,
     FinanceEntries,
     Categories,
     AppSettingsTable,
-    Accounts
+    Accounts,
+    Habits,
+    HabitLogs,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -110,33 +148,39 @@ class AppDatabase extends _$AppDatabase {
 
   static QueryExecutor _openConnection() {
     return LazyDatabase(() async {
+      if (kIsWeb) {
+        return driftDatabase(
+          name: 'lifepilot',
+          web: DriftWebOptions(
+            sqlite3Wasm: Uri.parse('sqlite3.wasm'),
+            driftWorker: Uri.parse('drift_worker.dart.js'),
+          ),
+        );
+      }
+
       final encryptionKey = await EncryptionService.getOrGenerateKey();
       final dbFolder = await getApplicationDocumentsDirectory();
       final file = File(p.join(dbFolder.path, 'lifepilot.sqlite'));
+      sqlite3.tempDirectory = (await getTemporaryDirectory()).path;
 
-      return driftDatabase(
-        name: 'lifepilot',
-        web: DriftWebOptions(
-          sqlite3Wasm: Uri.parse('sqlite3.wasm'),
-          driftWorker: Uri.parse('drift_worker.dart.js'),
-        ),
-        native: DriftNativeOptions(
-          setup: (rawDb) {
-            rawDb.execute("PRAGMA key = '$encryptionKey';");
+      return NativeDatabase(
+        file,
+        setup: (rawDb) {
+          rawDb.execute("PRAGMA key = '$encryptionKey';");
+          rawDb.execute("PRAGMA foreign_keys = ON;");
+          try {
+            rawDb.select('SELECT name FROM sqlite_schema LIMIT 1;');
+          } catch (e) {
             try {
-              // Verify encryption key succeeds on decrypting SQLite pages
-              rawDb.select('SELECT name FROM sqlite_schema LIMIT 1;');
-            } catch (e) {
-              // Delete corrupted/mismatched DB file so app doesn't crash permanently
-              try {
-                if (file.existsSync()) {
-                  file.deleteSync();
-                }
-              } catch (_) {}
-              throw Exception('Database decryption failed. Local database has been reset.');
-            }
-          },
-        ),
+              if (file.existsSync()) {
+                file.deleteSync();
+              }
+            } catch (_) {}
+            throw Exception(
+              'Database decryption failed. Local database has been reset.',
+            );
+          }
+        },
       );
     });
   }
@@ -148,38 +192,52 @@ class AppDatabase extends _$AppDatabase {
   }
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
-        onCreate: (m) async {
-          await m.createAll();
-        },
-        onUpgrade: (m, from, to) async {
-          if (from < 2) {
-            await m.addColumn(tasks, tasks.recurrencePattern);
-            await m.addColumn(tasks, tasks.recurrenceParentId);
-          }
-          if (from < 3) {
-            await m.addColumn(categories, categories.monthlyBudget);
-          }
-          if (from < 4) {
-            await m.createTable(accounts);
-            await m.addColumn(financeEntries, financeEntries.accountId);
-            await m.addColumn(financeEntries,
-                financeEntries.transferTargetAccountId);
+    onCreate: (m) async {
+      await m.createAll();
+    },
+    onUpgrade: (m, from, to) async {
+      if (from < 2) {
+        await m.addColumn(tasks, tasks.recurrencePattern);
+        await m.addColumn(tasks, tasks.recurrenceParentId);
+      }
+      if (from < 3) {
+        await m.addColumn(categories, categories.monthlyBudget);
+      }
+      if (from < 4) {
+        await m.createTable(accounts);
+        await m.addColumn(financeEntries, financeEntries.accountId);
+        await m.addColumn(
+          financeEntries,
+          financeEntries.transferTargetAccountId,
+        );
 
-            // Insert a default Primary Account
-            final nowStr = DateTime.now().toIso8601String();
-            final defaultAccountId = await customInsert(
-                "INSERT INTO accounts (name, initial_balance, current_balance, color_value, created_at) "
-                "VALUES ('Primary Account', 0.0, 0.0, 4280806499, '$nowStr');");
-            // Set all existing transactions to point to this Primary Account
-            await customUpdate(
-                "UPDATE transactions SET account_id = $defaultAccountId WHERE account_id IS NULL;");
-          }
-        },
-      );
+        // Insert a default Primary Account
+        final nowStr = DateTime.now().toIso8601String();
+        final defaultAccountId = await customInsert(
+          "INSERT INTO accounts (name, initial_balance, current_balance, color_value, created_at) "
+          "VALUES ('Primary Account', 0.0, 0.0, 4280806499, '$nowStr');",
+        );
+        // Set all existing transactions to point to this Primary Account
+        await customUpdate(
+          "UPDATE transactions SET account_id = $defaultAccountId WHERE account_id IS NULL;",
+        );
+      }
+      if (from < 5) {
+        await m.addColumn(financeEntries, financeEntries.currency);
+      }
+      if (from < 6) {
+        await m.createTable(subtasks);
+      }
+      if (from < 7) {
+        await m.createTable(habits);
+        await m.createTable(habitLogs);
+      }
+    },
+  );
 
   Future<void> ensureSeedData() async {
     final settings = await _settingsRow();
@@ -235,6 +293,73 @@ class AppDatabase extends _$AppDatabase {
     return update(tasks).replace(
       task.copyWith(isCompleted: !task.isCompleted, updatedAt: DateTime.now()),
     );
+  }
+
+  Stream<List<Subtask>> watchSubtasksForTask(int taskId) {
+    return (select(subtasks)..where((s) => s.parentId.equals(taskId))).watch();
+  }
+
+  Future<int> saveSubtask(SubtasksCompanion entry) {
+    return into(subtasks).insertOnConflictUpdate(entry);
+  }
+
+  Future<void> deleteSubtask(int id) async {
+    await (delete(subtasks)..where((s) => s.id.equals(id))).go();
+  }
+
+  Future<void> toggleSubtask(Subtask subtask) {
+    return update(
+      subtasks,
+    ).replace(subtask.copyWith(isCompleted: !subtask.isCompleted));
+  }
+
+  Stream<List<Habit>> watchHabits() {
+    return (select(
+      habits,
+    )..orderBy([(h) => OrderingTerm.desc(h.createdAt)])).watch();
+  }
+
+  Stream<List<HabitLog>> watchAllHabitLogs() {
+    return select(habitLogs).watch();
+  }
+
+  Future<int> saveHabit(HabitsCompanion entry) {
+    return into(habits).insertOnConflictUpdate(entry);
+  }
+
+  Future<void> deleteHabit(int id) async {
+    await (delete(habits)..where((h) => h.id.equals(id))).go();
+  }
+
+  Future<void> toggleHabitLog(
+    int habitId,
+    DateTime date,
+    bool isCompleted,
+  ) async {
+    final normalizedDate = DateTime(date.year, date.month, date.day);
+    final existing =
+        await (select(habitLogs)..where(
+              (l) => l.habitId.equals(habitId) & l.date.equals(normalizedDate),
+            ))
+            .getSingleOrNull();
+
+    if (existing != null) {
+      if (isCompleted) {
+        await update(habitLogs).replace(existing.copyWith(isCompleted: true));
+      } else {
+        await (delete(habitLogs)..where((l) => l.id.equals(existing.id))).go();
+      }
+    } else {
+      if (isCompleted) {
+        await into(habitLogs).insert(
+          HabitLogsCompanion.insert(
+            habitId: habitId,
+            date: normalizedDate,
+            isCompleted: const Value(true),
+          ),
+        );
+      }
+    }
   }
 
   Stream<List<CalendarEvent>> watchEvents() {
@@ -330,6 +455,9 @@ class AppDatabase extends _$AppDatabase {
             date: _date(json['date']) ?? DateTime.now(),
             note: Value(json['note'] as String? ?? ''),
             type: Value(json['type'] as String? ?? 'expense'),
+            currency: Value(
+              (json['currency'] as String?) ?? AppConstants.defaultCurrency,
+            ),
             createdAt: Value(_date(json['createdAt']) ?? DateTime.now()),
             updatedAt: Value(_date(json['updatedAt']) ?? DateTime.now()),
           ),
@@ -425,7 +553,8 @@ class AppDatabase extends _$AppDatabase {
             description: Value(event.description),
             date: _date(event.date) ?? start,
             startTime: start,
-            endTime: _date(event.endTime) ?? start.add(const Duration(hours: 1)),
+            endTime:
+                _date(event.endTime) ?? start.add(const Duration(hours: 1)),
             reminderAt: Value(_date(event.reminderAt)),
             createdAt: Value(_date(event.createdAt) ?? DateTime.now()),
             updatedAt: Value(_date(event.updatedAt) ?? DateTime.now()),
@@ -455,6 +584,7 @@ class AppDatabase extends _$AppDatabase {
             date: _date(tx.date) ?? DateTime.now(),
             note: Value(tx.note),
             type: Value(tx.type),
+            currency: Value(tx.currency),
             createdAt: Value(_date(tx.createdAt) ?? DateTime.now()),
             updatedAt: Value(_date(tx.updatedAt) ?? DateTime.now()),
             accountId: Value(remappedAccountId),
@@ -468,6 +598,9 @@ class AppDatabase extends _$AppDatabase {
   }
 
   Future<void> _clearAllDataInTransaction() async {
+    await delete(habitLogs).go();
+    await delete(habits).go();
+    await delete(subtasks).go();
     await delete(tasks).go();
     await delete(calendarEvents).go();
     await delete(financeEntries).go();
@@ -655,10 +788,14 @@ class AppDatabase extends _$AppDatabase {
     if ((await select(financeEntries).get()).isNotEmpty) return;
 
     final allAccounts = await select(accounts).get();
-    final bankAccount = allAccounts.firstWhere((a) => a.name == 'Bank',
-        orElse: () => allAccounts.first);
-    final cashAccount = allAccounts.firstWhere((a) => a.name == 'Cash',
-        orElse: () => allAccounts.first);
+    final bankAccount = allAccounts.firstWhere(
+      (a) => a.name == 'Bank',
+      orElse: () => allAccounts.first,
+    );
+    final cashAccount = allAccounts.firstWhere(
+      (a) => a.name == 'Cash',
+      orElse: () => allAccounts.first,
+    );
 
     final now = DateTime.now();
     await batch((batch) {
@@ -669,6 +806,7 @@ class AppDatabase extends _$AppDatabase {
           category: const Value('Salary'),
           date: DateTime(now.year, now.month, 1),
           type: const Value('income'),
+          currency: const Value(AppConstants.defaultCurrency),
           accountId: Value(bankAccount.id),
         ),
         FinanceEntriesCompanion.insert(
@@ -677,6 +815,7 @@ class AppDatabase extends _$AppDatabase {
           category: const Value('Food'),
           date: now.subtract(const Duration(days: 2)),
           type: const Value('expense'),
+          currency: const Value(AppConstants.defaultCurrency),
           accountId: Value(cashAccount.id),
         ),
         FinanceEntriesCompanion.insert(
@@ -685,6 +824,7 @@ class AppDatabase extends _$AppDatabase {
           category: const Value('Bills'),
           date: now.subtract(const Duration(days: 4)),
           type: const Value('expense'),
+          currency: const Value(AppConstants.defaultCurrency),
           accountId: Value(bankAccount.id),
         ),
         FinanceEntriesCompanion.insert(
@@ -693,6 +833,7 @@ class AppDatabase extends _$AppDatabase {
           category: const Value('Transport'),
           date: now.subtract(const Duration(days: 7)),
           type: const Value('expense'),
+          currency: const Value(AppConstants.defaultCurrency),
           accountId: Value(cashAccount.id),
         ),
       ]);
@@ -700,8 +841,9 @@ class AppDatabase extends _$AppDatabase {
   }
 
   Stream<List<Account>> watchAccounts() {
-    return (select(accounts)..orderBy([(a) => OrderingTerm.asc(a.name)]))
-        .watch();
+    return (select(
+      accounts,
+    )..orderBy([(a) => OrderingTerm.asc(a.name)])).watch();
   }
 
   Future<int> saveAccount(AccountsCompanion entry) async {
@@ -715,10 +857,10 @@ class AppDatabase extends _$AppDatabase {
   Future<void> deleteAccount(int id) async {
     await transaction(() async {
       await (delete(accounts)..where((a) => a.id.equals(id))).go();
-      await (delete(financeEntries)
-            ..where((t) =>
-                t.accountId.equals(id) |
-                t.transferTargetAccountId.equals(id)))
+      await (delete(financeEntries)..where(
+            (t) =>
+                t.accountId.equals(id) | t.transferTargetAccountId.equals(id),
+          ))
           .go();
       await recalculateAccountBalances();
     });

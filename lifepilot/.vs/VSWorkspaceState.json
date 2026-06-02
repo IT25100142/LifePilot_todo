@@ -1,0 +1,15 @@
+{
+  "ExpandedNodes": [
+    "",
+    "\\build",
+    "\\build\\windows",
+    "\\build\\windows\\x64",
+    "\\build\\windows\\x64\\CMakeFiles",
+    "\\build\\windows\\x64\\CMakeFiles\\4.2.3-msvc3",
+    "\\build\\windows\\x64\\CMakeFiles\\pkgRedirects",
+    "\\windows",
+    "\\windows\\runner"
+  ],
+  "SelectedNode": "\\run_linters.sh",
+  "PreviewInSolutionExplorer": false
+}

@@ -18,19 +18,38 @@ migrate_working_dir/
 *.iws
 .idea/
 
+# Visual Studio / Windows IDE noise
+.vs/
+CppProperties.json
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Local-only generated/override packages
+.openssl/
+.dummy_sqlite3_flutter_libs/
+windows/runner/RCa23288
+
 # The .vscode folder contains launch configuration and tasks you configure in
 # VS Code which you may wish to be included in version control, so this line
 # is commented out by default.
 #.vscode/
 
-# Flutter/Dart/Pub related
-**/doc/api/
-**/ios/Flutter/.last_build_id
+# Flutter/Dart transients
 .dart_tool/
+.flutter-plugins
 .flutter-plugins-dependencies
 .pub-cache/
 .pub/
-/build/
+build/
+
+# System/Log garbage
+*.log
+*.log.*
+doc/api/
+
+**/ios/Flutter/.last_build_id
 /coverage/
 
 # Symbolication related

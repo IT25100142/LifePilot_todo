@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants/app_constants.dart';
+import '../../core/models/life_pilot_currency.dart';
 import '../../data/database/app_database.dart';
 import '../../data/database/database_provider.dart';
 
@@ -22,6 +23,14 @@ final settingsControllerProvider =
       SettingsController.new,
     );
 
+final activeCurrencyCodeProvider = Provider<String>((ref) {
+  final configured = ref
+      .watch(settingsControllerProvider)
+      .valueOrNull
+      ?.currency;
+  return currencyFromCode(configured).code;
+});
+
 class SettingsController extends AsyncNotifier<SettingsState> {
   @override
   Future<SettingsState> build() async {
@@ -41,8 +50,7 @@ class SettingsController extends AsyncNotifier<SettingsState> {
   }
 
   Future<void> setCurrency(String currency) async {
-    final clean = currency.trim().toUpperCase();
-    if (clean.isEmpty) return;
+    final clean = currencyFromCode(currency).code;
     final database = ref.read(appDatabaseProvider);
     await database.updateCurrency(clean);
   }
@@ -54,9 +62,9 @@ class SettingsController extends AsyncNotifier<SettingsState> {
         'dark' => ThemeMode.dark,
         _ => ThemeMode.system,
       },
-      currency: data.currency.isEmpty
-          ? AppConstants.defaultCurrency
-          : data.currency,
+      currency: currencyFromCode(
+        data.currency.isEmpty ? AppConstants.defaultCurrency : data.currency,
+      ).code,
     );
   }
 }

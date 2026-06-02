@@ -1,0 +1,92 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "C:\\Users\\chamidu\\Documents\\TO-DO\\lifepilot\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\chamidu\\Documents\\TO-DO\\lifepilot\\CppProperties.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:CppProperties.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\chamidu\\Documents\\TO-DO\\lifepilot\\windows\\runner\\Runner.rc||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:windows\\runner\\Runner.rc||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\chamidu\\Documents\\TO-DO\\lifepilot\\run_linters.sh||{3B902123-F8A7-4915-9F01-361F908088D0}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:run_linters.sh||{3B902123-F8A7-4915-9F01-361F908088D0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\chamidu\\Documents\\TO-DO\\lifepilot\\build\\windows\\x64\\CMakeFiles\\4.2.3-msvc3\\CMakeSystem.cmake||{8B382828-6202-11D1-8870-0000F87579D2}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:build\\windows\\x64\\CMakeFiles\\4.2.3-msvc3\\CMakeSystem.cmake||{8B382828-6202-11D1-8870-0000F87579D2}"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 1,
+          "Children": [
+            {
+              "$type": "Bookmark",
+              "Name": "ST:1358002586:0:{83107a3e-496a-485e-b455-16ddb978e55e}"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "CppProperties.json",
+              "DocumentMoniker": "C:\\Users\\chamidu\\Documents\\TO-DO\\lifepilot\\CppProperties.json",
+              "RelativeDocumentMoniker": "CppProperties.json",
+              "ToolTip": "C:\\Users\\chamidu\\Documents\\TO-DO\\lifepilot\\CppProperties.json",
+              "RelativeToolTip": "CppProperties.json",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAEAAAAVAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
+              "WhenOpened": "2026-05-28T08:11:33.754Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "run_linters.sh",
+              "DocumentMoniker": "C:\\Users\\chamidu\\Documents\\TO-DO\\lifepilot\\run_linters.sh",
+              "RelativeDocumentMoniker": "run_linters.sh",
+              "ToolTip": "C:\\Users\\chamidu\\Documents\\TO-DO\\lifepilot\\run_linters.sh",
+              "RelativeToolTip": "run_linters.sh",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "00000000-0000-0000-0000-000000000000.000000|",
+              "WhenOpened": "2026-05-28T08:11:04.025Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "Runner.rc",
+              "DocumentMoniker": "C:\\Users\\chamidu\\Documents\\TO-DO\\lifepilot\\windows\\runner\\Runner.rc",
+              "RelativeDocumentMoniker": "windows\\runner\\Runner.rc",
+              "ToolTip": "C:\\Users\\chamidu\\Documents\\TO-DO\\lifepilot\\windows\\runner\\Runner.rc",
+              "RelativeToolTip": "windows\\runner\\Runner.rc",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001005|",
+              "WhenOpened": "2026-05-28T08:11:00.527Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "CMakeSystem.cmake",
+              "DocumentMoniker": "C:\\Users\\chamidu\\Documents\\TO-DO\\lifepilot\\build\\windows\\x64\\CMakeFiles\\4.2.3-msvc3\\CMakeSystem.cmake",
+              "RelativeDocumentMoniker": "build\\windows\\x64\\CMakeFiles\\4.2.3-msvc3\\CMakeSystem.cmake",
+              "ToolTip": "C:\\Users\\chamidu\\Documents\\TO-DO\\lifepilot\\build\\windows\\x64\\CMakeFiles\\4.2.3-msvc3\\CMakeSystem.cmake",
+              "RelativeToolTip": "build\\windows\\x64\\CMakeFiles\\4.2.3-msvc3\\CMakeSystem.cmake",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001001|",
+              "WhenOpened": "2026-05-28T08:10:33.13Z",
+              "EditorCaption": ""
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

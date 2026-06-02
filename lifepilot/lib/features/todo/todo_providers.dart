@@ -80,12 +80,11 @@ final toggleTaskCompletionProvider = Provider((ref) {
     final nextStatus = !task.isCompleted;
 
     // 1. Toggle completion on the current task
-    await db.update(db.tasks).replace(
-      task.copyWith(
-        isCompleted: nextStatus,
-        updatedAt: DateTime.now(),
-      ),
-    );
+    await db
+        .update(db.tasks)
+        .replace(
+          task.copyWith(isCompleted: nextStatus, updatedAt: DateTime.now()),
+        );
 
     // 2. Cancel original reminder if completing it
     if (nextStatus) {
@@ -93,7 +92,9 @@ final toggleTaskCompletionProvider = Provider((ref) {
     }
 
     // 3. Auto-generate the next occurrence if completing a recurring task
-    if (nextStatus && task.recurrencePattern != null && task.recurrencePattern != 'none') {
+    if (nextStatus &&
+        task.recurrencePattern != null &&
+        task.recurrencePattern != 'none') {
       final pattern = task.recurrencePattern!;
       final currentDue = task.dueDate ?? DateTime.now();
       final nextDue = calculateNextDueDate(currentDue, pattern);
@@ -170,3 +171,11 @@ DateTime calculateNextDueDate(DateTime current, String pattern) {
       return current;
   }
 }
+
+final subtasksProvider = StreamProvider.family<List<Subtask>, int>((
+  ref,
+  taskId,
+) {
+  final database = ref.watch(appDatabaseProvider);
+  return database.watchSubtasksForTask(taskId);
+});

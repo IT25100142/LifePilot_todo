@@ -1,19 +1,24 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/theme.dart';
+import '../theme/theme_customizer_provider.dart';
+import 'glass_panel.dart';
 
-class LiquidBackground extends StatefulWidget {
+export 'interactive_button.dart';
+export 'satin_glass_card.dart';
+export 'glass_panel.dart';
+
+class LiquidBackground extends ConsumerStatefulWidget {
   const LiquidBackground({required this.child, super.key});
 
   final Widget child;
 
   @override
-  State<LiquidBackground> createState() => _LiquidBackgroundState();
+  ConsumerState<LiquidBackground> createState() => _LiquidBackgroundState();
 }
 
-class _LiquidBackgroundState extends State<LiquidBackground>
+class _LiquidBackgroundState extends ConsumerState<LiquidBackground>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
 
@@ -36,56 +41,85 @@ class _LiquidBackgroundState extends State<LiquidBackground>
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final dark = theme.brightness == Brightness.dark;
+    final customizer = ref.watch(themeCustomizerProvider);
+    final tint = customizer.backdropTintColor;
 
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, child) {
-        final t = _controller.value;
-        return DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment(-0.9 + t * 0.22, -1),
-              end: Alignment(0.9 - t * 0.18, 1),
-              colors: dark
-                  ? const [
-                      Color(0xFF061312),
-                      Color(0xFF0E1824),
-                      Color(0xFF101015),
-                    ]
-                  : const [
-                      Color(0xFFEAFDFC),
-                      Color(0xFFF4F7FF),
-                      Color(0xFFFFFFFF),
-                    ],
-            ),
-          ),
-          child: Stack(
-            children: [
-              Positioned.fill(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topRight,
-                      end: Alignment.bottomLeft,
-                      colors: [
-                        theme.colorScheme.primary.withValues(
-                          alpha: dark ? 0.16 : 0.22,
-                        ),
-                        Colors.transparent,
-                        theme.colorScheme.tertiary.withValues(
-                          alpha: dark ? 0.14 : 0.2,
-                        ),
-                      ],
+    return TweenAnimationBuilder<Color?>(
+      tween: ColorTween(begin: tint, end: tint),
+      duration: const Duration(milliseconds: 300),
+      builder: (context, animatedTint, child) {
+        final currentTint = animatedTint ?? tint;
+        return AnimatedBuilder(
+          animation: _controller,
+          builder: (context, child) {
+            final t = _controller.value;
+            final baseColors = dark
+                ? [
+                    Color.alphaBlend(
+                      currentTint.withValues(alpha: 0.45),
+                      const Color(0xFF151316),
                     ),
-                  ),
+                    Color.alphaBlend(
+                      currentTint.withValues(alpha: 0.3),
+                      const Color(0xFF1A171A),
+                    ),
+                    Color.alphaBlend(
+                      currentTint.withValues(alpha: 0.15),
+                      const Color(0xFF1D1A1E),
+                    ),
+                  ]
+                : [
+                    Color.alphaBlend(
+                      currentTint.withValues(alpha: 0.08),
+                      const Color(0xFFF7F3EC),
+                    ),
+                    Color.alphaBlend(
+                      currentTint.withValues(alpha: 0.05),
+                      const Color(0xFFF9F6F0),
+                    ),
+                    Color.alphaBlend(
+                      currentTint.withValues(alpha: 0.02),
+                      const Color(0xFFFFFCF8),
+                    ),
+                  ];
+
+            return DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment(-0.9 + t * 0.22, -1),
+                  end: Alignment(0.9 - t * 0.18, 1),
+                  colors: baseColors,
                 ),
               ),
-              Positioned.fill(child: child!),
-            ],
-          ),
+              child: Stack(
+                children: [
+                  Positioned.fill(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topRight,
+                          end: Alignment.bottomLeft,
+                          colors: [
+                            const Color(
+                              0xFFD6BD92,
+                            ).withValues(alpha: dark ? 0.12 : 0.16),
+                            Colors.transparent,
+                            const Color(
+                              0xFFC8A97A,
+                            ).withValues(alpha: dark ? 0.10 : 0.14),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  Positioned.fill(child: child!),
+                ],
+              ),
+            );
+          },
+          child: widget.child,
         );
       },
-      child: widget.child,
     );
   }
 }
@@ -114,56 +148,13 @@ class GlassPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final dark = theme.brightness == Brightness.dark;
-    final fillOpacity = opacity ?? (dark ? 0.16 : 0.58);
-    final strokeOpacity = borderOpacity ?? (dark ? 0.2 : 0.72);
-
-    Widget content = ClipRRect(
-      borderRadius: BorderRadius.circular(radius),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
-        child: AnimatedContainer(
-          duration: LifePilotTheme.pageDuration,
-          curve: LifePilotTheme.quickCurve,
-          padding: padding,
-          constraints: constraints,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(radius),
-            color: theme.colorScheme.surface.withValues(alpha: fillOpacity),
-            border: Border.all(
-              color: Colors.white.withValues(alpha: strokeOpacity),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: dark ? 0.28 : 0.08),
-                blurRadius: 34,
-                offset: const Offset(0, 18),
-              ),
-              BoxShadow(
-                color: Colors.white.withValues(alpha: dark ? 0.04 : 0.56),
-                blurRadius: 1,
-                offset: const Offset(0, 1),
-              ),
-            ],
-          ),
-          child: child,
-        ),
-      ),
+    return LifePilotGlassCard(
+      padding: padding,
+      radius: radius,
+      constraints: constraints,
+      onTap: onTap,
+      child: child,
     );
-
-    if (onTap != null) {
-      content = Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(radius),
-          onTap: onTap,
-          child: content,
-        ),
-      );
-    }
-
-    return content;
   }
 }
 
@@ -177,10 +168,10 @@ class GlassIcon extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return GlassPanel(
-      radius: 18,
+      radius: 22,
       blur: 18,
       padding: const EdgeInsets.all(10),
-      opacity: theme.brightness == Brightness.dark ? 0.22 : 0.66,
+      opacity: theme.brightness == Brightness.dark ? 0.28 : 0.70,
       child: Icon(icon, color: color ?? theme.colorScheme.primary, size: 20),
     );
   }

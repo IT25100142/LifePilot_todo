@@ -75,11 +75,7 @@ Future<String> decryptBackupJson({
     final aesGcm = AesGcm.with256bits();
 
     final clearBytes = await aesGcm.decrypt(
-      SecretBox(
-        cipherText,
-        nonce: nonce,
-        mac: Mac(macBytes),
-      ),
+      SecretBox(cipherText, nonce: nonce, mac: Mac(macBytes)),
       secretKey: secretKey,
     );
 
@@ -120,7 +116,10 @@ void _validateContainer(Map<String, dynamic> payload) {
   final nonce = payload['nonce'];
   final ciphertext = payload['ciphertext'];
   final mac = payload['mac'];
-  if (salt is! String || nonce is! String || ciphertext is! String || mac is! String) {
+  if (salt is! String ||
+      nonce is! String ||
+      ciphertext is! String ||
+      mac is! String) {
     throw const BackupCryptoException('Invalid backup file format.');
   }
 

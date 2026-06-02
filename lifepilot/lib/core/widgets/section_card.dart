@@ -39,8 +39,11 @@ class SectionCard extends StatelessWidget {
                           Text(
                             title!,
                             style: theme.textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 0,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 1.2,
+                              color: theme.colorScheme.onSurface.withValues(
+                                alpha: 0.86,
+                              ),
                             ),
                           ),
                         if (subtitle != null) ...[

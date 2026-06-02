@@ -1,3 +1,5 @@
+import '../constants/app_constants.dart';
+
 class BackupPayloadV2 {
   const BackupPayloadV2({
     required this.formatVersion,
@@ -24,42 +26,43 @@ class BackupPayloadV2 {
   final List<BackupTransactionV2> transactions;
 
   Map<String, dynamic> toJson() => {
-        'formatVersion': formatVersion,
-        'app': app,
-        'exportedAt': exportedAt,
-        'dbSchemaVersion': dbSchemaVersion,
-        'settings': settings.toJson(),
-        'tasks': tasks.map((item) => item.toJson()).toList(),
-        'events': events.map((item) => item.toJson()).toList(),
-        'categories': categories.map((item) => item.toJson()).toList(),
-        'accounts': accounts.map((item) => item.toJson()).toList(),
-        'transactions': transactions.map((item) => item.toJson()).toList(),
-      };
+    'formatVersion': formatVersion,
+    'app': app,
+    'exportedAt': exportedAt,
+    'dbSchemaVersion': dbSchemaVersion,
+    'settings': settings.toJson(),
+    'tasks': tasks.map((item) => item.toJson()).toList(),
+    'events': events.map((item) => item.toJson()).toList(),
+    'categories': categories.map((item) => item.toJson()).toList(),
+    'accounts': accounts.map((item) => item.toJson()).toList(),
+    'transactions': transactions.map((item) => item.toJson()).toList(),
+  };
 
   static BackupPayloadV2 fromJson(Map<String, dynamic> json) {
     return BackupPayloadV2(
       formatVersion: (json['formatVersion'] as num?)?.toInt() ?? 0,
       app: json['app'] as String? ?? 'LifePilot',
-      exportedAt: json['exportedAt'] as String? ?? DateTime.now().toIso8601String(),
+      exportedAt:
+          json['exportedAt'] as String? ?? DateTime.now().toIso8601String(),
       dbSchemaVersion: (json['dbSchemaVersion'] as num?)?.toInt() ?? 0,
       settings: BackupSettingsV2.fromJson(
         (json['settings'] as Map?)?.cast<String, dynamic>() ?? const {},
       ),
-      tasks: _readList(json['tasks'])
-          .map((item) => BackupTaskV2.fromJson(item))
-          .toList(),
-      events: _readList(json['events'])
-          .map((item) => BackupEventV2.fromJson(item))
-          .toList(),
-      categories: _readList(json['categories'])
-          .map((item) => BackupCategoryV2.fromJson(item))
-          .toList(),
-      accounts: _readList(json['accounts'])
-          .map((item) => BackupAccountV2.fromJson(item))
-          .toList(),
-      transactions: _readList(json['transactions'])
-          .map((item) => BackupTransactionV2.fromJson(item))
-          .toList(),
+      tasks: _readList(
+        json['tasks'],
+      ).map((item) => BackupTaskV2.fromJson(item)).toList(),
+      events: _readList(
+        json['events'],
+      ).map((item) => BackupEventV2.fromJson(item)).toList(),
+      categories: _readList(
+        json['categories'],
+      ).map((item) => BackupCategoryV2.fromJson(item)).toList(),
+      accounts: _readList(
+        json['accounts'],
+      ).map((item) => BackupAccountV2.fromJson(item)).toList(),
+      transactions: _readList(
+        json['transactions'],
+      ).map((item) => BackupTransactionV2.fromJson(item)).toList(),
     );
   }
 
@@ -70,22 +73,19 @@ class BackupPayloadV2 {
 }
 
 class BackupSettingsV2 {
-  const BackupSettingsV2({
-    required this.currency,
-    this.themeMode,
-  });
+  const BackupSettingsV2({required this.currency, this.themeMode});
 
   final String currency;
   final String? themeMode;
 
   Map<String, dynamic> toJson() => {
-        'currency': currency,
-        'themeMode': themeMode,
-      };
+    'currency': currency,
+    'themeMode': themeMode,
+  };
 
   static BackupSettingsV2 fromJson(Map<String, dynamic> json) {
     return BackupSettingsV2(
-      currency: json['currency'] as String? ?? 'LKR',
+      currency: json['currency'] as String? ?? AppConstants.defaultCurrency,
       themeMode: json['themeMode'] as String?,
     );
   }
@@ -121,23 +121,26 @@ class BackupTaskV2 {
   final int? recurrenceParentId;
 
   Map<String, dynamic> toJson() => {
-        'sourceId': sourceId,
-        'title': title,
-        'description': description,
-        'dueDate': dueDate,
-        'reminderAt': reminderAt,
-        'priority': priority,
-        'tags': tags,
-        'isCompleted': isCompleted,
-        'createdAt': createdAt,
-        'updatedAt': updatedAt,
-        'recurrencePattern': recurrencePattern,
-        'recurrenceParentId': recurrenceParentId,
-      };
+    'sourceId': sourceId,
+    'title': title,
+    'description': description,
+    'dueDate': dueDate,
+    'reminderAt': reminderAt,
+    'priority': priority,
+    'tags': tags,
+    'isCompleted': isCompleted,
+    'createdAt': createdAt,
+    'updatedAt': updatedAt,
+    'recurrencePattern': recurrencePattern,
+    'recurrenceParentId': recurrenceParentId,
+  };
 
   static BackupTaskV2 fromJson(Map<String, dynamic> json) {
     return BackupTaskV2(
-      sourceId: (json['sourceId'] as num?)?.toInt() ?? (json['id'] as num?)?.toInt() ?? 0,
+      sourceId:
+          (json['sourceId'] as num?)?.toInt() ??
+          (json['id'] as num?)?.toInt() ??
+          0,
       title: json['title'] as String? ?? 'Imported task',
       description: json['description'] as String? ?? '',
       dueDate: json['dueDate'] as String?,
@@ -145,8 +148,10 @@ class BackupTaskV2 {
       priority: json['priority'] as String? ?? 'medium',
       tags: json['tags'] as String? ?? '',
       isCompleted: json['isCompleted'] as bool? ?? false,
-      createdAt: json['createdAt'] as String? ?? DateTime.now().toIso8601String(),
-      updatedAt: json['updatedAt'] as String? ?? DateTime.now().toIso8601String(),
+      createdAt:
+          json['createdAt'] as String? ?? DateTime.now().toIso8601String(),
+      updatedAt:
+          json['updatedAt'] as String? ?? DateTime.now().toIso8601String(),
       recurrencePattern: json['recurrencePattern'] as String?,
       recurrenceParentId: (json['recurrenceParentId'] as num?)?.toInt(),
     );
@@ -177,21 +182,24 @@ class BackupEventV2 {
   final String updatedAt;
 
   Map<String, dynamic> toJson() => {
-        'sourceId': sourceId,
-        'title': title,
-        'description': description,
-        'date': date,
-        'startTime': startTime,
-        'endTime': endTime,
-        'reminderAt': reminderAt,
-        'createdAt': createdAt,
-        'updatedAt': updatedAt,
-      };
+    'sourceId': sourceId,
+    'title': title,
+    'description': description,
+    'date': date,
+    'startTime': startTime,
+    'endTime': endTime,
+    'reminderAt': reminderAt,
+    'createdAt': createdAt,
+    'updatedAt': updatedAt,
+  };
 
   static BackupEventV2 fromJson(Map<String, dynamic> json) {
     final now = DateTime.now().toIso8601String();
     return BackupEventV2(
-      sourceId: (json['sourceId'] as num?)?.toInt() ?? (json['id'] as num?)?.toInt() ?? 0,
+      sourceId:
+          (json['sourceId'] as num?)?.toInt() ??
+          (json['id'] as num?)?.toInt() ??
+          0,
       title: json['title'] as String? ?? 'Imported event',
       description: json['description'] as String? ?? '',
       date: json['date'] as String? ?? now,
@@ -222,17 +230,20 @@ class BackupCategoryV2 {
   final double? monthlyBudget;
 
   Map<String, dynamic> toJson() => {
-        'sourceId': sourceId,
-        'name': name,
-        'type': type,
-        'colorValue': colorValue,
-        'iconName': iconName,
-        'monthlyBudget': monthlyBudget,
-      };
+    'sourceId': sourceId,
+    'name': name,
+    'type': type,
+    'colorValue': colorValue,
+    'iconName': iconName,
+    'monthlyBudget': monthlyBudget,
+  };
 
   static BackupCategoryV2 fromJson(Map<String, dynamic> json) {
     return BackupCategoryV2(
-      sourceId: (json['sourceId'] as num?)?.toInt() ?? (json['id'] as num?)?.toInt() ?? 0,
+      sourceId:
+          (json['sourceId'] as num?)?.toInt() ??
+          (json['id'] as num?)?.toInt() ??
+          0,
       name: json['name'] as String? ?? 'Category',
       type: json['type'] as String? ?? 'both',
       colorValue: (json['colorValue'] as num?)?.toInt() ?? 0xFF286C63,
@@ -260,22 +271,26 @@ class BackupAccountV2 {
   final String createdAt;
 
   Map<String, dynamic> toJson() => {
-        'sourceId': sourceId,
-        'name': name,
-        'initialBalance': initialBalance,
-        'currentBalance': currentBalance,
-        'colorValue': colorValue,
-        'createdAt': createdAt,
-      };
+    'sourceId': sourceId,
+    'name': name,
+    'initialBalance': initialBalance,
+    'currentBalance': currentBalance,
+    'colorValue': colorValue,
+    'createdAt': createdAt,
+  };
 
   static BackupAccountV2 fromJson(Map<String, dynamic> json) {
     return BackupAccountV2(
-      sourceId: (json['sourceId'] as num?)?.toInt() ?? (json['id'] as num?)?.toInt() ?? 0,
+      sourceId:
+          (json['sourceId'] as num?)?.toInt() ??
+          (json['id'] as num?)?.toInt() ??
+          0,
       name: json['name'] as String? ?? 'Account',
       initialBalance: (json['initialBalance'] as num?)?.toDouble() ?? 0,
       currentBalance: (json['currentBalance'] as num?)?.toDouble() ?? 0,
       colorValue: (json['colorValue'] as num?)?.toInt() ?? 0xFF286C63,
-      createdAt: json['createdAt'] as String? ?? DateTime.now().toIso8601String(),
+      createdAt:
+          json['createdAt'] as String? ?? DateTime.now().toIso8601String(),
     );
   }
 }
@@ -289,6 +304,7 @@ class BackupTransactionV2 {
     required this.date,
     required this.note,
     required this.type,
+    required this.currency,
     required this.createdAt,
     required this.updatedAt,
     required this.accountId,
@@ -302,38 +318,47 @@ class BackupTransactionV2 {
   final String date;
   final String note;
   final String type;
+  final String currency;
   final String createdAt;
   final String updatedAt;
   final int? accountId;
   final int? transferTargetAccountId;
 
   Map<String, dynamic> toJson() => {
-        'sourceId': sourceId,
-        'title': title,
-        'amount': amount,
-        'category': category,
-        'date': date,
-        'note': note,
-        'type': type,
-        'createdAt': createdAt,
-        'updatedAt': updatedAt,
-        'accountId': accountId,
-        'transferTargetAccountId': transferTargetAccountId,
-      };
+    'sourceId': sourceId,
+    'title': title,
+    'amount': amount,
+    'category': category,
+    'date': date,
+    'note': note,
+    'type': type,
+    'currency': currency,
+    'createdAt': createdAt,
+    'updatedAt': updatedAt,
+    'accountId': accountId,
+    'transferTargetAccountId': transferTargetAccountId,
+  };
 
   static BackupTransactionV2 fromJson(Map<String, dynamic> json) {
     return BackupTransactionV2(
-      sourceId: (json['sourceId'] as num?)?.toInt() ?? (json['id'] as num?)?.toInt() ?? 0,
+      sourceId:
+          (json['sourceId'] as num?)?.toInt() ??
+          (json['id'] as num?)?.toInt() ??
+          0,
       title: json['title'] as String? ?? 'Imported transaction',
       amount: (json['amount'] as num?)?.toDouble() ?? 0,
       category: json['category'] as String? ?? 'Other',
       date: json['date'] as String? ?? DateTime.now().toIso8601String(),
       note: json['note'] as String? ?? '',
       type: json['type'] as String? ?? 'expense',
-      createdAt: json['createdAt'] as String? ?? DateTime.now().toIso8601String(),
-      updatedAt: json['updatedAt'] as String? ?? DateTime.now().toIso8601String(),
+      currency: json['currency'] as String? ?? AppConstants.defaultCurrency,
+      createdAt:
+          json['createdAt'] as String? ?? DateTime.now().toIso8601String(),
+      updatedAt:
+          json['updatedAt'] as String? ?? DateTime.now().toIso8601String(),
       accountId: (json['accountId'] as num?)?.toInt(),
-      transferTargetAccountId: (json['transferTargetAccountId'] as num?)?.toInt(),
+      transferTargetAccountId: (json['transferTargetAccountId'] as num?)
+          ?.toInt(),
     );
   }
 }

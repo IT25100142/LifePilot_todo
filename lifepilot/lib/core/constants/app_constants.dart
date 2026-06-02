@@ -1,6 +1,7 @@
 class AppConstants {
   static const appName = 'LifePilot';
   static const defaultCurrency = 'LKR';
+  static const supportedCurrencyCodes = ['LKR', 'USD', 'EUR', 'GBP'];
   static const appVersion = '1.0.0';
 
   static const financeCategories = [

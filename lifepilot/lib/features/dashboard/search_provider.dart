@@ -21,7 +21,9 @@ class GlobalSearchResults {
 
 final searchQueryProvider = StateProvider<String>((ref) => '');
 
-final globalSearchResultsProvider = Provider<AsyncValue<GlobalSearchResults>>((ref) {
+final globalSearchResultsProvider = Provider<AsyncValue<GlobalSearchResults>>((
+  ref,
+) {
   final query = ref.watch(searchQueryProvider).trim().toLowerCase();
 
   final tasksAsync = ref.watch(tasksProvider);
@@ -29,11 +31,9 @@ final globalSearchResultsProvider = Provider<AsyncValue<GlobalSearchResults>>((r
   final financeAsync = ref.watch(financeEntriesProvider);
 
   if (query.isEmpty) {
-    return const AsyncValue.data(GlobalSearchResults(
-      tasks: [],
-      events: [],
-      transactions: [],
-    ));
+    return const AsyncValue.data(
+      GlobalSearchResults(tasks: [], events: [], transactions: []),
+    );
   }
 
   return tasksAsync.when(
@@ -65,11 +65,13 @@ final globalSearchResultsProvider = Provider<AsyncValue<GlobalSearchResults>>((r
                     entry.note.toLowerCase().contains(query);
               }).toList();
 
-              return AsyncValue.data(GlobalSearchResults(
-                tasks: filteredTasks,
-                events: filteredEvents,
-                transactions: filteredFinance,
-              ));
+              return AsyncValue.data(
+                GlobalSearchResults(
+                  tasks: filteredTasks,
+                  events: filteredEvents,
+                  transactions: filteredFinance,
+                ),
+              );
             },
           );
         },

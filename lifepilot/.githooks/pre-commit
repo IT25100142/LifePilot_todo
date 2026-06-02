@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# Pre-commit hook: ensure commits are made with the required email address
+# Repository requirement: use it25100142@my.sliit.lk
+
+required_email="it25100142@my.sliit.lk"
+
+# Try to get configured user.email (local -> global -> system)
+current_email=$(git config user.email || true)
+
+if [ -z "$current_email" ]; then
+  echo "ERROR: git user.email is not set. You must set it to: $required_email"
+  echo "Run: git config user.email '$required_email'  # or add --local/--global as needed"
+  exit 1
+fi
+
+if [ "$current_email" != "$required_email" ]; then
+  echo "ERROR: git user.email is '$current_email' but must be '$required_email'."
+  echo "Set it with: git config user.email '$required_email'"
+  echo "If you intentionally need to use a different identity, update your local git config or contact the project maintainers."
+  exit 1
+fi
+
+exit 0
+
