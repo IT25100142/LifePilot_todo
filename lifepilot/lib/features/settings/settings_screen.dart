@@ -48,6 +48,8 @@ class SettingsScreen extends ConsumerWidget {
                 const SizedBox(height: 16),
                 const _GlassPhysicsStudioSection(),
                 const SizedBox(height: 16),
+                const _AmbientCanvasSection(),
+                const SizedBox(height: 16),
                 const _DashboardGridManagerSection(),
                 const SizedBox(height: 16),
                 const _SettingsGroupHeader('Currency'),
@@ -1520,58 +1522,185 @@ class _GlassPhysicsStudioSection extends ConsumerWidget {
       ),
     );
   }
+}
 
-  Widget _buildSliderRow({
-    required BuildContext context,
-    required String label,
-    required double value,
-    required double min,
-    required double max,
-    required String displayValue,
-    required ValueChanged<double> onChanged,
-  }) {
+Widget _buildSliderRow({
+  required BuildContext context,
+  required String label,
+  required double value,
+  required double min,
+  required double max,
+  required String displayValue,
+  required ValueChanged<double> onChanged,
+}) {
+  final theme = Theme.of(context);
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          Text(
+            displayValue,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w800,
+              color: theme.colorScheme.primary,
+            ),
+          ),
+        ],
+      ),
+      const SizedBox(height: 4),
+      SliderTheme(
+        data: SliderThemeData(
+          trackHeight: 4,
+          activeTrackColor: theme.colorScheme.primary,
+          inactiveTrackColor: theme.colorScheme.onSurface.withValues(
+            alpha: 0.1,
+          ),
+          thumbColor: theme.colorScheme.primary,
+          overlayColor: theme.colorScheme.primary.withValues(alpha: 0.12),
+          valueIndicatorColor: theme.colorScheme.primary,
+        ),
+        child: Slider(
+          value: value.clamp(min, max),
+          min: min,
+          max: max,
+          onChanged: onChanged,
+        ),
+      ),
+    ],
+  );
+}
+
+class _AmbientCanvasSection extends ConsumerWidget {
+  const _AmbientCanvasSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              label,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
+    final customizer = ref.watch(themeCustomizerProvider);
+    final notifier = ref.read(themeCustomizerProvider.notifier);
+    final goldColor = const Color(0xFFD6BD92);
+    final dark = theme.brightness == Brightness.dark;
+
+    return LifePilotGlassCard(
+      radius: 24,
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'AMBIENT CANVAS ATMOSPHERE',
+            style: theme.textTheme.labelMedium?.copyWith(
+              fontWeight: FontWeight.w800,
+              letterSpacing: 1.5,
+              color: goldColor,
             ),
-            Text(
-              displayValue,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.w800,
-                color: theme.colorScheme.primary,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 4),
-        SliderTheme(
-          data: SliderThemeData(
-            trackHeight: 4,
-            activeTrackColor: theme.colorScheme.primary,
-            inactiveTrackColor: theme.colorScheme.onSurface.withValues(
-              alpha: 0.1,
-            ),
-            thumbColor: theme.colorScheme.primary,
-            overlayColor: theme.colorScheme.primary.withValues(alpha: 0.12),
-            valueIndicatorColor: theme.colorScheme.primary,
           ),
-          child: Slider(
-            value: value.clamp(min, max),
-            min: min,
-            max: max,
-            onChanged: onChanged,
+          const SizedBox(height: 6),
+          Text(
+            'Select the fluid background atmosphere profile and control the wave movement speed.',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+            ),
           ),
-        ),
-      ],
+          const SizedBox(height: 20),
+
+          // Atmosphere Selector Options
+          Text(
+            'Active Atmosphere',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              for (final atmosphere in const [
+                'ObsidianNight',
+                'NordicAurora',
+                'CyberNeon',
+              ])
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                    child: GestureDetector(
+                      onTap: () => notifier.setActiveAtmosphere(atmosphere),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(16),
+                          color: customizer.activeAtmosphere == atmosphere
+                              ? theme.colorScheme.primary.withValues(
+                                  alpha: dark ? 0.85 : 0.95,
+                                )
+                              : Colors.white.withValues(alpha: 0.03),
+                          border: Border.all(
+                            color: customizer.activeAtmosphere == atmosphere
+                                ? goldColor
+                                : Colors.white.withValues(alpha: 0.12),
+                            width: customizer.activeAtmosphere == atmosphere
+                                ? 2.0
+                                : 1.0,
+                          ),
+                          boxShadow: customizer.activeAtmosphere == atmosphere
+                              ? [
+                                  BoxShadow(
+                                    color: theme.colorScheme.primary.withValues(
+                                      alpha: 0.3,
+                                    ),
+                                    blurRadius: 6,
+                                  ),
+                                ]
+                              : null,
+                        ),
+                        child: Center(
+                          child: Text(
+                            atmosphere == 'ObsidianNight'
+                                ? 'Obsidian'
+                                : atmosphere == 'NordicAurora'
+                                ? 'Aurora'
+                                : 'Cyber Neon',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight:
+                                  customizer.activeAtmosphere == atmosphere
+                                  ? FontWeight.bold
+                                  : FontWeight.normal,
+                              color: customizer.activeAtmosphere == atmosphere
+                                  ? theme.colorScheme.onPrimary
+                                  : theme.colorScheme.onSurface,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 20),
+
+          // Animation Speed Slider
+          _buildSliderRow(
+            context: context,
+            label: 'Atmosphere Speed',
+            value: customizer.animationSpeed,
+            min: 0.5,
+            max: 3.0,
+            displayValue: '${customizer.animationSpeed.toStringAsFixed(1)}x',
+            onChanged: (val) => notifier.setAnimationSpeed(val),
+          ),
+        ],
+      ),
     );
   }
 }

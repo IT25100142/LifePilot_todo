@@ -22,15 +22,17 @@ class MonthNavigation extends StatelessWidget {
         IconButton(
           visualDensity: compact ? VisualDensity.compact : null,
           tooltip: 'Previous month',
-          onPressed: () =>
-              onMonthChanged(DateTime(currentMonth.year, currentMonth.month - 1)),
+          onPressed: () => onMonthChanged(
+            DateTime(currentMonth.year, currentMonth.month - 1),
+          ),
           icon: Icon(Icons.chevron_left, size: iconSize),
         ),
         IconButton(
           visualDensity: compact ? VisualDensity.compact : null,
           tooltip: 'Next month',
-          onPressed: () =>
-              onMonthChanged(DateTime(currentMonth.year, currentMonth.month + 1)),
+          onPressed: () => onMonthChanged(
+            DateTime(currentMonth.year, currentMonth.month + 1),
+          ),
           icon: Icon(Icons.chevron_right, size: iconSize),
         ),
       ],

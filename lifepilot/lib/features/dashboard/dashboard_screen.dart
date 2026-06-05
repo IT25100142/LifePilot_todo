@@ -1358,7 +1358,9 @@ class _DashboardSystemStatus extends ConsumerWidget {
               'Cognitive Focus Allocation',
               style: theme.textTheme.bodySmall?.copyWith(
                 fontWeight: FontWeight.w600,
-                color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+                color: theme.colorScheme.onSurfaceVariant.withValues(
+                  alpha: 0.5,
+                ),
               ),
             ),
             const SizedBox(height: 6),
@@ -1366,8 +1368,12 @@ class _DashboardSystemStatus extends ConsumerWidget {
               borderRadius: BorderRadius.circular(4),
               child: LinearProgressIndicator(
                 value: 0.68,
-                backgroundColor: theme.colorScheme.onSurface.withValues(alpha: 0.05),
-                valueColor: AlwaysStoppedAnimation<Color>(theme.colorScheme.primary),
+                backgroundColor: theme.colorScheme.onSurface.withValues(
+                  alpha: 0.05,
+                ),
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  theme.colorScheme.primary,
+                ),
                 minHeight: 6,
               ),
             ),
@@ -1388,7 +1394,11 @@ class _DashboardSystemStatus extends ConsumerWidget {
     final theme = Theme.of(context);
     return Row(
       children: [
-        Icon(icon, size: 16, color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6)),
+        Icon(
+          icon,
+          size: 16,
+          color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+        ),
         const SizedBox(width: 8),
         Expanded(
           child: Text(
@@ -1405,10 +1415,7 @@ class _DashboardSystemStatus extends ConsumerWidget {
           Container(
             width: 6,
             height: 6,
-            decoration: BoxDecoration(
-              color: color,
-              shape: BoxShape.circle,
-            ),
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
           ),
         const SizedBox(width: 6),
         Text(
@@ -1533,7 +1540,9 @@ class _DashboardZenInspiration extends ConsumerWidget {
                     fontSize: 8,
                     fontWeight: FontWeight.w700,
                     letterSpacing: 1.0,
-                    color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
+                    color: theme.colorScheme.onSurfaceVariant.withValues(
+                      alpha: 0.4,
+                    ),
                   ),
                 ),
                 Icon(

@@ -9,6 +9,8 @@ class ThemeCustomizerState {
   final Color backdropTintColor;
   final double specularGrainIntensity;
   final String interfaceDensity;
+  final String activeAtmosphere;
+  final double animationSpeed;
 
   const ThemeCustomizerState({
     this.glassBlurScale = 20.0,
@@ -16,6 +18,8 @@ class ThemeCustomizerState {
     this.backdropTintColor = const Color(0xFF0F0E11),
     this.specularGrainIntensity = 0.5,
     this.interfaceDensity = 'Zen',
+    this.activeAtmosphere = 'ObsidianNight',
+    this.animationSpeed = 1.0,
   });
 
   ThemeCustomizerState copyWith({
@@ -24,6 +28,8 @@ class ThemeCustomizerState {
     Color? backdropTintColor,
     double? specularGrainIntensity,
     String? interfaceDensity,
+    String? activeAtmosphere,
+    double? animationSpeed,
   }) {
     return ThemeCustomizerState(
       glassBlurScale: glassBlurScale ?? this.glassBlurScale,
@@ -32,6 +38,8 @@ class ThemeCustomizerState {
       specularGrainIntensity:
           specularGrainIntensity ?? this.specularGrainIntensity,
       interfaceDensity: interfaceDensity ?? this.interfaceDensity,
+      activeAtmosphere: activeAtmosphere ?? this.activeAtmosphere,
+      animationSpeed: animationSpeed ?? this.animationSpeed,
     );
   }
 
@@ -58,6 +66,10 @@ class ThemeCustomizerState {
           ) ??
           b.specularGrainIntensity,
       interfaceDensity: t < 0.5 ? a.interfaceDensity : b.interfaceDensity,
+      activeAtmosphere: t < 0.5 ? a.activeAtmosphere : b.activeAtmosphere,
+      animationSpeed:
+          ui.lerpDouble(a.animationSpeed, b.animationSpeed, t) ??
+          b.animationSpeed,
     );
   }
 
@@ -70,7 +82,9 @@ class ThemeCustomizerState {
           surfaceOpacity == other.surfaceOpacity &&
           backdropTintColor == other.backdropTintColor &&
           specularGrainIntensity == other.specularGrainIntensity &&
-          interfaceDensity == other.interfaceDensity;
+          interfaceDensity == other.interfaceDensity &&
+          activeAtmosphere == other.activeAtmosphere &&
+          animationSpeed == other.animationSpeed;
 
   @override
   int get hashCode =>
@@ -78,7 +92,9 @@ class ThemeCustomizerState {
       surfaceOpacity.hashCode ^
       backdropTintColor.hashCode ^
       specularGrainIntensity.hashCode ^
-      interfaceDensity.hashCode;
+      interfaceDensity.hashCode ^
+      activeAtmosphere.hashCode ^
+      animationSpeed.hashCode;
 }
 
 class ThemeCustomizerStateTween extends Tween<ThemeCustomizerState> {
@@ -113,6 +129,8 @@ class ThemeCustomizerNotifier extends Notifier<ThemeCustomizerState> {
         'lifepilot_theme_specular_grain_intensity',
       );
       final density = _prefs.getString('lifepilot_theme_interface_density');
+      final atmosphere = _prefs.getString('lifepilot_theme_active_atmosphere');
+      final speed = _prefs.getDouble('lifepilot_theme_animation_speed');
 
       state = ThemeCustomizerState(
         glassBlurScale: blur ?? 20.0,
@@ -122,6 +140,8 @@ class ThemeCustomizerNotifier extends Notifier<ThemeCustomizerState> {
             : const Color(0xFF0F0E11),
         specularGrainIntensity: grain ?? 0.5,
         interfaceDensity: density ?? 'Zen',
+        activeAtmosphere: atmosphere ?? 'ObsidianNight',
+        animationSpeed: speed ?? 1.0,
       );
     } catch (_) {
       // Safe fallback for test/mock environments
@@ -171,9 +191,60 @@ class ThemeCustomizerNotifier extends Notifier<ThemeCustomizerState> {
       await _prefs.setString('lifepilot_theme_interface_density', density);
     } catch (_) {}
   }
+
+  Future<void> setActiveAtmosphere(String atmosphere) async {
+    if (atmosphere != 'ObsidianNight' &&
+        atmosphere != 'NordicAurora' &&
+        atmosphere != 'CyberNeon') {
+      return;
+    }
+    state = state.copyWith(activeAtmosphere: atmosphere);
+    try {
+      _prefs = await SharedPreferences.getInstance();
+      await _prefs.setString('lifepilot_theme_active_atmosphere', atmosphere);
+    } catch (_) {}
+  }
+
+  Future<void> setAnimationSpeed(double val) async {
+    if (val < 0.5 || val > 3.0) return;
+    state = state.copyWith(animationSpeed: val);
+    try {
+      _prefs = await SharedPreferences.getInstance();
+      await _prefs.setDouble('lifepilot_theme_animation_speed', val);
+    } catch (_) {}
+  }
 }
 
 final themeCustomizerProvider =
     NotifierProvider<ThemeCustomizerNotifier, ThemeCustomizerState>(
       ThemeCustomizerNotifier.new,
     );
+
+extension AtmosphereColors on String {
+  List<Color> get atmosphereColors {
+    switch (this) {
+      case 'NordicAurora':
+        return const [
+          Color(0xFF0B2B28), // Deep emerald
+          Color(0xFF004D40), // Dark green teal
+          Color(0xFF00796B), // Muted cyan teal
+          Color(0xFF00E5FF), // Icy cyan
+        ];
+      case 'CyberNeon':
+        return const [
+          Color(0xFF2D003E), // Cyber violet/indigo
+          Color(0xFFFF007F), // Hot magenta
+          Color(0xFF00F0FF), // Electric cyan
+          Color(0xFF7000FF), // Vibrant purple
+        ];
+      case 'ObsidianNight':
+      default:
+        return const [
+          Color(0xFF0F0E11), // Deep obsidian
+          Color(0xFF1F1D24), // Very dark plum/indigo
+          Color(0xFF111726), // Deep midnight blue
+          Color(0xFF1F1235), // Dark violet
+        ];
+    }
+  }
+}

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/canvas_studio/canvas_studio_provider.dart';
+import 'ambient_canvas_background.dart';
 import 'glass.dart';
 import 'mesh_backdrop.dart';
 
@@ -55,6 +56,7 @@ class _LifePilotScaffoldState extends State<LifePilotScaffold> {
       body: LiquidBackground(
         child: Stack(
           children: [
+            const Positioned.fill(child: AmbientCanvasBackground()),
             const Positioned.fill(child: LifePilotMeshBackdrop()),
             // ── Page Content with AnimatedSwitcher transitions ──
             Positioned.fill(
