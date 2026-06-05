@@ -1,495 +1,169 @@
-# LifePilot
+# LifePilot: Executive Workspace & Secure Personal Ledger
 
-[![Flutter Version](https://img.shields.io/badge/Flutter-%5E3.9.0-blue.svg)](https://flutter.dev)
-[![State Management](https://img.shields.io/badge/State--Management-Riverpod%202.6-purple.svg)](https://riverpod.dev)
-[![Database](https://img.shields.io/badge/Database-Drift%20(SQLite)-green.svg)](https://drift.simonbinder.eu/)
-[![Encryption](https://img.shields.io/badge/Encryption-SQLCipher-yellow.svg)](https://www.zetetic.net/sqlcipher/)
-[![Platforms](https://img.shields.io/badge/Platforms-Android%20iOS%20Web%20Desktop-orange.svg)](#platforms-and-runtime)
-[![License](https://img.shields.io/badge/License-Private-red.svg)](#license-and-ownership)
+LifePilot is a high-fidelity, premium executive workspace application designed for distraction-free performance tracking. It provides a local-first, zero-knowledge environment consolidating personal task management, calendar scheduling, habit tracking, and personal finance ledgers into a single unified workspace.
 
-LifePilot is an offline-first Flutter application that combines task management, calendar scheduling, and personal finance tracking in one local-first product. Data is stored on-device using Drift + SQLCipher, and the app can run without a backend service.
+---
 
-## Table Of Contents
+## 1. Project Manifesto & Aesthetic Overview
 
-- [Project Overview](#project-overview)
-- [Platforms And Runtime](#platforms-and-runtime)
-- [Technology Stack](#technology-stack)
-- [Feature Guide](#feature-guide)
-- [Architecture](#architecture)
-- [Codebase Structure](#codebase-structure)
-- [Data Layer And Schema](#data-layer-and-schema)
-- [Security And Privacy Model](#security-and-privacy-model)
-- [Backup And Restore (Encrypted .lpbackup)](#backup-and-restore-encrypted-lpbackup)
-- [Getting Started For Developers](#getting-started-for-developers)
-- [Quick Usage Walkthrough](#quick-usage-walkthrough)
-- [Screenshots](#screenshots)
-- [Development Workflow](#development-workflow)
-- [Testing And Quality](#testing-and-quality)
-- [Troubleshooting](#troubleshooting)
-- [Contribution Notes](#contribution-notes)
-- [License And Ownership](#license-and-ownership)
+The engineering philosophy of LifePilot prioritizes visual excellence, deep hardware integration, and a zero-trust offline privacy posture. The application is structured around a spatial glassmorphism interface optimized specifically for wide-format executive desktop environments.
 
-## Project Overview
+### 1.1 Structural Design Language
+To eliminate stretched mobile interfaces on wide viewports, LifePilot transitions from a fluid single-column layout on compact screens to an **Asymmetrical Desktop Grid Matrix (3-Column Layout)** on screens of 1000px and wider. This grid enforces a strict **1650px** viewport constraint.
 
-LifePilot focuses on three domains that share a single local data model:
+The grid segments the screen into three logical columns with a **3:5:4 flex ratio**:
+*   **Left Column (Flex 3):** Displays high-level system indicators, user status, the global search interface, and Zen-density ambient quotes.
+*   **Center Column (Flex 5):** Serves as the primary active workspace, housing the cumulative financial analytics visualizer and the priority/urgent tasks view.
+*   **Right Column (Flex 4):** Houses context projections, the weekly calendar runway, the habit mesh heatmap, and the quick-focus session deck.
 
-- **Tasks:** priorities, due dates, recurring task patterns, completion state, reminder scheduling.
-- **Calendar:** events with start/end times and optional reminder timestamps.
-- **Finance:** income/expense entries, categories with monthly budgets, and multi-account wallet tracking.
-
-Key technical entry points:
-
-- App entry: [`lib/main.dart`](lib/main.dart)
-- Root widget and theme wiring: [`lib/app/app.dart`](lib/app/app.dart)
-- App navigation shell: [`lib/app/router.dart`](lib/app/router.dart)
-- Database and migrations: [`lib/data/database/app_database.dart`](lib/data/database/app_database.dart)
-
-## Platforms And Runtime
-
-The repository includes Flutter targets for:
-
-- Android (`android/`)
-- iOS (`ios/`)
-- Web (`web/`)
-- Windows (`windows/`)
-- macOS (`macos/`)
-- Linux (`linux/`)
-
-Project metadata:
-
-- Package name: `lifepilot`
-- Version: `1.0.0+1` in [`pubspec.yaml`](pubspec.yaml)
-- Dart SDK constraint: `^3.9.0`
-- `publish_to: 'none'` (private app package)
-
-## Technology Stack
-
-Runtime dependencies are defined in [`pubspec.yaml`](pubspec.yaml).
-
-### Core Framework
-
-- Flutter + Dart
-- `flutter_riverpod` for state management
-- `go_router` for shell-based tab routing
-
-### Data And Storage
-
-- `drift` + `drift_flutter` for typed database layer
-- `sqlcipher_flutter_libs` for encrypted SQLite engine
-- `flutter_secure_storage` for encryption-key persistence
-- `path` + `path_provider` for database file location handling
-
-### Product Features And Device Services
-
-- `flutter_local_notifications`, `timezone`, `flutter_timezone` for local reminders
-- `local_auth` for lock-screen authentication
-- `fl_chart` for finance visualizations
-- `csv`, `file_picker`, `file_saver` for import/export workflows
-- `intl` for formatting
-
-### Developer Tooling
-
-- `build_runner` + `drift_dev` for Drift code generation
-- `flutter_lints` via [`analysis_options.yaml`](analysis_options.yaml)
-- `flutter_test` for unit tests
-
-## Feature Guide
-
-Implementation lives under [`lib/features`](lib/features).
-
-### Dashboard
-
-- Consolidated summary cards for daily view and finance snapshots
-- Global search provider that filters tasks, calendar events, and finance entries by case-insensitive text match
-- Quick actions routed into task, event, and transaction creation flows
-
-Related files:
-
-- [`lib/features/dashboard/dashboard_screen.dart`](lib/features/dashboard/dashboard_screen.dart)
-- [`lib/features/dashboard/search_provider.dart`](lib/features/dashboard/search_provider.dart)
-
-### Todo And Recurring Tasks
-
-- Task priorities (`low`, `medium`, `high`) with sort/filter controls
-- Recurrence patterns (`daily`, `weekly`, `monthly`) via next-date calculation
-- Completion flow can auto-create next recurring item and re-schedule reminders
-
-Related files:
-
-- [`lib/features/todo/todo_screen.dart`](lib/features/todo/todo_screen.dart)
-- [`lib/features/todo/todo_providers.dart`](lib/features/todo/todo_providers.dart)
-
-### Calendar
-
-- Date/time event scheduling with reminder support
-- Event lifecycle persisted in local Drift table
-
-Related files:
-
-- [`lib/features/calendar/calendar_screen.dart`](lib/features/calendar/calendar_screen.dart)
-- [`lib/features/calendar/calendar_providers.dart`](lib/features/calendar/calendar_providers.dart)
-
-### Finance
-
-- Income/expense tracking
-- Category budget thresholds (80% warning and 100% exceeded notifications)
-- Account-based balances and transfer-aware recalculation
-- Monthly cumulative income vs expense trend computation for charts
-
-Related files:
-
-- [`lib/features/finance/finance_screen.dart`](lib/features/finance/finance_screen.dart)
-- [`lib/features/finance/finance_providers.dart`](lib/features/finance/finance_providers.dart)
-
-### Settings And Local Data Management
-
-- Theme mode (`system`, `light`, `dark`)
-- Custom currency code (default `LKR`)
-- Export Encrypted Backup (`.lpbackup`)
-- Import Encrypted Backup (`.lpbackup`)
-- Export CSV
-- Export JSON (legacy)
-- Import JSON (legacy)
-- Clear-all local data action
-
-Related files:
-
-- [`lib/features/settings/settings_screen.dart`](lib/features/settings/settings_screen.dart)
-- [`lib/core/services/export_service.dart`](lib/core/services/export_service.dart)
-
-## Architecture
-
-LifePilot uses a feature-first structure with Riverpod providers orchestrating business state over a Drift persistence layer.
-
-```mermaid
-flowchart TD
-  appStart[AppStart] --> mainEntry[main.dart]
-  mainEntry --> providerScope[RiverpodProviderScope]
-  providerScope --> lifePilotApp[LifePilotApp]
-  lifePilotApp --> router[GoRouter]
-  lifePilotApp --> lockScreen[AppLockScreen]
-  router --> featureModules[FeatureModules]
-  featureModules --> providers[RiverpodProviders]
-  providers --> appDatabase[AppDatabase]
-  appDatabase --> sqlCipherDb[SQLCipherSQLite]
-  featureModules --> deviceServices[NotificationsExportAuth]
-```
-
-High-level responsibilities:
-
-- **App shell/navigation:** [`lib/app`](lib/app)
-- **Shared services/widgets/constants:** [`lib/core`](lib/core)
-- **Database and provider wiring:** [`lib/data/database`](lib/data/database)
-- **Domain features:** [`lib/features`](lib/features)
-
-## Codebase Structure
-
-```text
-lib/
-|-- app/                    # App bootstrap, routing, theming
-|   |-- app.dart
-|   |-- router.dart
-|   `-- theme.dart
-|-- core/
-|   |-- constants/          # Static app constants
-|   |-- services/           # Notification, export, encryption utilities
-|   |-- utils/              # Date/format helper methods
-|   `-- widgets/            # Shared UI components (glass panels, scaffold, etc.)
-|-- data/
-|   `-- database/           # Drift tables, migrations, database providers
-|-- features/
-|   |-- dashboard/
-|   |-- todo/
-|   |-- calendar/
-|   |-- finance/
-|   `-- settings/
-`-- main.dart
-```
-
-## Data Layer And Schema
-
-Database definition: [`lib/data/database/app_database.dart`](lib/data/database/app_database.dart)
-
-- Database engine uses Drift.
-- Encryption key is applied with `PRAGMA key`.
-- Current schema version is `4`.
-- Migrations include:
-  - recurring-task columns in `tasks`
-  - budget column in `categories`
-  - accounts table and account references in `transactions`
-
-### Tables
-
-| Table | Drift class | Purpose |
+#### Layout Configuration Matrix
+| Layout Attribute | Compact Viewports (< 1000px) | Widescreen Desktop Viewports (>= 1000px) |
 | :--- | :--- | :--- |
-| `tasks` | `Tasks` | Todo items, priority, due/reminder time, recurrence metadata |
-| `events` | `CalendarEvents` | Calendar scheduling records with start/end/reminder times |
-| `transactions` | `FinanceEntries` | Income/expense/transfer records and account linkage |
-| `accounts` | `Accounts` | Wallet/account balances and metadata |
-| `categories` | `Categories` | Shared task/finance categories and optional monthly budget |
-| `app_settings` | `AppSettingsTable` | Theme mode, currency, and seed status |
+| **Grid Arrangement** | Single-column vertical stacking | Asymmetrical 3-column horizontal grid (3:5:4 flex ratio) |
+| **Viewport Constraint** | Fluid (100% of viewport width) | Centered layout with **1650px** maximum constraint limit |
+| **Left Column (Flex 3)** | Merged into main scrollable area | System Status, Global Search, and Executive Greeting |
+| **Center Column (Flex 5)** | Merged into main scrollable area | Core Workspace: Finance Analytics and Urgent Tasks |
+| **Right Column (Flex 4)** | Merged into main scrollable area | Context Runway, Week Strip, Habit Mesh, and Quick Focus |
+| **Dock Configuration** | Screen-bottom edge navigation | Centered horizontal glass capsule dock (max width **520px**) |
+| **Transition Animation** | Default route switches | Slide-fade transition pages with kinetic translation |
 
-### Data Operations
+### 1.2 Spatial Glassmorphic Material Stack
+The visual framework utilizes a layered materials stack to achieve a spatial depth effect. This is implemented via custom painters and filters in [glass_panel.dart](file:///c:/Users/chamidu/Documents/TO-DO/lifepilot/lib/core/widgets/glass_panel.dart):
 
-- Streaming read APIs (`watchTasks`, `watchEvents`, `watchFinanceEntries`, etc.)
-- Upsert-based save operations (`insertOnConflictUpdate`)
-- Import pipeline (`importJson`) and reset pipeline (`clearAllData`)
-- Account balance reconciliation (`recalculateAccountBalances`)
+*   **Backdrop Blur Filters:** Evaluates at a high-intensity **24.0 Sigma** blur value using `ui.ImageFilter.blur` within [LifePilotGlassCard](file:///c:/Users/chamidu/Documents/TO-DO/lifepilot/lib/core/widgets/glass_panel.dart#L57) to separate layout items from the dynamic background mesh.
+*   **Alpha Tint Surfaces:** Semi-translucent panels are configured with a **3% white/dark surface opacity** to ensure maximum content readability and background integration without losing color balance.
+*   **Directional Hair-line Specular Highlights:** A custom `SpecularBorderPainter` draws a precise **0.75-pixel** stroke highlight. The border uses a directional gradient (top-left highlights, bottom-right shadows) to simulate light refraction.
+*   **Organic Spring Kinetics:** Motion states use custom cubic Bezier curves (`Cubic(0.2, 0.9, 0.1, 1.05)`) for spring physics during page transitions and interactive hover effects.
+*   **Dynamic Spotlight Illuminator:** Interactive components track mouse movements in a `MouseRegion` to paint a dynamic spotlight highlight with a **120-unit** radius and a maximum opacity cap of **0.04**.
+*   **Tactile Neomorphic Depression:** When clicked, components render top-left dark inset shadows and bottom-right light reflections to simulate mechanical click feedback.
 
-## Security And Privacy Model
+---
 
-Security components:
+## 2. Core Architectural Pillars
 
-- Key management: [`lib/core/services/encryption_service.dart`](lib/core/services/encryption_service.dart)
-- DB encryption setup: [`lib/data/database/app_database.dart`](lib/data/database/app_database.dart)
-- App lock providers/UI: [`lib/features/settings/auth_provider.dart`](lib/features/settings/auth_provider.dart), [`lib/features/settings/lock_screen.dart`](lib/features/settings/lock_screen.dart)
+### 2.1 State Architecture
+Reactive state distributions and database interfaces are managed via the Riverpod framework:
+*   **Riverpod Notifiers:** Encapsulate domain actions and UI-consumed states. Logic for tasks, transactions, and habits is managed using Riverpod `Notifier` and `AsyncNotifier` structures.
+*   **Synchronous Session Guard Providers:** Access to the underlying encrypted database requires an active session state managed by the `authSessionProvider` in [router.dart](file:///c:/Users/chamidu/Documents/TO-DO/lifepilot/lib/app/router.dart#L34). 
+*   **Inactivity Session Locks:** Application lifecycle changes (such as system standby or backgrounding) cause the session provider to instantly revoke the decrypted database session. This locks the application until a valid credentials verification occurs.
 
-Implemented behavior:
+### 2.2 Navigation Topology
+The application uses declarative routing driven by GoRouter:
+*   **Shell-Based Layouts:** Stateful navigation branches are organized under a unified `StatefulShellRoute` in [router.dart](file:///c:/Users/chamidu/Documents/TO-DO/lifepilot/lib/app/router.dart#L67), preserving individual tab states when switching views.
+*   **Branch Kinetics:** Switching navigation tabs triggers a `KineticsBranchContainer` in [router.dart](file:///c:/Users/chamidu/Documents/TO-DO/lifepilot/lib/app/router.dart#L193). The outgoing view shrinks and slides out of frame, while the incoming view scales up and slides in. The direction of translation is determined by the transition index.
+*   **Organic Slide-Fade Pages:** Screen changes use the [OrganicPhysicsTransitionPage](file:///c:/Users/chamidu/Documents/TO-DO/lifepilot/lib/app/router.dart#L155) class, animating position (0.08 vertical offset to zero), scale (0.96 to 1.0), and opacity.
 
-- A 256-bit key is generated (if missing) and saved via `flutter_secure_storage`.
-- SQLCipher key is applied when opening the local SQLite file.
-- If database decryption fails, the invalid local DB file is removed to recover startup.
-- App lock re-authenticates on resume and locks on paused/inactive lifecycle events.
-- Biometrics can be unavailable; app lock falls back to `notSupported` state.
+### 2.3 Hardware-Level Event Capture
+LifePilot uses direct physical keyboard interception on the lock/login screen in [login_screen.dart](file:///c:/Users/chamidu/Documents/TO-DO/lifepilot/lib/features/auth/login_screen.dart):
+*   **Post-Frame Focus Request:** The login screen requests physical keyboard focus immediately after the first frame renders:
+    ```dart
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _keyboardFocusNode.requestFocus();
+    });
+    ```
+*   **Event Interception Pipeline:** The root view of the login interface is wrapped in a [KeyboardListener](file:///c:/Users/chamidu/Documents/TO-DO/lifepilot/lib/features/auth/login_screen.dart#L258) using the requested `FocusNode`.
+*   **Verification Vectors:** The listener intercepts input codes on `KeyDownEvent` and processes numerical entries from both main keyboard digits (`LogicalKeyboardKey.digit0` through `LogicalKeyboardKey.digit9`) and dedicated numerical keypads (`LogicalKeyboardKey.numpad0` through `LogicalKeyboardKey.numpad9`), alongside `LogicalKeyboardKey.backspace`. These characters feed straight into pin verification routines to dissolve the lock veil.
 
-## Backup And Restore (Encrypted .lpbackup)
+---
 
-Encrypted backup is available in **Settings -> Local data** and is the recommended backup path.
+## 3. Storage Security Ledger (Zero-Knowledge Architecture)
 
-### Backup Encryption Model
+LifePilot operates on a zero-knowledge data model. No user data, passwords, or transaction histories are transmitted to external servers.
 
-- File extension: `.lpbackup`
-- Container type: UTF-8 encoded JSON structure
-- KDF: `PBKDF2-HMAC-SHA256`
-- Iterations: `100000`
-- Cipher: `AES-256-GCM`
-- Key length: `256-bit`
-- Random salt/nonce generated per backup
-
-Backup container fields:
-
-- `format` (`lifepilot-backup-v1`)
-- `kdf`
-- `iterations`
-- `cipher`
-- `salt` (base64)
-- `nonce` (base64)
-- `ciphertext` (base64)
-- `mac` (base64)
-
-### Export Password Flow
-
-- User taps **Export Encrypted Backup**.
-- Dialog: **Create backup password**.
-- Validation:
-  - minimum length: 8 characters
-  - password and confirmation must match
-- On success, app writes `lifepilot-backup.lpbackup`.
-
-### Restore Password Flow
-
-- User taps **Import Encrypted Backup**.
-- Dialog: **Unlock encrypted backup**.
-- Password is required before decrypting.
-- On successful decrypt and parse, payload is sent to `database.importJson(...)`.
-
-### Error Handling Shown To Users
-
-- `Wrong password or corrupted backup file.`
-- `Invalid backup file format.`
-- `Unable to decrypt backup file.`
-
-### Current Backup Scope And Limitations
-
-Included in encrypted backup payload:
-
-- `tasks`
-- `events`
-- `transactions`
-- `categories`
-- `currency`
-- metadata such as `app` and `exportedAt`
-
-Current restore limitations (as currently implemented):
-
-- Accounts are not exported/imported as full account records.
-- Transaction account linkage and transfer relationships are not fully restored.
-- Backed-up custom categories are not restored one-to-one; category seeding occurs during import flow.
-- Full app settings are not restored; currency is restored, but theme and other settings are not fully replicated.
-
-Legacy compatibility:
-
-- JSON import/export remains available via **Export JSON (legacy)** and **Import JSON (legacy)**.
-
-## Getting Started For Developers
-
-### Prerequisites
-
-- Flutter SDK compatible with Dart `^3.9.0`
-- Run environment checks:
-  - `flutter --version`
-  - `flutter doctor -v`
-- Platform toolchains for target platforms:
-  - Android: Android SDK + emulator/device
-  - iOS/macOS: Xcode + CocoaPods (macOS)
-  - Windows desktop: Visual Studio with Desktop C++ workload
-  - Linux desktop: GTK/build dependencies required by Flutter docs
-- Git and terminal access
-- At least one runnable target confirmed with `flutter devices`
-
-### 1) Validate Environment
-
-```bash
-flutter --version
-flutter doctor -v
+```
++-------------------------------------------------------------+
+|                      LifePilot Flutter UI                   |
++-------------------------------------------------------------+
+                              |
+                              v
++-------------------------------------------------------------+
+|               Drift Database Mapping Layer                  |
++-------------------------------------------------------------+
+                              |
+                              v
++-------------------------------------------------------------+
+|        SQLCipher Database Engine (AES-256 Encrypted)        |
++-------------------------------------------------------------+
+      ^                                                 ^
+      | (Secure Key Injection)                          | (C-Library FFI Overrides)
++-------------------------------+             +-----------------------------+
+|  flutter_secure_storage       |             |  sqlite3 / FFI Bindings     |
+|  (System Keyring Persistence) |             |  (Android workaround/so)    |
++-------------------------------+             +-----------------------------+
 ```
 
-### 2) Install Dependencies
+### 3.1 Database & Cryptography Configuration
+The persistence engine uses the Drift framework on top of SQLite, compiled with SQLCipher bindings:
+*   **AES-256 Database Encryption:** Database rows and structures are encrypted using SQLCipher. 
+*   **Secure Key Generation:** A 256-bit cryptographic key is generated on first startup using a cryptographically secure random number generator (CSPRNG).
+*   **Key Storage:** The key is written directly to the OS security framework (Android Keystore / iOS Keychain) using the `flutter_secure_storage` package.
+*   **PRAGMA Injection:** The key is retrieved at startup and injected into the sqlite instance before executing any schema queries:
+    ```dart
+    rawDb.execute("PRAGMA key = '$encryptionKey';");
+    ```
+*   **Self-Healing Recovery:** If the database decryption fails (indicating file corruption or an invalid key), the database file is deleted, and the schema is re-initialized to prevent app startup crashes.
 
-```bash
+### 3.2 Native FFI & Initialization Workarounds
+To circumvent standard Dart FFI limits and platform linker restrictions, LifePilot uses custom initialization routines in [main.dart](file:///c:/Users/chamidu/Documents/TO-DO/lifepilot/lib/main.dart):
+*   **Android FFI Overrides:** Android systems frequently fail to resolve native FFI symbols for SQLCipher under standard sqlite configurations. LifePilot overrides this lookup sequence by routing queries through `sqlcipher_flutter_libs` bindings:
+    ```dart
+    if (Platform.isAndroid) {
+      await applyWorkaroundToOpenSqlCipherOnOldAndroidVersions();
+      open.overrideFor(OperatingSystem.android, openCipherOnAndroid);
+    }
+    ```
+*   **C-Library Linkage:** This configuration forces the runtime to load compiled C-libraries (`libsqlite3.so` containing SQLCipher symbols) rather than the default system SQLite library.
+
+---
+
+## 4. Hardware Compilation & Deployment Matrix
+
+### 4.1 Windows Desktop Architecture
+Compiling the application on Windows requires building the `sqlcipher_flutter_libs` package using Visual Studio C++ build tools and CMake. The compiler needs to link against local OpenSSL headers and binaries.
+
+#### 4.1.1 Environment Setup
+1. Download the pre-compiled OpenSSL binaries for Windows (1.1.x or 3.x series).
+2. Extract the files to a local folder (e.g., **`C:\Path\To\Project\.openssl`**).
+3. Set the CMake root pointer in an elevated PowerShell session to point to the local OpenSSL path:
+   ```powershell
+   [System.Environment]::SetEnvironmentVariable("OPENSSL_ROOT_DIR", "C:\Path\To\Project\.openssl", "User")
+   ```
+4. Restart the development terminal to apply the updated environment variables.
+
+#### 4.1.2 Compilation Commands
+Run the code generation scripts and build the Windows executable:
+```powershell
+# Get Flutter dependencies
 flutter pub get
-```
 
-### 3) Generate Drift Code
-
-```bash
+# Generate Drift database files
 dart run build_runner build --delete-conflicting-outputs
-```
 
-Use watch mode during active schema/model changes:
-
-```bash
-dart run build_runner watch --delete-conflicting-outputs
-```
-
-### 4) Run The App
-
-```bash
-flutter run
-```
-
-Platform-specific examples:
-
-```bash
-flutter run -d chrome
+# Execute compile build for Windows desktop targets
 flutter run -d windows
-flutter run -d android
 ```
 
-### 5) Run Tests
+### 4.2 Android Target Architecture
+Android targets compile SQLCipher using the Android NDK and distribute optimized binaries for supported CPU architectures.
 
+#### 4.2.1 CPU Architecture Configurations
+The build process generates native `.so` library bundles for:
+*   `arm64-v8a` (Modern Android devices)
+*   `x86_64` (Standard Android emulators)
+
+#### 4.2.2 Compilation and Deployment Commands
+Launch the compilation process and deploy to an active device or emulator:
 ```bash
-flutter test
-```
-
-### 6) Run Static Analysis
-
-```bash
-flutter analyze
-```
-
-## Quick Usage Walkthrough
-
-Suggested first-run flow:
-
-1. Open **Dashboard** and review summary cards.
-2. Add a task in **Todo**, including priority and optional recurrence.
-3. Add an event in **Calendar** with optional reminder time.
-4. Add income/expense entries in **Finance** and review category/trend visuals.
-5. Open **Settings** to configure currency/theme.
-6. In **Settings -> Local data**, export an encrypted `.lpbackup`.
-7. Test restore by importing the `.lpbackup` with the same password.
-
-## Screenshots
-
-Place screenshots in `screenshots/` (or `docs/screenshots/`) and keep filenames stable:
-
-- `dashboard.png`
-- `todo.png`
-- `calendar.png`
-- `finance.png`
-- `settings-local-data.png`
-- `backup-password-dialog.png`
-- `restore-password-dialog.png`
-
-Suggested markdown placeholders:
-
-```md
-![Dashboard](screenshots/dashboard.png)
-![Todo](screenshots/todo.png)
-![Calendar](screenshots/calendar.png)
-![Finance](screenshots/finance.png)
-![Settings Local Data](screenshots/settings-local-data.png)
-![Backup Password Dialog](screenshots/backup-password-dialog.png)
-![Restore Password Dialog](screenshots/restore-password-dialog.png)
-```
-
-## Development Workflow
-
-Recommended local workflow:
-
-1. Pull latest changes.
-2. `flutter pub get`
-3. If Drift models changed, run build_runner generation.
-4. Run app (`flutter run`) and validate changed feature flow.
-5. Run `flutter test` and `flutter analyze` before opening PR.
-
-## Testing And Quality
-
-Current tests are in [`test/life_pilot_utils_test.dart`](test/life_pilot_utils_test.dart).
-
-Covered areas include:
-
-- Date helper correctness
-- Finance summary math and category grouping
-- Notification ID ranges for task/event reminders
-- Recurrence date calculations (daily/weekly/monthly boundaries)
-- Budget threshold transition logic
-- Search matching behavior
-- Financial trend aggregation
-- Transfer-aware account balance calculation
-
-Current testing posture:
-
-- Unit-level logic coverage exists.
-- No CI pipeline configuration is currently present in this repository.
-
-## Troubleshooting
-
-### Drift Codegen Issues
-
-If generated files are stale or conflicting:
-
-```bash
-dart run build_runner build --delete-conflicting-outputs
-```
-
-### Flutter Dependency Or Build Problems
-
-Try:
-
-```bash
+# Clean cached Flutter artifacts
 flutter clean
+
+# Retrieve dependency libraries
 flutter pub get
+
+# Generate database sources
+dart run build_runner build --delete-conflicting-outputs
+
+# Run compilation and deploy to target emulator
+flutter run -d emulator-5554
 ```
-
-Then rerun build_runner and start the app again.
-
-### Notification Or Biometric Behavior
-
-- Verify OS permissions for notifications and biometrics on the test device.
-- Test on a physical device when simulator/emulator support is limited.
-
-## Contribution Notes
-
-This repository currently has no separate `CONTRIBUTING.md`, so use these defaults:
-
-- Keep changes scoped by feature module (`lib/features/...`).
-- Preserve feature-first organization and Riverpod-driven state flow.
-- Regenerate Drift code when schema/table definitions change.
-- Update README/docs when public behavior or developer workflow changes.
-- Run analyze and tests before requesting review.
-
-## License And Ownership
-
-This project is currently marked private (`publish_to: 'none'` in [`pubspec.yaml`](pubspec.yaml)) and README badge indicates private licensing. Do not redistribute code/assets unless explicit permission is provided by the project owner.
+The application dynamically selects and extracts the correct CPU architecture bundle during installation, deploying SQLCipher out-of-the-box.

@@ -13,7 +13,6 @@ import '../../core/widgets/glass_panel.dart';
 import '../../core/widgets/state_views.dart';
 import '../../data/database/database_provider.dart';
 import '../theme/theme_provider.dart';
-import '../canvas_studio/canvas_studio_provider.dart';
 import '../canvas_studio/grid_provider.dart';
 import '../../core/theme/theme_customizer_provider.dart';
 import 'settings_providers.dart';

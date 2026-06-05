@@ -7,7 +7,6 @@ import '../../core/services/notification_provider.dart';
 import '../../core/services/notification_service.dart';
 import '../../core/utils/date_helpers.dart';
 import '../../core/widgets/glass.dart';
-import '../../core/widgets/glass_panel.dart';
 import '../../core/widgets/section_card.dart';
 import '../../core/widgets/state_views.dart';
 import '../../data/database/app_database.dart';

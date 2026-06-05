@@ -148,7 +148,10 @@ class ThemeCustomizerNotifier extends Notifier<ThemeCustomizerState> {
     state = state.copyWith(backdropTintColor: color);
     try {
       _prefs = await SharedPreferences.getInstance();
-      await _prefs.setInt('lifepilot_theme_backdrop_tint_color', color.value);
+      await _prefs.setInt(
+        'lifepilot_theme_backdrop_tint_color',
+        color.toARGB32(),
+      );
     } catch (_) {}
   }
 

@@ -1,9 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/services/encryption_provider.dart';
 import 'app_database.dart';
 
 final appDatabaseProvider = Provider<AppDatabase>((ref) {
-  final database = AppDatabase();
+  final encryptionService = ref.watch(encryptionServiceProvider);
+  final database = AppDatabase(encryptionService);
   ref.onDispose(database.close);
   return database;
 });

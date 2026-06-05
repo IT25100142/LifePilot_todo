@@ -63,7 +63,11 @@ class _InteractiveButtonState extends State<InteractiveButton> {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 250),
         curve: const Cubic(0.2, 0.8, 0.2, 1),
-        transform: Matrix4.identity()..scale(_isHovered ? 1.02 : 1.0),
+        transform: Matrix4.diagonal3Values(
+          _isHovered ? 1.02 : 1.0,
+          _isHovered ? 1.02 : 1.0,
+          1.0,
+        ),
         transformAlignment: Alignment.center,
         child: LifePilotGlassCard(
           radius: widget.radius,

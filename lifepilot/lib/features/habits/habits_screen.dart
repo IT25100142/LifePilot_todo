@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/utils/date_helpers.dart';
 import '../../core/widgets/glass.dart';
-import '../../core/widgets/glass_panel.dart';
 import '../../core/widgets/state_views.dart';
 import '../../data/database/app_database.dart';
 import 'habit_providers.dart';

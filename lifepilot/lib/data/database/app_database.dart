@@ -9,7 +9,7 @@ import 'package:sqlite3/sqlite3.dart';
 
 import '../../core/constants/app_constants.dart';
 import '../../core/models/backup_payload_v2.dart';
-import '../../core/services/encryption_service.dart';
+import '../../core/services/encryption_service.dart' show EncryptionServiceBase;
 
 part 'app_database.g.dart';
 
@@ -142,11 +142,75 @@ class HabitLogs extends Table {
     HabitLogs,
   ],
 )
-class AppDatabase extends _$AppDatabase {
-  AppDatabase() : super(_openConnection());
-  AppDatabase.forTesting(super.executor);
+abstract class AppDatabaseBase {
+  // Settings
+  Stream<AppSettingsTableData> watchSettings();
+  Future<AppSettingsTableData> readSettings();
+  Future<void> updateThemeMode(String mode);
+  Future<void> updateCurrency(String currency);
+  Future<void> ensureSeedData();
 
-  static QueryExecutor _openConnection() {
+  // Tasks
+  Stream<List<Task>> watchTasks();
+  Future<int> saveTask(TasksCompanion entry);
+  Future<void> deleteTask(int id);
+  Future<void> toggleTask(Task task);
+
+  // Subtasks
+  Stream<List<Subtask>> watchSubtasksForTask(int taskId);
+  Future<int> saveSubtask(SubtasksCompanion entry);
+  Future<void> deleteSubtask(int id);
+  Future<void> toggleSubtask(Subtask subtask);
+
+  // Habits
+  Stream<List<Habit>> watchHabits();
+  Stream<List<HabitLog>> watchAllHabitLogs();
+  Future<int> saveHabit(HabitsCompanion entry);
+  Future<void> deleteHabit(int id);
+  Future<void> toggleHabitLog(int habitId, DateTime date, bool isCompleted);
+
+  // Calendar
+  Stream<List<CalendarEvent>> watchEvents();
+  Future<int> saveEvent(CalendarEventsCompanion entry);
+  Future<void> deleteEvent(int id);
+
+  // Finance
+  Stream<List<FinanceEntry>> watchFinanceEntries();
+  Future<int> saveFinanceEntry(FinanceEntriesCompanion entry);
+  Future<void> deleteFinanceEntry(int id);
+  Future<void> recalculateAccountBalances();
+  Future<int> saveFinanceEntryWithBalance(FinanceEntriesCompanion entry);
+  Future<void> deleteFinanceEntryWithBalance(int id);
+
+  // Categories
+  Stream<List<Category>> watchCategories();
+  Future<int> saveCategory(CategoriesCompanion entry);
+
+  // Accounts
+  Stream<List<Account>> watchAccounts();
+  Future<int> saveAccount(AccountsCompanion entry);
+  Future<void> deleteAccount(int id);
+
+  // Import / Export / Reset
+  Future<void> clearAllData();
+  Future<void> importJson(Map<String, dynamic> payload);
+  Future<void> importBackupV2(Map<String, dynamic> payload);
+  Future<void> rotateEncryptionKey(String newKey);
+
+  int get schemaVersion;
+}
+
+class AppDatabase extends _$AppDatabase implements AppDatabaseBase {
+  AppDatabase(EncryptionServiceBase encryptionService)
+    : _encryptionService = encryptionService,
+      super(_openConnection(encryptionService));
+  AppDatabase.forTesting(super.executor) : _encryptionService = null;
+
+  final EncryptionServiceBase? _encryptionService;
+
+  static QueryExecutor _openConnection(
+    EncryptionServiceBase encryptionService,
+  ) {
     return LazyDatabase(() async {
       if (kIsWeb) {
         return driftDatabase(
@@ -158,7 +222,7 @@ class AppDatabase extends _$AppDatabase {
         );
       }
 
-      final encryptionKey = await EncryptionService.getOrGenerateKey();
+      final encryptionKey = await encryptionService.getOrGenerateKey();
       final dbFolder = await getApplicationDocumentsDirectory();
       final file = File(p.join(dbFolder.path, 'lifepilot.sqlite'));
       sqlite3.tempDirectory = (await getTemporaryDirectory()).path;
@@ -166,7 +230,7 @@ class AppDatabase extends _$AppDatabase {
       return NativeDatabase(
         file,
         setup: (rawDb) {
-          rawDb.execute("PRAGMA key = '$encryptionKey';");
+          rawDb.execute("PRAGMA key = ?", [encryptionKey]);
           rawDb.execute("PRAGMA foreign_keys = ON;");
           try {
             rawDb.select('SELECT name FROM sqlite_schema LIMIT 1;');
@@ -188,7 +252,7 @@ class AppDatabase extends _$AppDatabase {
   /// Rotates the database encryption key.
   Future<void> rotateEncryptionKey(String newKey) async {
     await customStatement("PRAGMA rekey = '$newKey';");
-    await EncryptionService.rotateKey(newKey);
+    await _encryptionService?.rotateKey(newKey);
   }
 
   @override
