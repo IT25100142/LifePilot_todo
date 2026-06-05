@@ -73,7 +73,7 @@ class DashboardScreen extends ConsumerWidget {
                 ? Center(
                     key: const ValueKey('dashboard_zen'),
                     child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 1400.0),
+                      constraints: const BoxConstraints(maxWidth: 1650.0),
                       child: Padding(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 40.0,
@@ -138,7 +138,7 @@ class DashboardScreen extends ConsumerWidget {
       return SingleChildScrollView(
         child: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 1400.0),
+            constraints: const BoxConstraints(maxWidth: 1650.0),
             child: query.isNotEmpty
                 ? Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -175,6 +175,10 @@ class DashboardScreen extends ConsumerWidget {
                             const _DashboardHeader(),
                             SizedBox(height: spacing),
                             const _SearchBar(),
+                            SizedBox(height: spacing),
+                            const _DashboardSystemStatus(),
+                            SizedBox(height: spacing),
+                            const _DashboardZenInspiration(),
                           ],
                         ),
                       ),
@@ -1290,6 +1294,257 @@ class _SystemInsightsProjections extends ConsumerWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _DashboardSystemStatus extends ConsumerWidget {
+  const _DashboardSystemStatus();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final isZen = ref.watch(themeCustomizerProvider).interfaceDensity == 'Zen';
+
+    return SatinGlassCard(
+      child: Padding(
+        padding: isZen
+            ? const EdgeInsets.all(20.0)
+            : const EdgeInsets.symmetric(horizontal: 16.0, vertical: 14.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.analytics_outlined,
+                  size: 18,
+                  color: theme.colorScheme.primary,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'Core Diagnostics',
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: theme.colorScheme.onSurfaceVariant.withValues(
+                      alpha: 0.6,
+                    ),
+                    letterSpacing: 1.2,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            _buildDiagnosticRow(
+              context,
+              label: 'Secure Local Database',
+              value: 'ENCRYPTED',
+              icon: Icons.lock_outline_rounded,
+              color: theme.colorScheme.primary,
+            ),
+            const SizedBox(height: 12),
+            _buildDiagnosticRow(
+              context,
+              label: 'Secure Fallback Sync',
+              value: 'OPERATIONAL',
+              icon: Icons.sync_rounded,
+              color: const Color(0xFF00E676), // Green glow
+              isPulsing: true,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Cognitive Focus Allocation',
+              style: theme.textTheme.bodySmall?.copyWith(
+                fontWeight: FontWeight.w600,
+                color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+              ),
+            ),
+            const SizedBox(height: 6),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: LinearProgressIndicator(
+                value: 0.68,
+                backgroundColor: theme.colorScheme.onSurface.withValues(alpha: 0.05),
+                valueColor: AlwaysStoppedAnimation<Color>(theme.colorScheme.primary),
+                minHeight: 6,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDiagnosticRow(
+    BuildContext context, {
+    required String label,
+    required String value,
+    required IconData icon,
+    required Color color,
+    bool isPulsing = false,
+  }) {
+    final theme = Theme.of(context);
+    return Row(
+      children: [
+        Icon(icon, size: 16, color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6)),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            label,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+        if (isPulsing)
+          _PulsingIndicator(color: color)
+        else
+          Container(
+            width: 6,
+            height: 6,
+            decoration: BoxDecoration(
+              color: color,
+              shape: BoxShape.circle,
+            ),
+          ),
+        const SizedBox(width: 6),
+        Text(
+          value,
+          style: theme.textTheme.labelSmall?.copyWith(
+            fontSize: 10,
+            fontWeight: FontWeight.w800,
+            color: color,
+            letterSpacing: 0.5,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _PulsingIndicator extends StatefulWidget {
+  const _PulsingIndicator({required this.color});
+  final Color color;
+
+  @override
+  State<_PulsingIndicator> createState() => _PulsingIndicatorState();
+}
+
+class _PulsingIndicatorState extends State<_PulsingIndicator>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        return Container(
+          width: 6,
+          height: 6,
+          decoration: BoxDecoration(
+            color: widget.color,
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: widget.color.withValues(alpha: _controller.value * 0.6),
+                blurRadius: 4.0 + _controller.value * 4.0,
+                spreadRadius: _controller.value * 2.0,
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _DashboardZenInspiration extends ConsumerWidget {
+  const _DashboardZenInspiration();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final isZen = ref.watch(themeCustomizerProvider).interfaceDensity == 'Zen';
+
+    return SatinGlassCard(
+      child: Padding(
+        padding: isZen
+            ? const EdgeInsets.all(20.0)
+            : const EdgeInsets.symmetric(horizontal: 16.0, vertical: 14.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.wb_sunny_outlined,
+                  size: 18,
+                  color: theme.colorScheme.tertiary,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'Daily Flight Reference',
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: theme.colorScheme.onSurfaceVariant.withValues(
+                      alpha: 0.6,
+                    ),
+                    letterSpacing: 1.2,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            Text(
+              '“The engine is the heart of an airplane, but the pilot is its soul. Maintain visual flight reference and fly intentionally.”',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                fontStyle: FontStyle.italic,
+                height: 1.45,
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'PILOT MINDSET • FOCUS ACTIVE',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    fontSize: 8,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 1.0,
+                    color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
+                  ),
+                ),
+                Icon(
+                  Icons.flight_takeoff_rounded,
+                  size: 14,
+                  color: theme.colorScheme.primary.withValues(alpha: 0.5),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
