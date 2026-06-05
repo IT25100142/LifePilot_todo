@@ -230,7 +230,7 @@ class AppDatabase extends _$AppDatabase implements AppDatabaseBase {
       return NativeDatabase(
         file,
         setup: (rawDb) {
-          rawDb.execute("PRAGMA key = ?", [encryptionKey]);
+          rawDb.execute("PRAGMA key = '$encryptionKey';");
           rawDb.execute("PRAGMA foreign_keys = ON;");
           try {
             rawDb.select('SELECT name FROM sqlite_schema LIMIT 1;');
